@@ -382,7 +382,7 @@ export function HomeScreen({ onNavigate }: Props) {
 
           <div
             className="relative overflow-hidden -mx-4 px-4 select-none"
-            style={{ touchAction: 'pan-y' }}
+            style={{ touchAction: 'none' }}
             onPointerDown={(event) => {
               if (event.pointerType === 'mouse' && event.button !== 0) return;
               swipeStartXRef.current = event.clientX;
