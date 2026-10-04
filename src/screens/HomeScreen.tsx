@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
   ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
@@ -94,10 +95,13 @@ export function HomeScreen({ onNavigate }: Props) {
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [movieIndex, setMovieIndex] = useState(0);
-  const swipeStartXRef = useRef<number | null>(null);
-  const draggedRef = useRef(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'center',
+    loop: false,
+    containScroll: false,
+    dragFree: false,
+    duration: 28,
+  });
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -148,9 +152,24 @@ export function HomeScreen({ onNavigate }: Props) {
     }),
   ];
   useEffect(() => {
+    if (!emblaApi) return;
+    const syncSelected = () => setMovieIndex(emblaApi.selectedScrollSnap());
+    syncSelected();
+    emblaApi.on('select', syncSelected);
+    emblaApi.on('reInit', syncSelected);
+    return () => {
+      emblaApi.off('select', syncSelected);
+      emblaApi.off('reInit', syncSelected);
+    };
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
     const activeIndex = activeCampaign ? movies.findIndex((movie) => movie.id === activeCampaign.id) : -1;
-    if (activeIndex >= 0) setMovieIndex(activeIndex);
-  }, [activeCampaign?.id, campaigns.length]);
+    if (activeIndex >= 0 && activeIndex !== emblaApi.selectedScrollSnap()) {
+      emblaApi.scrollTo(activeIndex);
+    }
+  }, [activeCampaign?.id, campaigns.length, emblaApi]);
 
   if (loading || !dashboard || !activeCampaign) {
     return (
@@ -243,17 +262,16 @@ export function HomeScreen({ onNavigate }: Props) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const changeMovie = (direction: -1 | 1) => {
-    if (movies.length < 2) return;
-    setMovieIndex((current) => {
-      const next = Math.max(0, Math.min(movies.length - 1, current + direction));
-      const selectedMovie = movies[next];
-      if (!selectedMovie.demo) {
-        const realCampaign = campaigns.find((campaign) => campaign.id === selectedMovie.id);
-        if (realCampaign) selectCampaign(realCampaign as Campaign);
-      }
-      return next;
-    });
+  const selectMovie = (index: number) => {
+    if (!emblaApi || index < 0 || index >= movies.length) return;
+    emblaApi.scrollTo(index);
+  };
+
+  const activateMovie = (index: number) => {
+    const movie = movies[index];
+    if (!movie || movie.demo) return;
+    const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+    if (realCampaign) selectCampaign(realCampaign as Campaign);
   };
 
   return (
@@ -380,90 +398,36 @@ export function HomeScreen({ onNavigate }: Props) {
             </span>
           </div>
 
-          <div
-            className="relative overflow-hidden -mx-4 px-4 select-none"
-            style={{ touchAction: 'none' }}
-            onPointerDown={(event) => {
-              if (event.pointerType === 'mouse' && event.button !== 0) return;
-              swipeStartXRef.current = event.clientX;
-              draggedRef.current = false;
-              setDragOffset(0);
-              setIsDragging(true);
-              event.currentTarget.setPointerCapture?.(event.pointerId);
-            }}
-            onPointerMove={(event) => {
-              const startX = swipeStartXRef.current;
-              if (startX === null) return;
-
-              const delta = event.clientX - startX;
-              if (Math.abs(delta) > 8) {
-                draggedRef.current = true;
-                event.preventDefault();
-                setDragOffset(delta);
-              }
-            }}
-            onPointerUp={(event) => {
-              const startX = swipeStartXRef.current;
-              if (startX === null) return;
-
-              const delta = event.clientX - startX;
-              if (Math.abs(delta) > 45) {
-                changeMovie(delta < 0 ? 1 : -1);
-              }
-
-              swipeStartXRef.current = null;
-              setDragOffset(0);
-              setIsDragging(false);
-              event.currentTarget.releasePointerCapture?.(event.pointerId);
-            }}
-            onPointerCancel={(event) => {
-              swipeStartXRef.current = null;
-              setDragOffset(0);
-              setIsDragging(false);
-              event.currentTarget.releasePointerCapture?.(event.pointerId);
-            }}
-          >
-            <div className="relative h-[344px] w-full overflow-visible">
-              <div
-                className="absolute left-1/2 top-1/2 flex items-center gap-4 will-change-transform"
-                style={{
-                  transform: `translate3d(calc(-109px - ${safeMovieIndex * 234}px + ${dragOffset}px), -50%, 0)`,
-                  transition: isDragging ? 'none' : 'transform 480ms cubic-bezier(0.22,1,0.36,1)',
-                }}
-              >
+          <div className="relative -mx-4 px-4 select-none">
+            <div
+              ref={emblaRef}
+              className="overflow-hidden"
+              style={{ touchAction: 'pan-y pinch-zoom' }}
+            >
+              <div className="flex items-center gap-4 py-3">
                 {movies.map((movie, index) => {
-                  const isCenter = index === safeMovieIndex;
-                  const distance = Math.abs(index - safeMovieIndex);
-                  const isVisible = distance <= 2;
+                  const isCenter = index === movieIndex;
+                  const isVisible = Math.abs(index - movieIndex) <= 2;
 
                   return (
                     <button
                       key={movie.id}
                       type="button"
-                      onClick={(event) => {
-                        if (draggedRef.current) {
-                          event.preventDefault();
-                          draggedRef.current = false;
-                          return;
-                        }
-                        if (index !== safeMovieIndex) {
-                          setMovieIndex(index);
-                          if (!movie.demo) {
-                            const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                            if (realCampaign) selectCampaign(realCampaign as Campaign);
-                          }
-                        } else if (!movie.demo) {
-                          const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                          if (realCampaign) selectCampaign(realCampaign as Campaign);
+                      onClick={() => {
+                        if (index !== movieIndex) {
+                          selectMovie(index);
+                        } else {
+                          activateMovie(index);
                         }
                       }}
                       className={
-                        'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] ' +
-                        'transition-[transform,opacity,filter,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
+                        'relative flex-[0_0_218px] w-[218px] h-[320px] text-left overflow-hidden rounded-[24px] ' +
+                        'transition-[transform,opacity,filter,box-shadow] duration-300 ease-out ' +
                         (isCenter
-                          ? 'w-[218px] h-[320px] z-20 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
-                          : 'w-[218px] h-[320px] z-10 ' +
-                            (isVisible ? 'opacity-55 saturate-[0.65] scale-[0.88]' : 'opacity-0 pointer-events-none scale-[0.78]'))
+                          ? 'z-20 scale-100 opacity-100 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
+                          : isVisible
+                            ? 'z-10 scale-[0.88] opacity-55 saturate-[0.65]'
+                            : 'z-0 scale-[0.78] opacity-0 pointer-events-none')
                       }
                       style={{ userSelect: 'none', WebkitUserDrag: 'none' }}
                     >
@@ -496,23 +460,16 @@ export function HomeScreen({ onNavigate }: Props) {
                   key={movie.id + '-dot'}
                   type="button"
                   aria-label={`Show ${movie.movie_title || 'movie'}`}
-                  onClick={() => {
-                    setMovieIndex(index);
-                    if (!movie.demo) {
-                      const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                      if (realCampaign) selectCampaign(realCampaign as Campaign);
-                    }
-                  }}
+                  onClick={() => selectMovie(index)}
                   className={
                     'h-1.5 rounded-full transition-all duration-300 ' +
-                    (index === safeMovieIndex ? 'w-5 bg-pink-300' : 'w-1.5 bg-white/20')
+                    (index === movieIndex ? 'w-5 bg-pink-300' : 'w-1.5 bg-white/20')
                   }
                 />
               ))}
             </div>
           </div>
-        </section>
-      )}
+
 
       {/* FEATURED HUNT */}
       {nextMission && (
