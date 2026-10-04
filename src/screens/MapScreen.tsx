@@ -67,7 +67,7 @@ export function MapScreen({ onNavigate }: Props) {
 
   const q = query.trim().toLowerCase();
   const visibleFeatures = q
-    ? features.filter((f) => `${f.location.name} ${f.location.address}`.toLowerCase().includes(q))
+    ? features.filter((f) => `${f.location?.name ?? ''} ${f.location?.address ?? ''}`.toLowerCase().includes(q))
     : features;
 
   const handleMarkerClick = (feature: MapFeature) => {
