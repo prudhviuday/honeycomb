@@ -149,7 +149,63 @@ export function HomeScreen({ onNavigate }: Props) {
 
   return (
     <div className="px-4 pt-10 pb-6 animate-fade-in space-y-4">
-      {/* 1. CAMPAIGN RAIL — switch between live movie experiences */}
+      {/* 2. PERSONALIZED USER CARD — strongest element */}
+      <section className="relative overflow-hidden rounded-[26px] p-5 bg-gradient-to-br from-[#211A12] via-bg-surface to-[#0E1018] border border-gold/20 shadow-[0_18px_55px_-20px_rgba(255,184,74,0.32)]">
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center gap-3.5 mb-5">
+          <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-br from-gold-bright to-gold-dim flex-shrink-0">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover bg-bg-elevated" />
+            ) : (
+              <div className="w-full h-full rounded-full bg-bg-elevated flex items-center justify-center font-display text-xl text-gold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-[30px] text-text-white leading-none truncate tracking-[-0.02em]">
+              Hello, {displayName}!
+            </h1>
+            <p className="text-xs text-text-muted flex items-center gap-1 mt-1.5">
+              <MapPin className="w-3.5 h-3.5 text-gold" />
+              {profile?.city || 'Chennai'}
+            </p>
+          </div>
+        </div>
+
+        <div className="relative flex items-end justify-between mb-2.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 border border-gold/30">
+            <Crown className="w-3.5 h-3.5 text-gold" />
+            <span className="text-xs font-semibold text-gold">Level {level}</span>
+          </div>
+          <p className="leading-none">
+            <span className="font-display text-3xl text-gold-bright">{points.toLocaleString()}</span>
+            <span className="text-xs text-text-muted ml-1">points</span>
+          </p>
+        </div>
+
+        <div className="relative h-2 bg-white/8 rounded-full overflow-hidden mb-2">
+          <div
+            className="h-full bg-gradient-to-r from-gold-dim via-gold to-gold-bright rounded-full transition-all duration-500"
+            style={{ width: `${levelProgress}%` }}
+          />
+        </div>
+        <p className="relative text-xs text-text-muted mb-4">
+          <span className="text-text-primary font-medium">{challengesToNextReward}</span>{' '}
+          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to next reward
+        </p>
+
+        {/* Small stat chips */}
+        <div className="relative flex gap-2">
+          <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
+          <StatChip icon={Target} value={`${completedMissions}/${totalMissions}`} label="Missions" onClick={() => onNavigate?.('hunts')} />
+          <StatChip icon={Trophy} value={`#${myRank}`} label="Rank" onClick={() => setLeaderboardOpen(true)} />
+        </div>
+      </section>
+
+
+      {/* 2. CAMPAIGN RAIL — switch between live movie experiences */}
       <section className="-mx-4">
         <div className="flex items-end justify-between px-4 mb-3">
           <div>
@@ -162,10 +218,10 @@ export function HomeScreen({ onNavigate }: Props) {
           {[
             ...campaigns.map((campaign) => ({ campaign, demo: false })),
             ...(campaigns.length < 4 ? [
-              { campaign: { id: 'demo-baasha', movie_title: 'Baasha', title: 'The Mass Hunt', hero_image_url: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg' }, demo: true },
-              { campaign: { id: 'demo-mouna-ragam', movie_title: 'Mouna Ragam', title: 'Chennai Love Story', hero_image_url: 'https://images.pexels.com/photos/7991379/pexels-photo-7991379.jpeg' }, demo: true },
-              { campaign: { id: 'demo-roja', movie_title: 'Roja', title: 'The Secret Trail', hero_image_url: 'https://images.pexels.com/photos/7991486/pexels-photo-7991486.jpeg' }, demo: true },
-              { campaign: { id: 'demo-ghilli', movie_title: 'Ghilli', title: 'Race to the Finish', hero_image_url: 'https://images.pexels.com/photos/7991587/pexels-photo-7991587.jpeg' }, demo: true },
+              { campaign: { id: 'demo-baasha', movie_title: 'Baasha', title: 'The Mass Hunt', hero_image_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=85' }, demo: true },
+              { campaign: { id: 'demo-mouna-ragam', movie_title: 'Mouna Ragam', title: 'Chennai Love Story', hero_image_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=85' }, demo: true },
+              { campaign: { id: 'demo-roja', movie_title: 'Roja', title: 'The Secret Trail', hero_image_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=85' }, demo: true },
+              { campaign: { id: 'demo-ghilli', movie_title: 'Ghilli', title: 'Race to the Finish', hero_image_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=85' }, demo: true },
             ].slice(0, 4 - campaigns.length) : []),
           ].map(({ campaign, demo }) => {
             const selected = campaign.id === activeCampaign.id;
@@ -192,7 +248,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </div>
       </section>
 
-      {/* 2. PERSONALIZED USER CARD — strongest element */}
+      {/* 1. PERSONALIZED USER CARD — strongest element */}
       <section className="relative overflow-hidden rounded-[26px] p-5 bg-gradient-to-br from-[#211A12] via-bg-surface to-[#0E1018] border border-gold/20 shadow-[0_18px_55px_-20px_rgba(255,184,74,0.32)]">
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
 
