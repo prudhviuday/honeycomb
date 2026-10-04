@@ -22,7 +22,7 @@ type CollectionItem = { id: string; kind: 'card' | 'ticket' | 'merch' | 'badge';
 
 export function HomeScreen({ onNavigate }: Props) {
   const { user, profile } = useAuth();
-  const { activeCampaign, campaignUser, refreshCampaignUser } = useCampaign();
+  const { campaigns, activeCampaign, campaignUser, refreshCampaignUser, selectCampaign } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -148,8 +148,51 @@ export function HomeScreen({ onNavigate }: Props) {
 
   return (
     <div className="px-4 pt-10 pb-6 animate-fade-in space-y-4">
-      {/* 1. PERSONALIZED USER CARD — strongest element */}
-      <section className="relative overflow-hidden rounded-[22px] p-5 bg-gradient-to-br from-[#1E1A10] via-bg-surface to-bg-secondary border border-gold/25 shadow-[0_12px_40px_-12px_rgba(212,175,55,0.35)]">
+      {/* 1. CAMPAIGN RAIL — switch between live movie experiences */}
+      <section className="-mx-4">
+        <div className="flex items-end justify-between px-4 mb-3">
+          <div>
+            <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold">Now playing</p>
+            <h2 className="font-display text-2xl text-text-white leading-none mt-1">MOVIE CAMPAIGNS</h2>
+          </div>
+          <span className="text-[10px] text-text-subtle uppercase tracking-wider">{campaigns.length} live</span>
+        </div>
+        <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
+          {[
+            ...campaigns.map((campaign) => ({ campaign, demo: false })),
+            ...(campaigns.length < 4 ? [
+              { campaign: { id: 'demo-baasha', movie_title: 'Baasha', title: 'The Mass Hunt', hero_image_url: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg' }, demo: true },
+              { campaign: { id: 'demo-mouna-ragam', movie_title: 'Mouna Ragam', title: 'Chennai Love Story', hero_image_url: 'https://images.pexels.com/photos/7991379/pexels-photo-7991379.jpeg' }, demo: true },
+              { campaign: { id: 'demo-roja', movie_title: 'Roja', title: 'The Secret Trail', hero_image_url: 'https://images.pexels.com/photos/7991486/pexels-photo-7991486.jpeg' }, demo: true },
+              { campaign: { id: 'demo-ghilli', movie_title: 'Ghilli', title: 'Race to the Finish', hero_image_url: 'https://images.pexels.com/photos/7991587/pexels-photo-7991587.jpeg' }, demo: true },
+            ].slice(0, 4 - campaigns.length) : []),
+          ].map(({ campaign, demo }) => {
+            const selected = campaign.id === activeCampaign.id;
+            return (
+              <button
+                key={campaign.id}
+                type="button"
+                onClick={() => !demo && selectCampaign(campaign as typeof activeCampaign)}
+                className={`relative flex-shrink-0 w-[142px] h-[190px] overflow-hidden rounded-[20px] text-left group transition-all duration-300 ${selected ? 'ring-2 ring-gold shadow-[0_12px_35px_rgba(255,184,74,0.22)] scale-[1.01]' : 'ring-1 ring-white/8 opacity-80'}`}
+              >
+                <img src={campaign.hero_image_url} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#080910] via-[#080910]/25 to-transparent" />
+                <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10">
+                  <span className={`w-1.5 h-1.5 rounded-full ${demo ? 'bg-accent' : 'bg-emerald-400'}`} />
+                  <span className="text-[8px] text-white/85 uppercase tracking-[0.16em]">{demo ? 'Demo' : 'Live'}</span>
+                </div>
+                <div className="absolute bottom-0 inset-x-0 p-3">
+                  <p className="font-display text-[21px] text-white leading-none">{campaign.movie_title}</p>
+                  <p className="text-[9px] text-white/60 uppercase tracking-wider mt-1 truncate">{campaign.title}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 2. PERSONALIZED USER CARD — strongest element */}
+      <section className="relative overflow-hidden rounded-[26px] p-5 bg-gradient-to-br from-[#211A12] via-bg-surface to-[#0E1018] border border-gold/20 shadow-[0_18px_55px_-20px_rgba(255,184,74,0.32)]">
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
 
         <div className="relative flex items-center gap-3.5 mb-5">
@@ -163,7 +206,7 @@ export function HomeScreen({ onNavigate }: Props) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-[28px] text-text-white leading-none truncate">
+            <h1 className="font-display text-[30px] text-text-white leading-none truncate tracking-[-0.02em]">
               Hello, {displayName}!
             </h1>
             <p className="text-xs text-text-muted flex items-center gap-1 mt-1.5">
@@ -203,7 +246,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </div>
       </section>
 
-      {/* 2. REWARD / COUPON */}
+      {/* 3. REWARD / COUPON */}
       {dashboard.rewards.length > 0 && (
         <button
           onClick={() => onNavigate?.('rewards')}
@@ -265,7 +308,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </section>
       )}
 
-      {/* 3. FEATURED HUNT — hero gameplay card */}
+      {/* 4. FEATURED HUNT — hero gameplay card */}
       {nextMission && (
         <section className="rounded-[22px] overflow-hidden bg-bg-surface hairline">
           <div className="relative h-52">
@@ -317,7 +360,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </section>
       )}
 
-      {/* 4. NEAREST CHALLENGES — location discovery */}
+      {/* 5. NEAREST CHALLENGES — location discovery */}
       {nearbyChallenges.length > 0 && (
         <Section title="Nearest challenges" onMore={() => onNavigate?.('map')}>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
@@ -351,7 +394,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </Section>
       )}
 
-      {/* 5. MY COLLECTION */}
+      {/* 6. MY COLLECTION */}
       <Section title="My collection" onMore={() => onNavigate?.('profile')}>
         {collection.length > 0 ? (
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
@@ -377,7 +420,7 @@ export function HomeScreen({ onNavigate }: Props) {
         )}
       </Section>
 
-      {/* 6. LEADERBOARD PREVIEW */}
+      {/* 7. LEADERBOARD PREVIEW */}
       {dashboard.leaderboard.length > 0 && (
         <Section title="Leaderboard" onMore={() => setLeaderboardOpen(true)}>
           <button
@@ -397,7 +440,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </Section>
       )}
 
-      {/* 7. ACHIEVEMENTS */}
+      {/* 8. ACHIEVEMENTS */}
       {allBadges.length > 0 && (
         <Section title="Achievements" onMore={() => onNavigate?.('profile')}>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
