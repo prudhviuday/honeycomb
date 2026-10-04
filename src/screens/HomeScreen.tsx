@@ -1,22 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
-  ChevronRight, Star, Target, User as UserIcon,
+  ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/lib/api';
+import { calculateDistance } from '@/lib/mapData';
 import type { Tab } from './AppShell';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
 }
 
+// Every 100 points = 1 level (shared by the user card and leaderboard)
+const levelFor = (pts: number) => Math.floor(pts / 100) + 1;
+
+const FALLBACK_HERO = 'https://images.pexels.com/photos/2873486/pexels-photo-2873486.jpeg';
+
+type CollectionItem = { id: string; kind: 'card' | 'ticket' | 'merch' | 'badge'; label: string; sub: string };
+
 export function HomeScreen({ onNavigate }: Props) {
   const { user, profile } = useAuth();
   const { activeCampaign, campaignUser, refreshCampaignUser } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -37,6 +47,15 @@ export function HomeScreen({ onNavigate }: Props) {
   useEffect(() => {
     refreshCampaignUser();
   }, [refreshCampaignUser]);
+
+  // Optional — only used to show distance on nearest challenges
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { timeout: 5000 },
+    );
+  }, []);
 
   if (loading || !dashboard || !activeCampaign) {
     return (
@@ -59,9 +78,9 @@ export function HomeScreen({ onNavigate }: Props) {
   const nextMissionProgress = nextMission
     ? dashboard.missionProgress.find((p) => p.mission_id === nextMission.id)
     : null;
+  const missionDone = nextMissionProgress?.progress ?? 0;
 
-  // Level calculation — every 100 points = 1 level
-  const level = Math.floor(points / 100) + 1;
+  const level = levelFor(points);
   const levelProgress = points % 100;
   const challengesToNextReward = Math.max(0, 3 - (scanCount % 3));
 
@@ -70,17 +89,56 @@ export function HomeScreen({ onNavigate }: Props) {
     .filter((r) => r.points_required > points)
     .sort((a, b) => a.points_required - b.points_required)[0];
   const closestReward = nextReward ?? dashboard.rewards[0];
+  const claimableCount = dashboard.rewards.filter((r) => points >= r.points_required).length;
 
-  // Nearest challenges — locations with sources that aren't scanned
+  // Nearest challenges — locations with sources that aren't scanned, closest first when location is known
+  const scannedSourceIds = new Set(dashboard.scans.map((s) => s.interaction_source_id));
   const nearbyChallenges = dashboard.locations
-    .filter((loc) => {
+    .map((loc) => {
       const srcs = dashboard.interactionSources.filter((s) => s.location_id === loc.id);
-      const scanned = srcs.some((s) =>
-        dashboard.scans.some((sc) => sc.interaction_source_id === s.id),
-      );
-      return srcs.length > 0 && !scanned;
+      return {
+        loc,
+        srcs,
+        scanned: srcs.some((s) => scannedSourceIds.has(s.id)),
+        totalPts: srcs.reduce((sum, s) => sum + s.points, 0),
+        km: userLoc ? calculateDistance(userLoc.lat, userLoc.lng, loc.latitude, loc.longitude) : null,
+      };
     })
-    .slice(0, 4);
+    .filter((c) => c.srcs.length > 0 && !c.scanned)
+    .sort((a, b) => (a.km ?? 0) - (b.km ?? 0))
+    .slice(0, 6);
+
+  // Collection — derived from claimed rewards, earned badges and scanned locations
+  const collection: CollectionItem[] = [
+    ...dashboard.rewardClaims
+      .filter((c) => c.status !== 'rejected')
+      .map((c) => {
+        const reward = dashboard.rewards.find((r) => r.id === c.reward_id);
+        const title = reward?.title ?? 'Reward';
+        return {
+          id: `claim-${c.id}`,
+          kind: /ticket/i.test(title) ? ('ticket' as const) : ('merch' as const),
+          label: title,
+          sub: c.status,
+        };
+      }),
+    ...dashboard.userBadges.map((ub) => ({
+      id: `badge-${ub.id}`,
+      kind: 'badge' as const,
+      label: dashboard.badges.find((b) => b.id === ub.badge_id)?.name ?? 'Badge',
+      sub: 'Badge',
+    })),
+    ...dashboard.locations
+      .filter((loc) =>
+        dashboard.interactionSources.some((s) => s.location_id === loc.id && scannedSourceIds.has(s.id)),
+      )
+      .map((loc) => ({ id: `loc-${loc.id}`, kind: 'card' as const, label: loc.name, sub: 'Campaign card' })),
+  ];
+
+  // Leaderboard preview — top 3 plus the user's own row if they're outside it
+  const top3 = dashboard.leaderboard.slice(0, 3);
+  const me = dashboard.myLeaderboardPosition;
+  const showMeSeparately = !!me && !top3.some((e) => e.user_id === me.user_id);
 
   // Badges
   const earnedBadgeIds = new Set(dashboard.userBadges.map((b) => b.badge_id));
@@ -89,269 +147,268 @@ export function HomeScreen({ onNavigate }: Props) {
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Player';
 
   return (
-    <div className="px-4 pt-12 pb-6 animate-fade-in">
-      {/* ============================================================
-          1. PERSONALIZED USER CARD — large, first visual
-         ============================================================ */}
-      <div className="bg-bg-surface hairline rounded-[14px] p-5 mb-4">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-bg-elevated hairline flex items-center justify-center flex-shrink-0">
-            <UserIcon className="w-6 h-6 text-text-muted" />
+    <div className="px-4 pt-10 pb-6 animate-fade-in space-y-4">
+      {/* 1. PERSONALIZED USER CARD — strongest element */}
+      <section className="relative overflow-hidden rounded-[22px] p-5 bg-gradient-to-br from-[#1E1A10] via-bg-surface to-bg-secondary border border-gold/25 shadow-[0_12px_40px_-12px_rgba(212,175,55,0.35)]">
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center gap-3.5 mb-5">
+          <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-br from-gold-bright to-gold-dim flex-shrink-0">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover bg-bg-elevated" />
+            ) : (
+              <div className="w-full h-full rounded-full bg-bg-elevated flex items-center justify-center font-display text-xl text-gold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em]">Welcome back</p>
-            <h1 className="font-display text-xl text-text-primary leading-tight mt-0.5">
-              {displayName.toUpperCase()}
+            <h1 className="font-display text-[28px] text-text-white leading-none truncate">
+              Hello, {displayName}!
             </h1>
-            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3 h-3" />
+            <p className="text-xs text-text-muted flex items-center gap-1 mt-1.5">
+              <MapPin className="w-3.5 h-3.5 text-gold" />
               {profile?.city || 'Chennai'}
             </p>
           </div>
         </div>
 
-        {/* Level + Points */}
-        <div className="flex items-end justify-between mb-3">
-          <div>
-            <p className="text-[10px] text-text-subtle uppercase tracking-wide">Level</p>
-            <p className="font-display text-2xl text-text-primary leading-none">{level}</p>
+        <div className="relative flex items-end justify-between mb-2.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 border border-gold/30">
+            <Crown className="w-3.5 h-3.5 text-gold" />
+            <span className="text-xs font-semibold text-gold">Level {level}</span>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-text-subtle uppercase tracking-wide">Points</p>
-            <p className="font-display text-2xl text-gold leading-none">{points}</p>
-          </div>
+          <p className="leading-none">
+            <span className="font-display text-3xl text-gold-bright">{points.toLocaleString()}</span>
+            <span className="text-xs text-text-muted ml-1">points</span>
+          </p>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-1.5 bg-white/6 rounded-full overflow-hidden mb-2">
+        <div className="relative h-2 bg-white/8 rounded-full overflow-hidden mb-2">
           <div
-            className="h-full bg-gold rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-gold-dim via-gold to-gold-bright rounded-full transition-all duration-500"
             style={{ width: `${levelProgress}%` }}
           />
         </div>
-        <p className="text-[11px] text-text-muted">
-          {challengesToNextReward} {challengesToNextReward === 1 ? 'scan' : 'scans'} to next reward
+        <p className="relative text-xs text-text-muted mb-4">
+          <span className="text-text-primary font-medium">{challengesToNextReward}</span>{' '}
+          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to next reward
         </p>
-      </div>
 
-      {/* ============================================================
-          2. REWARD / COUPON CARD
-         ============================================================ */}
-      {closestReward && (
-        <div
-          className="bg-bg-surface hairline rounded-[14px] overflow-hidden mb-4 cursor-pointer active:scale-[0.99] transition-transform"
-          onClick={() => onNavigate?.('rewards')}
-        >
-          <div className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-[10px] bg-gold/10 flex items-center justify-center flex-shrink-0">
-              <Gift className="w-6 h-6 text-gold" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-gold uppercase tracking-[0.15em] mb-0.5">
-                {closestReward.reward_type === 'lucky_draw' ? 'Lucky Draw' : 'Guaranteed'}
-              </p>
-              <p className="text-sm font-medium text-text-primary truncate">{closestReward.title}</p>
-              <p className="text-[11px] text-text-muted mt-0.5">
-                {points >= closestReward.points_required
-                  ? 'Ready to claim'
-                  : `${(closestReward.points_required - points).toLocaleString()} more points`}
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-text-subtle flex-shrink-0" />
-          </div>
-          {points < closestReward.points_required && (
-            <div className="h-0.5 bg-white/4">
-              <div
-                className="h-full bg-gold/60"
-                style={{ width: `${Math.min((points / closestReward.points_required) * 100, 100)}%` }}
-              />
-            </div>
-          )}
+        {/* Small stat chips */}
+        <div className="relative flex gap-2">
+          <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
+          <StatChip icon={Target} value={`${completedMissions}/${totalMissions}`} label="Missions" onClick={() => onNavigate?.('hunts')} />
+          <StatChip icon={Trophy} value={`#${myRank}`} label="Rank" onClick={() => setLeaderboardOpen(true)} />
         </div>
+      </section>
+
+      {/* 2. REWARD / COUPON */}
+      {dashboard.rewards.length > 0 && (
+        <button
+          onClick={() => onNavigate?.('rewards')}
+          className="w-full flex items-center justify-between rounded-full px-4 py-2.5 bg-gold/10 border border-gold/25 active:scale-[0.99] transition-transform"
+        >
+          <span className="flex items-center gap-2 text-xs text-text-primary">
+            <Ticket className="w-4 h-4 text-gold" />
+            <span className="font-semibold">{dashboard.rewards.length} rewards</span>
+            <span className="text-text-muted">· {claimableCount} ready</span>
+          </span>
+          <span className="text-xs font-semibold text-gold flex items-center gap-0.5">
+            Get it <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </button>
       )}
 
-      {/* ============================================================
-          3. FEATURED HUNT / MISSION CARD — large hero card
-         ============================================================ */}
-      {nextMission && (
-        <div
-          className="relative rounded-[14px] overflow-hidden mb-4 cursor-pointer active:scale-[0.99] transition-transform"
-          onClick={() => onNavigate?.('scanner')}
+      {closestReward && (
+        <section
+          onClick={() => onNavigate?.('rewards')}
+          className="relative overflow-hidden rounded-[20px] bg-bg-surface hairline cursor-pointer active:scale-[0.99] transition-transform"
         >
-          {/* Campaign image background */}
-          <div className="relative h-44">
+          <div className="flex">
+            <div className="flex-1 p-5 pr-3">
+              <p className="text-[10px] text-gold uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5" />
+                {closestReward.reward_type === 'lucky_draw' ? 'Lucky Draw' : 'Guaranteed Reward'}
+              </p>
+              <h2 className="font-display text-xl text-text-white leading-tight mb-1.5">{closestReward.title}</h2>
+              <p className="text-xs text-text-muted line-clamp-2 mb-4">
+                {closestReward.description || 'Complete location challenges to unlock this reward.'}
+              </p>
+              <p className="text-[11px] text-text-primary font-medium mb-1.5 tabular-nums">
+                {Math.min(points, closestReward.points_required).toLocaleString()} / {closestReward.points_required.toLocaleString()} pts
+              </p>
+              <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gold rounded-full"
+                  style={{ width: `${Math.min((points / Math.max(closestReward.points_required, 1)) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="relative w-28 flex-shrink-0">
+              {closestReward.image_url ? (
+                <img src={closestReward.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-gold/25 to-gold/5 flex items-center justify-center">
+                  <Gift className="w-10 h-10 text-gold" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-bg-surface to-transparent" />
+            </div>
+          </div>
+          <div className="px-5 pb-4 flex justify-end">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
+              {points >= closestReward.points_required ? 'Claim now' : 'Continue Hunt'}
+              <ChevronRight className="w-4 h-4" />
+            </span>
+          </div>
+        </section>
+      )}
+
+      {/* 3. FEATURED HUNT — hero gameplay card */}
+      {nextMission && (
+        <section className="rounded-[22px] overflow-hidden bg-bg-surface hairline">
+          <div className="relative h-52">
             <img
-              src={activeCampaign.hero_image_url || 'https://images.pexels.com/photos/2873486/pexels-photo-2873486.jpeg'}
+              src={activeCampaign.hero_image_url || FALLBACK_HERO}
               alt={activeCampaign.movie_title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-bg-surface/30 to-transparent" />
+            <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full glass">
+              <Flame className="w-3.5 h-3.5 text-gold" />
+              <span className="text-[10px] text-gold uppercase tracking-[0.18em] font-medium">Active Hunt</span>
+            </div>
+            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gold text-bg-primary font-display text-base tabular-nums">
+              {missionDone}/{nextMission.target_count}
+            </div>
           </div>
 
-          {/* Content overlay */}
-          <div className="absolute inset-0 flex flex-col justify-end p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <Flame className="w-4 h-4 text-gold" />
-              <p className="text-[10px] text-gold uppercase tracking-[0.2em] font-medium">Active Hunt</p>
-            </div>
-            <h2 className="font-display text-2xl text-text-white leading-tight mb-1">{nextMission.title}</h2>
-            <p className="text-xs text-text-muted line-clamp-1 mb-3">{nextMission.description}</p>
+          <div className="px-5 pb-5 -mt-6 relative">
+            <h2 className="font-display text-[26px] text-text-white leading-tight mb-1 flex items-center gap-2">
+              {nextMission.title} <Clapperboard className="w-5 h-5 text-gold" />
+            </h2>
+            <p className="text-sm text-text-muted line-clamp-2 mb-2">{nextMission.description}</p>
+            <p className="text-xs text-text-subtle flex items-center gap-1 mb-4">
+              <MapPin className="w-3.5 h-3.5" /> {profile?.city || 'Chennai'} · {activeCampaign.movie_title}
+            </p>
 
-            {/* Progress */}
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gold rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(((nextMissionProgress?.progress ?? 0) / nextMission.target_count) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((missionDone / Math.max(nextMission.target_count, 1)) * 100, 100)}%` }}
                 />
               </div>
-              <span className="text-[11px] text-text-white font-medium tabular-nums">
-                {nextMissionProgress?.progress ?? 0}/{nextMission.target_count}
+              <span className="text-xs text-text-primary font-medium tabular-nums">
+                {missionDone} / {nextMission.target_count} completed
               </span>
             </div>
 
-            {/* CTA */}
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-gold font-medium">+{nextMission.points_reward} XP</span>
-              <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-gold text-bg-primary rounded-[8px]">
-                <span className="text-xs font-semibold">
-                  {nextMissionProgress?.progress ? 'Continue Hunt' : 'Start Hunt'}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
+            <button
+              onClick={() => onNavigate?.('scanner')}
+              className="w-full py-3.5 bg-gold text-bg-primary rounded-[12px] font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold/20 active:scale-[0.98] transition-transform"
+            >
+              {missionDone ? 'Continue Hunt' : 'Start Hunt'}
+              <span className="text-bg-primary/60">· +{nextMission.points_reward} XP</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ============================================================
-          4. NEAREST CHALLENGES — horizontal scroll cards
-         ============================================================ */}
+      {/* 4. NEAREST CHALLENGES — location discovery */}
       {nearbyChallenges.length > 0 && (
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-[11px] text-text-subtle uppercase tracking-[0.2em] font-medium">
-              Nearest Challenges
-            </h3>
-            <button onClick={() => onNavigate?.('map')} className="text-text-subtle">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar px-1 pb-1">
-            {nearbyChallenges.map((loc) => {
-              const srcs = dashboard.interactionSources.filter((s) => s.location_id === loc.id);
-              const totalPts = srcs.reduce((sum, s) => sum + s.points, 0);
-              return (
-                <div
-                  key={loc.id}
-                  className="flex-shrink-0 w-40 bg-bg-surface hairline rounded-[12px] p-4 cursor-pointer active:scale-[0.97] transition-transform"
-                  onClick={() => onNavigate?.('map')}
-                >
-                  <div className="w-9 h-9 rounded-full bg-gold/10 flex items-center justify-center mb-3">
-                    <Target className="w-4 h-4 text-gold" />
-                  </div>
-                  <p className="text-sm font-medium text-text-primary truncate mb-1">{loc.name}</p>
-                  <p className="text-[11px] text-text-muted truncate mb-3">{loc.address}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-sm text-gold">+{totalPts}</span>
-                    <span className="text-[10px] text-text-subtle uppercase">XP</span>
-                  </div>
+        <Section title="Nearest challenges" onMore={() => onNavigate?.('map')}>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+            {nearbyChallenges.map(({ loc, totalPts, km }) => (
+              <button
+                key={loc.id}
+                onClick={() => onNavigate?.('map')}
+                className="flex-shrink-0 w-44 text-left bg-bg-surface hairline rounded-[16px] p-4 active:scale-[0.97] transition-transform"
+              >
+                <div className="w-9 h-9 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center mb-3">
+                  <Target className="w-4 h-4 text-gold" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================
-          5. QUICK STATS ROW — compact
-         ============================================================ */}
-      <div className="grid grid-cols-3 gap-2 mb-5">
-        <QuickStat icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
-        <QuickStat icon={Target} value={`${completedMissions}/${totalMissions}`} label="Missions" onClick={() => onNavigate?.('scanner')} />
-        <QuickStat icon={Trophy} value={`#${myRank}`} label="Rank" onClick={() => onNavigate?.('rewards')} />
-      </div>
-
-      {/* ============================================================
-          6. RECENT ACTIVITY — compact list
-         ============================================================ */}
-      {dashboard.scans.length > 0 && (
-        <div className="mb-5">
-          <h3 className="text-[11px] text-text-subtle uppercase tracking-[0.2em] font-medium mb-3 px-1">
-            Recent Activity
-          </h3>
-          <div className="bg-bg-surface hairline rounded-[12px] p-4 space-y-px">
-            {dashboard.scans.slice(0, 4).map((scan) => {
-              const source = dashboard.interactionSources.find((s) => s.id === scan.interaction_source_id);
-              return (
-                <div key={scan.id} className="flex items-center gap-3 py-2.5 hairline-b last:border-b-0">
-                  <ScanLine className="w-4 h-4 text-gold flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary truncate">{source?.name ?? 'QR Scan'}</p>
-                    <p className="text-[11px] text-text-subtle">
-                      {new Date(scan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </p>
-                  </div>
-                  <span className="font-display text-base text-gold">+{scan.points_awarded}</span>
+                <p className="text-sm font-semibold text-text-primary truncate">{loc.name}</p>
+                <p className="text-[11px] text-text-muted truncate mb-3 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 flex-shrink-0" /> {loc.address}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-gold/15 text-[10px] font-semibold text-gold">
+                    +{totalPts} pts
+                  </span>
+                  {km !== null && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/6 text-[10px] text-text-muted flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {km < 2 ? `${Math.max(1, Math.round(km * 12))} min` : `${km.toFixed(1)} km`}
+                    </span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================
-          7. LEADERBOARD CARD — compact preview
-         ============================================================ */}
-      {dashboard.leaderboard.length > 0 && (
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-[11px] text-text-subtle uppercase tracking-[0.2em] font-medium">
-              Leaderboard
-            </h3>
-            <button onClick={() => onNavigate?.('rewards')} className="text-text-subtle">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="bg-bg-surface hairline rounded-[12px] p-4 space-y-px">
-            {dashboard.leaderboard.slice(0, 3).map((entry, i) => (
-              <div key={entry.id} className="flex items-center gap-3 py-2.5 hairline-b last:border-b-0">
-                <span className={`font-display text-base w-6 ${i === 0 ? 'text-gold' : 'text-text-muted'}`}>
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-sm text-text-primary truncate">{entry.display_name}</span>
-                <span className="font-display text-sm text-text-primary">{entry.points}</span>
-              </div>
+              </button>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
-      {/* ============================================================
-          8. ACHIEVEMENTS — horizontal scroll badges
-         ============================================================ */}
-      {allBadges.length > 0 && (
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-[11px] text-text-subtle uppercase tracking-[0.2em] font-medium">
-              Achievements
-            </h3>
-            <button onClick={() => onNavigate?.('profile')} className="text-text-subtle">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+      {/* 5. MY COLLECTION */}
+      <Section title="My collection" onMore={() => onNavigate?.('profile')}>
+        {collection.length > 0 ? (
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+            {collection.map((item) => (
+              <CollectionTile key={item.id} item={item} />
+            ))}
           </div>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar px-1 pb-1">
+        ) : (
+          <button
+            onClick={() => onNavigate?.('scanner')}
+            className="w-full bg-bg-surface hairline rounded-[16px] p-4 flex items-center gap-3 text-left"
+          >
+            <div className="flex -space-x-2">
+              {[Clapperboard, Ticket, Star].map((Icon, i) => (
+                <div key={i} className="w-9 h-9 rounded-[10px] bg-bg-elevated border border-white/8 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-text-subtle" />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-text-muted flex-1">Scan your first location to start collecting campaign cards.</p>
+            <ChevronRight className="w-4 h-4 text-text-subtle" />
+          </button>
+        )}
+      </Section>
+
+      {/* 6. LEADERBOARD PREVIEW */}
+      {dashboard.leaderboard.length > 0 && (
+        <Section title="Leaderboard" onMore={() => setLeaderboardOpen(true)}>
+          <button
+            onClick={() => setLeaderboardOpen(true)}
+            className="w-full text-left bg-bg-surface hairline rounded-[16px] px-4 py-1.5"
+          >
+            {top3.map((entry) => (
+              <LeaderRow key={entry.id} entry={entry} isMe={entry.user_id === user?.id} />
+            ))}
+            {showMeSeparately && me && (
+              <>
+                <div className="text-center text-text-subtle text-xs leading-none py-0.5">···</div>
+                <LeaderRow entry={me} isMe />
+              </>
+            )}
+          </button>
+        </Section>
+      )}
+
+      {/* 7. ACHIEVEMENTS */}
+      {allBadges.length > 0 && (
+        <Section title="Achievements" onMore={() => onNavigate?.('profile')}>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
             {allBadges.map((badge) => {
               const earned = earnedBadgeIds.has(badge.id);
               return (
-                <div
-                  key={badge.id}
-                  className="flex-shrink-0 w-20 flex flex-col items-center"
-                >
+                <div key={badge.id} className="flex-shrink-0 w-[68px] flex flex-col items-center">
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 ${
+                    className={`w-14 h-14 rounded-full flex items-center justify-center mb-1.5 ${
                       earned
-                        ? 'bg-gold/10 border border-gold/30'
+                        ? 'bg-gradient-to-br from-gold/30 to-gold/5 border border-gold/40 shadow-[0_0_16px_rgba(212,175,55,0.25)]'
                         : 'bg-bg-surface border border-white/8'
                     }`}
                   >
@@ -368,20 +425,87 @@ export function HomeScreen({ onNavigate }: Props) {
               );
             })}
           </div>
-        </div>
+        </Section>
+      )}
+
+      {/* Recent activity */}
+      {dashboard.scans.length > 0 && (
+        <Section title="Recent activity">
+          <div className="bg-bg-surface hairline rounded-[16px] px-4 py-1.5">
+            {dashboard.scans.slice(0, 4).map((scan) => {
+              const source = dashboard.interactionSources.find((s) => s.id === scan.interaction_source_id);
+              return (
+                <div key={scan.id} className="flex items-center gap-3 py-2.5 hairline-b last:border-b-0">
+                  <ScanLine className="w-4 h-4 text-gold flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary truncate">{source?.name ?? 'QR Scan'}</p>
+                    <p className="text-[11px] text-text-subtle">
+                      {new Date(scan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <span className="font-display text-base text-gold">+{scan.points_awarded}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
       )}
 
       {/* Brand footer */}
-      <div className="flex items-baseline justify-center gap-0.5 mt-6 mb-2">
+      <div className="flex items-baseline justify-center gap-0.5 pt-4">
         <span className="font-display text-xs text-text-subtle">HONEY</span>
         <span className="font-display text-xs text-gold/60">BADGER</span>
         <span className="text-[9px] text-text-subtle uppercase tracking-[0.2em] ml-1">Media</span>
       </div>
+
+      {/* Full leaderboard sheet */}
+      {leaderboardOpen && (
+        <div className="fixed inset-0 z-[60] max-w-md mx-auto" onClick={() => setLeaderboardOpen(false)}>
+          <div className="absolute inset-0 bg-black/50 animate-fade-in" />
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[20px] hairline-t animate-slide-up max-h-[80%] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="pt-3 pb-3 px-5">
+              <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xl text-text-white flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-gold" /> Leaderboard
+                </h3>
+                <button onClick={() => setLeaderboardOpen(false)} className="text-text-subtle hover:text-text-primary">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto no-scrollbar px-5 pb-8">
+              {dashboard.leaderboard.map((entry) => (
+                <LeaderRow key={entry.id} entry={entry} isMe={entry.user_id === user?.id} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function QuickStat({
+function Section({ title, onMore, children }: { title: string; onMore?: () => void; children: ReactNode }) {
+  return (
+    <section className="pt-2">
+      <div className="flex items-center justify-between mb-2.5 px-1">
+        <h3 className="font-display text-lg text-text-primary tracking-wide">{title}</h3>
+        {onMore && (
+          <button onClick={onMore} className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-text-muted">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function StatChip({
   icon: Icon,
   value,
   label,
@@ -395,11 +519,51 @@ function QuickStat({
   return (
     <button
       onClick={onClick}
-      className="bg-bg-surface hairline rounded-[10px] p-3 text-center active:scale-[0.97] transition-transform"
+      className="flex-1 flex items-center gap-2 rounded-[12px] bg-black/30 border border-white/6 px-2.5 py-2 active:scale-[0.97] transition-transform"
     >
-      <Icon className="w-4 h-4 text-gold mx-auto mb-1.5" />
-      <p className="font-display text-lg text-text-primary leading-none">{value}</p>
-      <p className="text-[9px] text-text-subtle uppercase tracking-wide mt-1">{label}</p>
+      <Icon className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+      <span className="text-left leading-none">
+        <span className="block font-display text-sm text-text-primary">{value}</span>
+        <span className="block text-[9px] text-text-subtle uppercase tracking-wide mt-0.5">{label}</span>
+      </span>
     </button>
+  );
+}
+
+const collectionStyle: Record<CollectionItem['kind'], { icon: typeof Zap; tone: string }> = {
+  card: { icon: Clapperboard, tone: 'from-gold/25 to-gold/5 border-gold/30' },
+  ticket: { icon: Ticket, tone: 'from-rose-400/25 to-rose-400/5 border-rose-400/30' },
+  merch: { icon: Gift, tone: 'from-sky-400/25 to-sky-400/5 border-sky-400/30' },
+  badge: { icon: Star, tone: 'from-emerald-400/25 to-emerald-400/5 border-emerald-400/30' },
+};
+
+function CollectionTile({ item }: { item: CollectionItem }) {
+  const { icon: Icon, tone } = collectionStyle[item.kind];
+  return (
+    <div className="flex-shrink-0 w-24 bg-bg-surface hairline rounded-[14px] p-2.5">
+      <div className={`h-16 rounded-[10px] bg-gradient-to-br border flex items-center justify-center mb-2 ${tone}`}>
+        <Icon className="w-7 h-7 text-text-white" />
+      </div>
+      <p className="text-[11px] font-medium text-text-primary truncate">{item.label}</p>
+      <p className="text-[9px] text-text-subtle uppercase tracking-wide truncate">{item.sub}</p>
+    </div>
+  );
+}
+
+function LeaderRow({ entry, isMe }: { entry: CampaignDashboard['leaderboard'][number]; isMe: boolean }) {
+  const medal = ['text-gold', 'text-zinc-300', 'text-amber-600'][entry.rank - 1];
+  return (
+    <div className={`flex items-center gap-3 py-2.5 hairline-b last:border-b-0 ${isMe ? '-mx-2 px-2 rounded-[10px] bg-gold/10' : ''}`}>
+      <span className={`font-display text-base w-6 text-center ${medal ?? 'text-text-muted'}`}>
+        {entry.rank <= 3 ? <Trophy className="w-4 h-4 inline" fill="currentColor" /> : entry.rank}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className={`block text-sm truncate ${isMe ? 'text-gold font-semibold' : 'text-text-primary'}`}>
+          {isMe ? 'You' : entry.display_name}
+        </span>
+        <span className="block text-[10px] text-text-subtle">Lv. {levelFor(entry.points)}</span>
+      </span>
+      <span className="font-display text-sm text-text-primary tabular-nums">{entry.points.toLocaleString()}</span>
+    </div>
   );
 }
