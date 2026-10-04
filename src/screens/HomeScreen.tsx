@@ -41,29 +41,42 @@ type MovieCardData = {
   demo: boolean;
 };
 
+const localMovieImage = (movieTitle?: string | null) => {
+  const name = String(movieTitle ?? '').toLowerCase();
+  if (name.includes('baasha')) return '/movies/baasha.webp';
+  if (name.includes('anniyan')) return '/movies/anniyan.jpg';
+  if (name.includes('mandaadi')) return '/movies/mandaadi.jpg';
+  if (name.includes('sholay')) return '/movies/sholay.jpg';
+  return undefined;
+};
+
 const DEMO_MOVIES: MovieCardData[] = [
   {
     id: 'demo-baasha',
     movie_title: 'Baasha',
     title: 'The Mass Hunt',
+    hero_image_url: '/movies/baasha.webp',
     demo: true,
   },
   {
-    id: 'demo-mouna-ragam',
-    movie_title: 'Mouna Ragam',
-    title: 'Chennai Love Story',
+    id: 'demo-anniyan',
+    movie_title: 'Anniyan',
+    title: 'The Mind Hunt',
+    hero_image_url: '/movies/anniyan.jpg',
     demo: true,
   },
   {
-    id: 'demo-roja',
-    movie_title: 'Roja',
-    title: 'The Secret Trail',
+    id: 'demo-mandaadi',
+    movie_title: 'Mandaadi',
+    title: 'The Street Hunt',
+    hero_image_url: '/movies/mandaadi.jpg',
     demo: true,
   },
   {
-    id: 'demo-ghilli',
-    movie_title: 'Ghilli',
-    title: 'Race to the Finish',
+    id: 'demo-sholay',
+    movie_title: 'Sholay',
+    title: 'The Classic Hunt',
+    hero_image_url: '/movies/sholay.jpg',
     demo: true,
   },
 ];
@@ -111,7 +124,7 @@ export function HomeScreen({ onNavigate }: Props) {
       id: campaign.id,
       movie_title: campaign.movie_title,
       title: campaign.title,
-      hero_image_url: campaign.hero_image_url,
+      hero_image_url: campaign.hero_image_url || localMovieImage(campaign.movie_title),
       demo: false,
     })),
     ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
@@ -229,8 +242,8 @@ export function HomeScreen({ onNavigate }: Props) {
   return (
     <div className="px-4 pt-7 pb-8 animate-fade-in space-y-6 overflow-x-hidden">
       {/* HERO / USER IDENTITY */}
-      <section className="relative overflow-hidden rounded-[28px] p-5 bg-[linear-gradient(135deg,#341024_0%,#24101D_48%,#160D17_100%)] shadow-[0_22px_65px_-28px_rgba(232,62,140,0.55)]">
-        <div className="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-pink-500/15 blur-3xl pointer-events-none animate-hero-breathe" />
+      <section className="relative overflow-hidden rounded-[28px] p-5 bg-[linear-gradient(135deg,#341024_0%,#24101D_48%,#160D17_100%)] shadow-[0_22px_65px_-30px_rgba(232,62,140,0.28)]">
+        <div className="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-pink-500/7 blur-3xl pointer-events-none animate-hero-breathe" />
         <div className="absolute -bottom-24 -left-16 w-48 h-48 rounded-full bg-violet-500/12 blur-3xl pointer-events-none" />
         <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/55 to-transparent" />
         <div className="absolute right-5 top-5 text-white/15">
@@ -336,15 +349,23 @@ export function HomeScreen({ onNavigate }: Props) {
           </div>
 
           <div
-            className="relative overflow-hidden -mx-4 px-4"
+            className="relative overflow-hidden -mx-4 px-4 select-none"
             onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
             onTouchEnd={(event) => {
               if (touchStartX === null) return;
               const endX = event.changedTouches[0]?.clientX ?? touchStartX;
               const delta = endX - touchStartX;
-              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
+              if (Math.abs(delta) > 35) changeMovie(delta < 0 ? 1 : -1);
               setTouchStartX(null);
             }}
+            onMouseDown={(event) => setTouchStartX(event.clientX)}
+            onMouseUp={(event) => {
+              if (touchStartX === null) return;
+              const delta = event.clientX - touchStartX;
+              if (Math.abs(delta) > 35) changeMovie(delta < 0 ? 1 : -1);
+              setTouchStartX(null);
+            }}
+            onMouseLeave={() => setTouchStartX(null)}
           >
             <div className="flex items-center justify-center h-[344px] w-full">
               {[-1, 0, 1].map((offset) => {
@@ -371,20 +392,21 @@ export function HomeScreen({ onNavigate }: Props) {
                     className={
                       'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
                       (isCenter
-                        ? 'w-[218px] h-[320px] z-20 -mx-5 shadow-[0_22px_60px_-18px_rgba(232,62,140,0.58)]'
-                        : 'w-[152px] h-[272px] z-10 opacity-55 saturate-[0.55] scale-[0.88] -mx-3')
+                        ? 'w-[218px] h-[320px] z-20 -mx-5 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
+                        : 'w-[152px] h-[272px] z-10 opacity-55 saturate-[0.6] scale-[0.88] -mx-3')
                     }
+                    style={{ touchAction: 'pan-y' }}
                   >
                     <MovieArtwork movie={movie} isCenter={isCenter} />
                     <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent" />
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md">
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent pointer-events-none" />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md pointer-events-none">
                       <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-[#A78BFA]' : 'bg-[#45D483]')} />
                       <span className="text-[8px] text-white/85 uppercase tracking-[0.15em]">
                         {movie.demo ? 'Preview' : 'Live'}
                       </span>
                     </div>
-                    <div className="absolute left-4 right-4 bottom-4">
+                    <div className="absolute left-4 right-4 bottom-4 pointer-events-none">
                       <p className="font-display text-[27px] text-white leading-none truncate">{movie.movie_title || movie.title || 'Movie'}</p>
                       <p className="text-[10px] text-white/65 mt-1.5 truncate">{movie.title}</p>
                     </div>
@@ -394,26 +416,44 @@ export function HomeScreen({ onNavigate }: Props) {
             </div>
 
             {movies.length > 1 && (
-              <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5">
-                {movies.map((movie, index) => (
-                  <button
-                    key={movie.id}
-                    type="button"
-                    aria-label={'Show ' + (movie.movie_title || movie.title || 'Movie')}
-                    onClick={() => {
-                      setMovieIndex(index);
-                      if (!movie.demo) {
-                        const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                        if (realCampaign) selectCampaign(realCampaign as Campaign);
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous movie"
+                  onClick={() => changeMovie(-1)}
+                  className="absolute left-5 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center text-white/80 shadow-lg active:scale-90"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next movie"
+                  onClick={() => changeMovie(1)}
+                  className="absolute right-5 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center text-white/80 shadow-lg active:scale-90"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5">
+                  {movies.map((movie, index) => (
+                    <button
+                      key={movie.id}
+                      type="button"
+                      aria-label={'Show ' + (movie.movie_title || movie.title || 'Movie')}
+                      onClick={() => {
+                        setMovieIndex(index);
+                        if (!movie.demo) {
+                          const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                          if (realCampaign) selectCampaign(realCampaign as Campaign);
+                        }
+                      }}
+                      className={
+                        'rounded-full transition-all duration-300 ' +
+                        (index === safeMovieIndex ? 'w-5 h-1.5 bg-pink-400' : 'w-1.5 h-1.5 bg-white/25')
                       }
-                    }}
-                    className={
-                      'rounded-full transition-all duration-300 ' +
-                      (index === safeMovieIndex ? 'w-5 h-1.5 bg-pink-400' : 'w-1.5 h-1.5 bg-white/25')
-                    }
-                  />
-                ))}
-              </div>
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -873,7 +913,7 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
 function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
   return (
     <div className="absolute inset-0">
-      <PosterArtwork movie={movie} isCenter={isCenter} />
+      {movie.hero_image_url ? null : <PosterArtwork movie={movie} isCenter={isCenter} />}
       {movie.hero_image_url && (
         <img
           src={movie.hero_image_url}
