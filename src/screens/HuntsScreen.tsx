@@ -61,9 +61,9 @@ export function HuntsScreen({ onNavigate }: Props) {
   return (
     <div className="px-4 pt-12 pb-6 animate-fade-in">
       {/* Title */}
-      <div className="flex items-center justify-between mb-6 px-1">
+      <div className="flex items-end justify-between mb-6 px-1">
         <div>
-          <h1 className="font-display text-3xl text-text-primary leading-none">HUNTS</h1>
+          <div><p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your missions</p><h1 className="font-display text-[34px] text-text-primary leading-none tracking-[-0.02em]">HUNTS</h1>
           <p className="text-[11px] text-text-muted mt-1.5">
             {completedMissions}/{totalMissions} completed · {earnedXP}/{totalXP} XP earned
           </p>
@@ -75,10 +75,10 @@ export function HuntsScreen({ onNavigate }: Props) {
       </div>
 
       {/* Progress overview bar */}
-      <div className="px-1 mb-6">
+      <div className="px-1 mb-7">
         <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gold rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-gold via-gold-bright to-accent rounded-full transition-all duration-500"
             style={{ width: `${totalMissions > 0 ? (completedMissions / totalMissions) * 100 : 0}%` }}
           />
         </div>
@@ -96,8 +96,8 @@ export function HuntsScreen({ onNavigate }: Props) {
           return (
             <div
               key={mission.id}
-              className={`rounded-[14px] overflow-hidden cursor-pointer active:scale-[0.99] transition-transform ${
-                isCompleted ? 'bg-bg-surface/50 hairline' : 'bg-bg-surface hairline'
+              className={`rounded-[20px] overflow-hidden cursor-pointer active:scale-[0.985] transition-all duration-300 shadow-[0_12px_35px_-24px_rgba(0,0,0,0.9)] ${
+                isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#10121B] border border-white/8'
               }`}
               onClick={() => !isCompleted && onNavigate?.('scanner')}
             >
@@ -162,7 +162,7 @@ export function HuntsScreen({ onNavigate }: Props) {
       {completedMissions < totalMissions && (
         <button
           onClick={() => onNavigate?.('scanner')}
-          className="w-full mt-5 py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full mt-5 py-4 bg-gradient-to-r from-gold-bright to-gold text-bg-primary font-semibold text-sm rounded-[14px] shadow-[0_12px_30px_rgba(255,184,74,0.18)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <ScanLine className="w-4 h-4" />
           Start Scanning
