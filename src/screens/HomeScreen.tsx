@@ -385,7 +385,7 @@ export function HomeScreen({ onNavigate }: Props) {
                       </span>
                     </div>
                     <div className="absolute left-4 right-4 bottom-4">
-                      <p className="font-display text-[27px] text-white leading-none truncate">{movie.movie_title}</p>
+                      <p className="font-display text-[27px] text-white leading-none truncate">{movie.movie_title || movie.title || 'Movie'}</p>
                       <p className="text-[10px] text-white/65 mt-1.5 truncate">{movie.title}</p>
                     </div>
                   </button>
@@ -399,7 +399,7 @@ export function HomeScreen({ onNavigate }: Props) {
                   <button
                     key={movie.id}
                     type="button"
-                    aria-label={'Show ' + movie.movie_title}
+                    aria-label={'Show ' + (movie.movie_title || movie.title || 'Movie')}
                     onClick={() => {
                       setMovieIndex(index);
                       if (!movie.demo) {
@@ -786,7 +786,8 @@ function QuickAction({
 }
 
 function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
-  const title = movie.movie_title.toLowerCase();
+  const movieName = movie.movie_title || movie.title || 'Movie';
+  const title = String(movieName).toLowerCase();
   const theme =
     title.includes('baasha')
       ? { bg: '#5C160F', accent: '#FF8A5B', glow: '#EF4444', shape: 'action' }
@@ -859,7 +860,7 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
           Honeycomb Original
         </div>
         <div className={'font-display text-white leading-[0.9] mt-1 ' + (isCenter ? 'text-[33px]' : 'text-[24px]')}>
-          {movie.movie_title}
+          {movieName}
         </div>
       </div>
     </div>
