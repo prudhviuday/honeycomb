@@ -50,8 +50,10 @@ const localMovieImage = (movieTitle?: string | null) => {
   if (name.includes('anniyan')) return publicMovieAsset('anniyan.jpg');
   if (name.includes('mandaadi')) return publicMovieAsset('mandaadi.jpg');
   if (name.includes('sholay')) return publicMovieAsset('sholay.jpg');
-  return publicMovieAsset('movie.jpg');
+  return undefined;
 };
+
+const defaultMovieImage = publicMovieAsset('movie.jpg');
 
 const DEMO_MOVIES: MovieCardData[] = [
   {
@@ -137,9 +139,9 @@ export function HomeScreen({ onNavigate }: Props) {
         movie_title: movieTitle || campaignTitle || 'Movie',
         title: campaignTitle || movieTitle || 'Movie Hunt',
         hero_image_url:
-          localMovieImage(movieTitle) ||
           campaign.hero_image_url ||
-          undefined,
+          localMovieImage(movieTitle) ||
+          defaultMovieImage,
         demo: false,
       };
     }),
@@ -337,15 +339,15 @@ export function HomeScreen({ onNavigate }: Props) {
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
-          <QuickAction icon={Film} label="Movies" tone="pink" onClick={() => scrollToSection('movie-campaigns')} />
-          <QuickAction icon={Target} label="Hunt" tone="orange" onClick={() => onNavigate?.('hunts')} />
-          <QuickAction icon={CalendarDays} label="Events" tone="violet" onClick={() => scrollToSection('featured-hunt')} />
+          <QuickAction iconSrc="Movie.png" label="Movies" tone="pink" onClick={() => scrollToSection('movie-campaigns')} />
+          <QuickAction iconSrc="hunt.png" label="Hunt" tone="orange" onClick={() => onNavigate?.('hunts')} />
+          <QuickAction iconSrc="events.png" label="Events" tone="violet" onClick={() => scrollToSection('featured-hunt')} />
         </div>
         <div className="grid grid-cols-4 gap-2.5 mt-2.5">
-          <QuickAction icon={ShoppingBag} label="Malls" tone="cyan" onClick={() => scrollToSection('nearby-challenges')} />
-          <QuickAction icon={Gamepad2} label="Activities" tone="green" onClick={() => scrollToSection('nearby-challenges')} />
-          <QuickAction icon={Gift} label="Rewards" tone="gold" onClick={() => onNavigate?.('rewards')} />
-          <QuickAction icon={Medal} label="Leaderboard" tone="purple" onClick={() => setLeaderboardOpen(true)} />
+          <QuickAction iconSrc="Mall.png" label="Malls" tone="cyan" onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction iconSrc="activities.png" label="Activities" tone="green" onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction iconSrc="Gift.png" label="Rewards" tone="gold" onClick={() => onNavigate?.('rewards')} />
+          <QuickAction iconSrc="leaderboard.png" label="Leaderboard" tone="purple" onClick={() => setLeaderboardOpen(true)} />
         </div>
       </section>
 
@@ -364,6 +366,7 @@ export function HomeScreen({ onNavigate }: Props) {
 
           <div
             className="relative overflow-hidden -mx-4 px-4 select-none"
+            style={{ touchAction: 'pan-y' }}
             onTouchStart={(event) => {
               setTouchStartX(event.touches[0]?.clientX ?? null);
               setDragOffset(0);
@@ -372,199 +375,114 @@ export function HomeScreen({ onNavigate }: Props) {
             onTouchMove={(event) => {
               if (touchStartX === null) return;
               const currentX = event.touches[0]?.clientX ?? touchStartX;
-              setDragOffset(currentX - touchStartX);
+              const delta = currentX - touchStartX;
+
+              // Once the gesture is clearly horizontal, stop the browser from
+              // treating it as back/forward navigation and move the track live.
+              if (Math.abs(delta) > 8) event.preventDefault();
+              setDragOffset(delta);
             }}
             onTouchEnd={(event) => {
               if (touchStartX === null) return;
               const endX = event.changedTouches[0]?.clientX ?? touchStartX;
               const delta = endX - touchStartX;
-              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
+
+              if (Math.abs(delta) > 45) {
+                changeMovie(delta < 0 ? 1 : -1);
+              }
+
               setTouchStartX(null);
               setDragOffset(0);
               setIsDragging(false);
             }}
-            onMouseDown={(event) => {
-              setTouchStartX(event.clientX);
-              setDragOffset(0);
-              setIsDragging(true);
-            }}
-            onMouseMove={(event) => {
-              if (!isDragging || touchStartX === null) return;
-              setDragOffset(event.clientX - touchStartX);
-            }}
-            onMouseUp={(event) => {
-              if (touchStartX === null) return;
-              const delta = event.clientX - touchStartX;
-              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
-              setTouchStartX(null);
-              setDragOffset(0);
-              setIsDragging(false);
-            }}
-            onMouseLeave={() => {
+            onTouchCancel={() => {
               setTouchStartX(null);
               setDragOffset(0);
               setIsDragging(false);
             }}
           >
-            <div className="flex items-center justify-center h-[344px] w-full">
-              {[-1, 0, 1].map((offset) => {
-                const index = (safeMovieIndex + offset + movies.length) % movies.length;
-                const movie = movies[index];
-                const isCenter = offset === 0;
+            <div className="relative h-[344px] w-full overflow-visible">
+              <div
+                className="absolute left-1/2 top-1/2 flex items-center gap-4 will-change-transform"
+                style={{
+                  transform: `translate3d(calc(-109px - ${safeMovieIndex * 234}px + ${dragOffset}px), -50%, 0)`,
+                  transition: isDragging ? 'none' : 'transform 480ms cubic-bezier(0.22,1,0.36,1)',
+                }}
+              >
+                {movies.map((movie, index) => {
+                  const isCenter = index === safeMovieIndex;
+                  const distance = Math.abs(index - safeMovieIndex);
+                  const isVisible = distance <= 2;
 
-                return (
-                  <button
-                    key={movie.id + '-' + offset}
-                    type="button"
-                    onClick={() => {
-                      if (offset !== 0) {
-                        setMovieIndex(index);
-                        if (!movie.demo) {
-                          const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                          if (realCampaign) selectCampaign(realCampaign as Campaign);
-                        }
-                      } else if (!movie.demo) {
-                        const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-                        if (realCampaign) selectCampaign(realCampaign as Campaign);
-                      }
-                    }}
-                    className={
-                      'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
-                      (isCenter
-                        ? 'w-[218px] h-[320px] z-20 -mx-5 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
-                        : 'w-[152px] h-[272px] z-10 opacity-55 saturate-[0.6] scale-[0.88] -mx-3')
-                    }
-                    style={{
-                      touchAction: 'pan-y',
-                      transform: `translateX(${dragOffset * 0.28}px)`,
-                      transitionDuration: isDragging ? '0ms' : undefined,
-                    }}
-                  >
-                    <MovieArtwork movie={movie} isCenter={isCenter} />
-                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent pointer-events-none" />
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md pointer-events-none">
-                      <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-[#A78BFA]' : 'bg-[#45D483]')} />
-                      <span className="text-[8px] text-white/85 uppercase tracking-[0.15em]">
-                        {movie.demo ? 'Preview' : 'Live'}
-                      </span>
-                    </div>
-                    <div className="absolute z-20 left-4 right-4 bottom-4 pointer-events-none">
-                      <p className="font-display text-[27px] text-white leading-none truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
-                        {String(movie.movie_title ?? '').trim() || String(movie.title ?? '').trim() || 'Movie'}
-                      </p>
-                      <p className="text-[10px] text-white/70 mt-1.5 truncate drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
-                        {String(movie.title ?? '').trim() || 'Movie Hunt'}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {movies.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  aria-label="Previous movie"
-                  onClick={() => changeMovie(-1)}
-                  className="absolute left-5 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center text-white/80 shadow-lg active:scale-90"
-                >
-                  <ChevronRight className="w-4 h-4 rotate-180" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next movie"
-                  onClick={() => changeMovie(1)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center text-white/80 shadow-lg active:scale-90"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5">
-                  {movies.map((movie, index) => (
+                  return (
                     <button
                       key={movie.id}
                       type="button"
-                      aria-label={'Show ' + (movie.movie_title || movie.title || 'Movie')}
                       onClick={() => {
-                        setMovieIndex(index);
-                        if (!movie.demo) {
+                        if (index !== safeMovieIndex) {
+                          setMovieIndex(index);
+                          if (!movie.demo) {
+                            const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                            if (realCampaign) selectCampaign(realCampaign as Campaign);
+                          }
+                        } else if (!movie.demo) {
                           const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
                           if (realCampaign) selectCampaign(realCampaign as Campaign);
                         }
                       }}
                       className={
-                        'rounded-full transition-all duration-300 ' +
-                        (index === safeMovieIndex ? 'w-5 h-1.5 bg-pink-400' : 'w-1.5 h-1.5 bg-white/25')
+                        'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] ' +
+                        'transition-[transform,opacity,filter,box-shadow] duration-480 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
+                        (isCenter
+                          ? 'w-[218px] h-[320px] z-20 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
+                          : 'w-[218px] h-[320px] z-10 ' +
+                            (isVisible ? 'opacity-55 saturate-[0.65] scale-[0.88]' : 'opacity-0 pointer-events-none scale-[0.78]'))
                       }
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* REWARD STRIP */}
-      {dashboard.rewards.length > 0 && (
-        <button
-          onClick={() => onNavigate?.('rewards')}
-          className="w-full flex items-center justify-between rounded-[18px] px-4 py-3 bg-gradient-to-r from-[#3A191C] to-[#25111C] shadow-[0_10px_28px_-18px_rgba(255,200,87,0.45)] active:scale-[0.99] transition-transform"
-        >
-          <span className="flex items-center gap-2 text-xs text-text-primary">
-            <Gift className="w-4 h-4 text-[#FFC857]" />
-            <span className="font-semibold">{dashboard.rewards.length} rewards</span>
-            <span className="text-text-muted">· {claimableCount} ready</span>
-          </span>
-          <span className="text-xs font-semibold text-[#FFC857] flex items-center gap-0.5">
-            Get it <ChevronRight className="w-3.5 h-3.5" />
-          </span>
-        </button>
-      )}
-
-      {closestReward && (
-        <section
-          onClick={() => onNavigate?.('rewards')}
-          className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#24111C] via-[#1D1019] to-[#160C15] shadow-[0_16px_42px_-26px_rgba(232,62,140,0.45)] cursor-pointer active:scale-[0.99] transition-transform"
-        >
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-pink-400/60 via-amber-300/70 to-transparent" />
-          <div className="flex">
-            <div className="flex-1 p-5 pr-3">
-              <p className="text-[10px] text-[#FFC857] uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1.5">
-                <Gift className="w-3.5 h-3.5" />
-                {closestReward.reward_type === 'lucky_draw' ? 'Lucky Draw' : 'Guaranteed Reward'}
-              </p>
-              <h2 className="font-display text-xl text-text-white leading-tight mb-1.5">{closestReward.title}</h2>
-              <p className="text-xs text-text-muted line-clamp-2 mb-4">
-                {closestReward.description || 'Complete location challenges to unlock this reward.'}
-              </p>
-              <p className="text-[11px] text-text-primary font-medium mb-1.5 tabular-nums">
-                {Math.min(points, closestReward.points_required).toLocaleString()} / {closestReward.points_required.toLocaleString()} pts
-              </p>
-              <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#FFC857] to-[#FF8A5B] rounded-full"
-                  style={{ width: Math.min((points / Math.max(closestReward.points_required, 1)) * 100, 100) + '%' }}
-                />
+                      style={{ userSelect: 'none', WebkitUserDrag: 'none' }}
+                    >
+                      <MovieArtwork movie={movie} isCenter={isCenter} />
+                      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent pointer-events-none" />
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md pointer-events-none">
+                        <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-[#A78BFA]' : 'bg-[#45D483]')} />
+                        <span className="text-[9px] uppercase tracking-[0.16em] text-white/75">
+                          {movie.demo ? 'Demo' : 'Live'}
+                        </span>
+                      </div>
+                      <div className="absolute z-20 left-4 right-4 bottom-4 pointer-events-none">
+                        <p className="font-display text-[27px] text-white leading-none truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+                          {String(movie.movie_title ?? '').trim() || String(movie.title ?? '').trim() || 'Movie'}
+                        </p>
+                        <p className="text-[10px] text-white/70 mt-1.5 truncate drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                          {String(movie.title ?? '').trim() || 'Movie Hunt'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="relative w-28 flex-shrink-0">
-              {closestReward.image_url ? (
-                <img src={closestReward.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/25 to-violet-500/10 flex items-center justify-center">
-                  <Gift className="w-10 h-10 text-pink-200" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#24111C] to-transparent" />
+
+            <div className="flex items-center justify-center gap-1.5 mt-1.5">
+              {movies.map((movie, index) => (
+                <button
+                  key={movie.id + '-dot'}
+                  type="button"
+                  aria-label={`Show ${movie.movie_title || 'movie'}`}
+                  onClick={() => {
+                    setMovieIndex(index);
+                    if (!movie.demo) {
+                      const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                      if (realCampaign) selectCampaign(realCampaign as Campaign);
+                    }
+                  }}
+                  className={
+                    'h-1.5 rounded-full transition-all duration-300 ' +
+                    (index === safeMovieIndex ? 'w-5 bg-pink-300' : 'w-1.5 bg-white/20')
+                  }
+                />
+              ))}
             </div>
-          </div>
-          <div className="px-5 pb-4 flex justify-end">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-pink-300">
-              {points >= closestReward.points_required ? 'Claim now' : 'Continue Hunt'}
-              <ChevronRight className="w-4 h-4" />
-            </span>
           </div>
         </section>
       )}
@@ -838,24 +756,24 @@ function StatChip({
 }
 
 function QuickAction({
-  icon: Icon,
+  iconSrc,
   label,
   tone,
   onClick,
 }: {
-  icon: typeof Film;
+  iconSrc: string;
   label: string;
   tone: 'pink' | 'orange' | 'violet' | 'cyan' | 'green' | 'gold' | 'purple';
   onClick: () => void;
 }) {
   const tones = {
-    pink: 'from-pink-400/25 to-pink-600/5 text-pink-200 shadow-pink-500/10',
-    orange: 'from-orange-400/25 to-orange-600/5 text-orange-200 shadow-orange-500/10',
-    violet: 'from-violet-400/25 to-violet-600/5 text-violet-200 shadow-violet-500/10',
-    cyan: 'from-cyan-300/25 to-cyan-500/5 text-cyan-200 shadow-cyan-500/10',
-    green: 'from-emerald-400/25 to-emerald-600/5 text-emerald-200 shadow-emerald-500/10',
-    gold: 'from-amber-300/25 to-amber-500/5 text-amber-200 shadow-amber-500/10',
-    purple: 'from-fuchsia-400/25 to-violet-500/5 text-fuchsia-200 shadow-fuchsia-500/10',
+    pink: 'from-pink-400/25 to-pink-600/5 shadow-pink-500/10',
+    orange: 'from-orange-400/25 to-orange-600/5 shadow-orange-500/10',
+    violet: 'from-violet-400/25 to-violet-600/5 shadow-violet-500/10',
+    cyan: 'from-cyan-300/25 to-cyan-500/5 shadow-cyan-500/10',
+    green: 'from-emerald-400/25 to-emerald-600/5 shadow-emerald-500/10',
+    gold: 'from-amber-300/25 to-amber-500/5 shadow-amber-500/10',
+    purple: 'from-fuchsia-400/25 to-violet-500/5 shadow-fuchsia-500/10',
   };
 
   return (
@@ -865,7 +783,14 @@ function QuickAction({
       className="rounded-[18px] bg-gradient-to-b from-[#28131F] to-[#1B0E17] px-2.5 py-3.5 flex flex-col items-center gap-2.5 active:scale-[0.96] transition-transform shadow-[0_10px_24px_-18px_rgba(0,0,0,0.8)]"
     >
       <span className={'relative w-12 h-12 rounded-[16px] bg-gradient-to-br flex items-center justify-center shadow-lg ring-1 ring-white/8 ' + tones[tone]}>
-        <span className="absolute inset-[2px] rounded-[14px] bg-gradient-to-br from-white/10 to-transparent pointer-events-none" /><Icon className="relative w-5 h-5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]" />
+        <span className="absolute inset-[2px] rounded-[14px] bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+        <img
+          src={`${import.meta.env.BASE_URL}icon/${iconSrc}`}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          className="relative w-10 h-10 object-contain drop-shadow-[0_3px_3px_rgba(0,0,0,0.4)]"
+        />
       </span>
       <span className="text-[11px] font-semibold text-white/80">{label}</span>
     </button>
@@ -962,7 +887,7 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
 
   const movieTitle = String(movie.movie_title ?? '').trim();
   const localFallback = localMovieImage(movieTitle);
-  const primaryImage = localFallback || movie.hero_image_url || undefined;
+  const primaryImage = movie.hero_image_url || localFallback || defaultMovieImage;
   const displayTitle = movieTitle || String(movie.title ?? '').trim() || 'Movie';
 
   useEffect(() => {
