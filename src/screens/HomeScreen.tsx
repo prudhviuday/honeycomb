@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
   ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
@@ -94,7 +94,8 @@ export function HomeScreen({ onNavigate }: Props) {
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [movieIndex, setMovieIndex] = useState(0);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const swipeStartXRef = useRef<number | null>(null);
+  const draggedRef = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -257,6 +258,21 @@ export function HomeScreen({ onNavigate }: Props) {
 
   return (
     <div className="px-4 pt-7 pb-8 animate-fade-in space-y-6 overflow-x-hidden">
+      <svg aria-hidden="true" className="absolute w-0 h-0 overflow-hidden pointer-events-none">
+        <defs>
+          <filter id="honeycomb-remove-white-icon-bg" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="
+                1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                -0.333 -0.333 -0.333 0 1
+              "
+            />
+          </filter>
+        </defs>
+      </svg>
       {/* HERO / USER IDENTITY */}
       <section className="relative overflow-hidden rounded-[28px] p-5 bg-[linear-gradient(135deg,#341024_0%,#24101D_48%,#160D17_100%)] shadow-[0_22px_65px_-30px_rgba(232,62,140,0.28)]">
         <div className="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-pink-500/7 blur-3xl pointer-events-none animate-hero-breathe" />
@@ -367,38 +383,44 @@ export function HomeScreen({ onNavigate }: Props) {
           <div
             className="relative overflow-hidden -mx-4 px-4 select-none"
             style={{ touchAction: 'pan-y' }}
-            onTouchStart={(event) => {
-              setTouchStartX(event.touches[0]?.clientX ?? null);
+            onPointerDown={(event) => {
+              if (event.pointerType === 'mouse' && event.button !== 0) return;
+              swipeStartXRef.current = event.clientX;
+              draggedRef.current = false;
               setDragOffset(0);
               setIsDragging(true);
+              event.currentTarget.setPointerCapture?.(event.pointerId);
             }}
-            onTouchMove={(event) => {
-              if (touchStartX === null) return;
-              const currentX = event.touches[0]?.clientX ?? touchStartX;
-              const delta = currentX - touchStartX;
+            onPointerMove={(event) => {
+              const startX = swipeStartXRef.current;
+              if (startX === null) return;
 
-              // Once the gesture is clearly horizontal, stop the browser from
-              // treating it as back/forward navigation and move the track live.
-              if (Math.abs(delta) > 8) event.preventDefault();
-              setDragOffset(delta);
+              const delta = event.clientX - startX;
+              if (Math.abs(delta) > 8) {
+                draggedRef.current = true;
+                event.preventDefault();
+                setDragOffset(delta);
+              }
             }}
-            onTouchEnd={(event) => {
-              if (touchStartX === null) return;
-              const endX = event.changedTouches[0]?.clientX ?? touchStartX;
-              const delta = endX - touchStartX;
+            onPointerUp={(event) => {
+              const startX = swipeStartXRef.current;
+              if (startX === null) return;
 
+              const delta = event.clientX - startX;
               if (Math.abs(delta) > 45) {
                 changeMovie(delta < 0 ? 1 : -1);
               }
 
-              setTouchStartX(null);
+              swipeStartXRef.current = null;
               setDragOffset(0);
               setIsDragging(false);
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
             }}
-            onTouchCancel={() => {
-              setTouchStartX(null);
+            onPointerCancel={(event) => {
+              swipeStartXRef.current = null;
               setDragOffset(0);
               setIsDragging(false);
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
             }}
           >
             <div className="relative h-[344px] w-full overflow-visible">
@@ -418,7 +440,12 @@ export function HomeScreen({ onNavigate }: Props) {
                     <button
                       key={movie.id}
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        if (draggedRef.current) {
+                          event.preventDefault();
+                          draggedRef.current = false;
+                          return;
+                        }
                         if (index !== safeMovieIndex) {
                           setMovieIndex(index);
                           if (!movie.demo) {
@@ -782,14 +809,15 @@ function QuickAction({
       onClick={onClick}
       className="rounded-[18px] bg-gradient-to-b from-[#28131F] to-[#1B0E17] px-2.5 py-3.5 flex flex-col items-center gap-2.5 active:scale-[0.96] transition-transform shadow-[0_10px_24px_-18px_rgba(0,0,0,0.8)]"
     >
-      <span className={'relative w-12 h-12 rounded-[16px] bg-gradient-to-br flex items-center justify-center shadow-lg ring-1 ring-white/8 ' + tones[tone]}>
-        <span className="absolute inset-[2px] rounded-[14px] bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+      <span className={'relative w-12 h-12 rounded-[16px] bg-gradient-to-br flex items-center justify-center shadow-lg ' + tones[tone]}>
+        
         <img
           src={`${import.meta.env.BASE_URL}icon/${iconSrc}`}
           alt=""
           aria-hidden="true"
           draggable={false}
-          className="relative w-10 h-10 object-contain drop-shadow-[0_3px_3px_rgba(0,0,0,0.4)]"
+          className="relative w-[52px] h-[52px] object-contain drop-shadow-[0_4px_5px_rgba(0,0,0,0.45)]"
+          style={{ filter: 'url(#honeycomb-remove-white-icon-bg)' }}
         />
       </span>
       <span className="text-[11px] font-semibold text-white/80">{label}</span>
