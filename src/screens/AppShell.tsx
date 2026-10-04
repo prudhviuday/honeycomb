@@ -48,7 +48,7 @@ export function AppShell() {
         {activeTab === 'profile' && <ProfileScreen />}
       </div>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-strong hairline-t z-50">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-strong hairline-t z-50 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]">
         <div className="flex items-center justify-around px-2 pt-2.5 pb-1 safe-area-inset">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -62,10 +62,10 @@ export function AppShell() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex flex-col items-center -mt-7"
                 >
-                  <div className="w-14 h-14 rounded-full bg-gold flex items-center justify-center shadow-xl shadow-gold/20 transition-transform active:scale-95">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold-bright to-gold flex items-center justify-center shadow-xl shadow-gold/25 transition-transform active:scale-95 ring-4 ring-bg-primary/80">
                     <Icon className="w-6 h-6 text-bg-primary" strokeWidth={2.5} />
                   </div>
-                  <span className="text-[9px] font-medium text-gold mt-1 tracking-wide uppercase">{tab.label}</span>
+                  <span className="text-[9px] font-semibold text-gold-bright mt-1 tracking-[0.14em] uppercase">{tab.label}</span>
                 </button>
               );
             }
