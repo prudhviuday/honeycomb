@@ -5,22 +5,57 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // MapLibre GL JS v6 requires an explicit worker URL when bundled by Vite.
-// ?worker&url makes Vite emit a self-contained production worker chunk.
 setWorkerUrl(workerUrl);
+
 import { honeybadgerMapStyle } from '@/lib/mapStyle';
 import type { MapFeature } from '@/lib/mapData';
+import type { Scan } from '@/types';
 import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
 
 interface Props {
   features: MapFeature[];
+  activityScans: Scan[];
   userLocation: { lng: number; lat: number } | null;
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
+const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
+const ACTIVITY_HEAT = 'honeycomb-activity-heat';
+const ACTIVITY_POINTS = 'honeycomb-activity-points';
 
-export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick }: Props) {
+function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: scans
+      .filter(
+        (scan) =>
+          Number.isFinite(Number(scan.latitude)) &&
+          Number.isFinite(Number(scan.longitude)),
+      )
+      .map((scan, index) => ({
+        type: 'Feature' as const,
+        id: scan.id || `scan-${index}`,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [Number(scan.longitude), Number(scan.latitude)],
+        },
+        properties: {
+          points: 1,
+          scanId: scan.id,
+        },
+      })),
+  };
+}
+
+export function MapLibreMap({
+  features,
+  activityScans,
+  userLocation,
+  onMarkerClick,
+  onMapClick,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -28,12 +63,13 @@ export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick 
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const featuresRef = useRef(features);
+  const activityScansRef = useRef(activityScans);
 
   featuresRef.current = features;
+  activityScansRef.current = activityScans;
   onMarkerClickRef.current = onMarkerClick;
   onMapClickRef.current = onMapClick;
 
-  // Initialize map once
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -50,23 +86,162 @@ export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick 
       touchPitch: false,
     });
 
-    // Pinch-zoom on touch devices without rotation
     map.touchZoomRotate.disableRotation();
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: true }),
+      'bottom-right',
+    );
     map.on('click', () => onMapClickRef.current());
 
     mapRef.current = map;
+
+    const addActivityLayers = () => {
+      if (!map.getSource(ACTIVITY_SOURCE)) {
+        map.addSource(ACTIVITY_SOURCE, {
+          type: 'geojson',
+          data: buildActivityGeoJSON(activityScansRef.current),
+        });
+      }
+
+      if (!map.getLayer(ACTIVITY_HEAT)) {
+        map.addLayer(
+          {
+            id: ACTIVITY_HEAT,
+            type: 'heatmap',
+            source: ACTIVITY_SOURCE,
+            maxzoom: 11,
+            paint: {
+              'heatmap-weight': 1,
+              'heatmap-intensity': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                3,
+                1.2,
+                8,
+                2.4,
+                11,
+                3.2,
+              ],
+              'heatmap-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                3,
+                16,
+                6,
+                28,
+                9,
+                42,
+                11,
+                55,
+              ],
+              'heatmap-opacity': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                3,
+                0.92,
+                10,
+                0.82,
+                11,
+                0.35,
+              ],
+              'heatmap-color': [
+                'interpolate',
+                ['linear'],
+                ['heatmap-density'],
+                0,
+                'rgba(232,62,140,0)',
+                0.15,
+                'rgba(139,92,246,0.28)',
+                0.35,
+                'rgba(232,62,140,0.55)',
+                0.55,
+                'rgba(255,107,74,0.72)',
+                0.75,
+                'rgba(255,200,87,0.88)',
+                1,
+                'rgba(255,255,255,0.98)',
+              ],
+            },
+          },
+          // Put activity beneath map labels when possible.
+          map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id,
+        );
+      }
+
+      if (!map.getLayer(ACTIVITY_POINTS)) {
+        map.addLayer({
+          id: ACTIVITY_POINTS,
+          type: 'circle',
+          source: ACTIVITY_SOURCE,
+          minzoom: 8.5,
+          paint: {
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              8.5,
+              2.5,
+              12,
+              5,
+              16,
+              7,
+            ],
+            'circle-color': '#ff6b4a',
+            'circle-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              8.5,
+              0.2,
+              10,
+              0.5,
+              12,
+              0.82,
+            ],
+            'circle-stroke-color': 'rgba(255,255,255,0.8)',
+            'circle-stroke-width': 1,
+          },
+        });
+      }
+
+      const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
+      source?.setData(buildActivityGeoJSON(activityScansRef.current));
+    };
+
+    map.once('load', addActivityLayers);
+
     return () => {
       map.remove();
       mapRef.current = null;
       userMarkerRef.current = null;
+      hasFitRef.current = false;
     };
   }, []);
 
-  // Campaign/location markers
+  // Update heatmap whenever activity scan data changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
+    const update = () => {
+      const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
+      source?.setData(buildActivityGeoJSON(activityScans));
+    };
+
+    if (map.isStyleLoaded()) {
+      update();
+    } else {
+      map.once('load', update);
+    }
+  }, [activityScans]);
+
+  // Campaign/location markers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
 
     const markers = features.map((feature) =>
       createCampaignMarker(
@@ -86,26 +261,62 @@ export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick 
       ),
     );
 
-    return () => markers.forEach((m) => m.remove());
+    return () => markers.forEach((marker) => marker.remove());
   }, [features]);
 
-  // User marker; fit to markers on first location, recenter on later updates
+  // Fit to activity + campaign points once data is available.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const activityPoints = activityScans
+      .filter(
+        (scan) =>
+          Number.isFinite(Number(scan.latitude)) &&
+          Number.isFinite(Number(scan.longitude)),
+      )
+      .map(
+        (scan) =>
+          [Number(scan.longitude), Number(scan.latitude)] as [number, number],
+      );
+
+    const locationPoints = features.map(
+      (feature) =>
+        [feature.location.longitude, feature.location.latitude] as [number, number],
+    );
+
+    const points = [...activityPoints, ...locationPoints];
+
+    if (userLocation) {
+      points.push([userLocation.lng, userLocation.lat]);
+    }
+
+    if (!points.length || hasFitRef.current) return;
+
+    hasFitRef.current = true;
+    const bounds = points.reduce(
+      (bounds, point) => bounds.extend(point),
+      new maplibregl.LngLatBounds(points[0], points[0]),
+    );
+
+    map.fitBounds(bounds, {
+      padding: 70,
+      maxZoom: 11,
+      duration: 700,
+    });
+  }, [activityScans, features, userLocation]);
+
+  // User marker.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !userLocation) return;
 
     userMarkerRef.current?.remove();
-    userMarkerRef.current = createUserMarker(map, userLocation.lng, userLocation.lat).marker;
-
-    if (!hasFitRef.current) {
-      hasFitRef.current = true;
-      const points: [number, number][] = featuresRef.current.map((f) => [f.location.longitude, f.location.latitude]);
-      points.push([userLocation.lng, userLocation.lat]);
-      const bounds = points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0]));
-      map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 0 });
-    } else {
-      map.easeTo({ center: [userLocation.lng, userLocation.lat], duration: 600 });
-    }
+    userMarkerRef.current = createUserMarker(
+      map,
+      userLocation.lng,
+      userLocation.lat,
+    ).marker;
   }, [userLocation]);
 
   return <div ref={containerRef} className="absolute inset-0" />;
