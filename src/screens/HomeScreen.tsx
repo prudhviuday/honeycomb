@@ -818,7 +818,7 @@ function QuickAction({
       className="rounded-[18px] bg-gradient-to-b from-[#28131F] to-[#1B0E17] px-2.5 py-3.5 flex flex-col items-center gap-2.5 active:scale-[0.96] transition-transform shadow-[0_10px_24px_-18px_rgba(0,0,0,0.8)]"
     >
       <span className={'relative w-12 h-12 rounded-[16px] bg-gradient-to-br flex items-center justify-center shadow-lg ring-1 ring-white/8 ' + tones[tone]}>
-        <span className="absolute inset-[2px] rounded-[14px] bg-gradient-to-br from-white/10 to-transparent pointer-events-none" /><Icon className="relative w-5.5 h-5.5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]" />
+        <span className="absolute inset-[2px] rounded-[14px] bg-gradient-to-br from-white/10 to-transparent pointer-events-none" /><Icon className="relative w-5 h-5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]" />
       </span>
       <span className="text-[11px] font-semibold text-white/80">{label}</span>
     </button>
