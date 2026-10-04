@@ -469,7 +469,8 @@ export function HomeScreen({ onNavigate }: Props) {
               ))}
             </div>
           </div>
-
+        </section>
+      )}
 
       {/* FEATURED HUNT */}
       {nextMission && (
