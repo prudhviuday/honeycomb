@@ -158,10 +158,23 @@ export async function upsertProfile(
    CAMPAIGNS
    ============================================================ */
 
+function mapCampaignRow(row: any): Campaign {
+  const movie = Array.isArray(row.movies) ? row.movies[0] : row.movies;
+
+  return {
+    ...row,
+    // Database schema uses campaigns.name/media_url and a movie_id relation.
+    // The public app uses the normalized Campaign shape below.
+    title: row.name ?? '',
+    movie_title: movie?.title ?? '',
+    hero_image_url: movie?.poster_url ?? row.media_url ?? '',
+  };
+}
+
 export async function getCampaigns(): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*')
+    .select('*, movies(title, poster_url)')
     .eq('active', true)
     .order('created_at', {
       ascending: false,
@@ -169,7 +182,9 @@ export async function getCampaigns(): Promise<Campaign[]> {
 
   if (error) throw error;
 
-  return asAppType<Campaign[]>(data || []);
+  return asAppType<Campaign[]>(
+    (data || []).map(mapCampaignRow)
+  );
 }
 
 export async function getActiveCampaigns(): Promise<Campaign[]> {
@@ -181,13 +196,15 @@ export async function getCampaign(
 ): Promise<Campaign | null> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*')
+    .select('*, movies(title, poster_url)')
     .eq('id', id)
     .maybeSingle();
 
   if (error) throw error;
 
-  return asAppType<Campaign | null>(data);
+  return data
+    ? asAppType<Campaign>(mapCampaignRow(data))
+    : null;
 }
 
 /* ============================================================
