@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// MapLibre GL JS v6 requires an explicit worker URL when bundled by Vite.
+// ?worker&url makes Vite emit a self-contained production worker chunk.
+setWorkerUrl(workerUrl);
 import { honeybadgerMapStyle } from '@/lib/mapStyle';
 import type { MapFeature } from '@/lib/mapData';
 import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
