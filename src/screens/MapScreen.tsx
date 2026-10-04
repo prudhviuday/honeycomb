@@ -14,7 +14,8 @@ interface Props {
 export function MapScreen({ onNavigate }: Props) {
   const { user } = useAuth();
   const { activeCampaign } = useCampaign();
-  const [features, setFeatures] = useState<MapFeature[]>([]);\n  const [activityScans, setActivityScans] = useState<Scan[]>([]);
+  const [features, setFeatures] = useState<MapFeature[]>([]);
+  const [activityScans, setActivityScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -31,7 +32,8 @@ export function MapScreen({ onNavigate }: Props) {
             getInteractionSources(activeCampaign.id),
             getUserScans(activeCampaign.id, user.id),
           ]);
-          setActivityScans(userScans);\n          setFeatures(buildMapFeatures(locs, srcs, userScans));
+          setActivityScans(userScans);
+          setFeatures(buildMapFeatures(locs, srcs, userScans));
         } catch {
           // ignore
         } finally {
