@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crosshair, X, MapPin, Check, Navigation, Zap } from 'lucide-react';
+import { Search, X, MapPin, Check, Navigation, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/lib/api';
@@ -19,6 +19,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [userLoc, setUserLoc] = useState<{ lng: number; lat: number } | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -64,6 +65,11 @@ export function MapScreen({ onNavigate }: Props) {
       }).length
     : 0;
 
+  const q = query.trim().toLowerCase();
+  const visibleFeatures = q
+    ? features.filter((f) => `${f.location.name} ${f.location.address}`.toLowerCase().includes(q))
+    : features;
+
   const handleMarkerClick = (feature: MapFeature) => {
     setSelected(feature);
     setPanelOpen(true);
@@ -94,19 +100,35 @@ export function MapScreen({ onNavigate }: Props) {
     <div className="relative h-screen pb-20 overflow-hidden">
       {/* MapLibre Map — full bleed */}
       <MapLibreMap
-        features={features}
+        features={visibleFeatures}
         userLocation={userLoc}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
 
-      {/* Top overlay — discovery bar */}
+      {/* Top overlay — search */}
       <div className="absolute top-0 left-0 right-0 p-4 z-10 pointer-events-none">
-        <div className="glass rounded-[10px] px-4 py-2.5 inline-flex items-center gap-2 pointer-events-auto">
-          <Crosshair className="w-3.5 h-3.5 text-gold" />
-          <span className="text-xs text-text-primary font-medium">Chennai</span>
-          <span className="text-[10px] text-text-muted">· {scannedCount}/{features.length} explored</span>
+        <div className="glass-strong hairline rounded-full h-11 pl-4 pr-2 flex items-center gap-2.5 pointer-events-auto shadow-lg shadow-black/40">
+          <Search className="w-4 h-4 text-text-muted flex-shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search locations"
+            className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder:text-text-subtle outline-none"
+          />
+          {query ? (
+            <button onClick={() => setQuery('')} className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted">
+              <X className="w-4 h-4" />
+            </button>
+          ) : (
+            <span className="text-[10px] text-text-muted px-2 whitespace-nowrap">
+              {scannedCount}/{features.length} explored
+            </span>
+          )}
         </div>
+        {q && visibleFeatures.length === 0 && (
+          <p className="mt-2 ml-2 text-[11px] text-text-muted">No locations match "{query}"</p>
+        )}
       </div>
 
       {/* Discovery overlay — nearby opportunities */}

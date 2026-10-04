@@ -28,7 +28,11 @@ export function createCampaignMarker(
   onClick: () => void,
 ): Marker {
   const size = categorySize[category] ?? categorySize.venue;
+  // MapLibre positions the root element via `transform`, so the scalable
+  // .hb-marker lives inside a wrapper to keep hover/tap scaling from moving it.
+  const root = document.createElement('div');
   const el = document.createElement('div');
+  root.appendChild(el);
   el.className = 'hb-marker';
   el.style.width = `${size.w}px`;
   el.style.height = `${size.h}px`;
@@ -42,12 +46,12 @@ export function createCampaignMarker(
          <span class="hb-marker-icon">${categoryIcons[category]}</span>
        </div>`;
 
-  el.addEventListener('click', (e) => {
+  root.addEventListener('click', (e) => {
     e.stopPropagation();
     onClick();
   });
 
-  const marker = new Marker({ element: el, anchor: 'center' });
+  const marker = new Marker({ element: root, anchor: 'center' });
   marker.setLngLat([lng, lat]).addTo(map);
   return marker;
 }
