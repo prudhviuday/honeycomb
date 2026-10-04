@@ -5,21 +5,25 @@ export default {
     extend: {
       colors: {
         bg: {
-          primary: '#0B0B0B',
-          secondary: '#111111',
-          surface: '#151515',
-          elevated: '#1A1A1A',
+          primary: '#090A10',
+          secondary: '#0E1018',
+          surface: '#141722',
+          elevated: '#1B1E2B',
         },
         gold: {
-          DEFAULT: '#D4AF37',
-          bright: '#E8B34D',
-          dim: '#9E8327',
+          DEFAULT: '#FFB84A',
+          bright: '#FFD166',
+          dim: '#B97822',
+        },
+        accent: {
+          DEFAULT: '#8B5CF6',
+          bright: '#A78BFA',
         },
         text: {
-          primary: '#F5F1E8',
+          primary: '#F7F4EC',
           white: '#FFFFFF',
-          muted: '#8A8A8A',
-          subtle: '#666666',
+          muted: '#9A9EAE',
+          subtle: '#696E80',
         },
         line: 'rgba(255,255,255,0.08)',
       },
