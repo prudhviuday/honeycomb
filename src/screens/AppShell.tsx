@@ -28,7 +28,7 @@ export function AppShell() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-        <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col max-w-md mx-auto relative">
+    <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col max-w-md mx-auto relative overflow-x-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
         {activeTab === 'home' && <HomeScreen onNavigate={navigate} />}
         {activeTab === 'hunts' && <HuntsScreen onNavigate={navigate} />}
@@ -48,7 +48,7 @@ export function AppShell() {
         {activeTab === 'profile' && <ProfileScreen />}
       </div>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-strong hairline-t z-50 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#170B13]/92 backdrop-blur-2xl border-t border-white/7 z-50 shadow-[0_-18px_48px_rgba(0,0,0,0.38)]">
         <div className="flex items-center justify-around px-2 pt-2.5 pb-1 safe-area-inset">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -62,10 +62,10 @@ export function AppShell() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex flex-col items-center -mt-7"
                 >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold-bright to-gold flex items-center justify-center shadow-xl shadow-gold/25 transition-transform active:scale-95 ring-4 ring-bg-primary/80">
-                    <Icon className="w-6 h-6 text-bg-primary" strokeWidth={2.5} />
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#F04F9B] to-[#FF6B4A] flex items-center justify-center shadow-xl shadow-pink-500/25 transition-transform active:scale-95 ring-4 ring-[#170B13]">
+                    <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
-                  <span className="text-[9px] font-semibold text-gold-bright mt-1 tracking-[0.14em] uppercase">{tab.label}</span>
+                  <span className="text-[9px] font-semibold text-pink-300 mt-1 tracking-[0.14em] uppercase">{tab.label}</span>
                 </button>
               );
             }
@@ -77,13 +77,13 @@ export function AppShell() {
                 className="flex flex-col items-center gap-1 py-1 px-2 transition-all min-w-[52px]"
               >
                 <Icon
-                  className={`w-[22px] h-[22px] transition-colors ${isActive ? 'text-text-primary' : 'text-text-subtle'}`}
+                  className={'w-[22px] h-[22px] transition-colors ' + (isActive ? 'text-white' : 'text-white/28')}
                   strokeWidth={isActive ? 2.2 : 1.8}
                 />
-                <span className={`text-[9px] font-medium tracking-wide uppercase transition-colors ${isActive ? 'text-text-primary' : 'text-text-subtle'}`}>
+                <span className={'text-[9px] font-medium tracking-wide transition-colors ' + (isActive ? 'text-white' : 'text-white/28')}>
                   {tab.label}
                 </span>
-                {isActive && <div className="w-1 h-1 rounded-full bg-gold -mt-0.5" />}
+                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-pink-400 -mt-0.5 shadow-[0_0_8px_rgba(232,62,140,0.7)]" />}
               </button>
             );
           })}
