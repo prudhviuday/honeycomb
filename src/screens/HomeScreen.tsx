@@ -123,16 +123,21 @@ export function HomeScreen({ onNavigate }: Props) {
   }, []);
 
   const movies: MovieCardData[] = [
-    ...campaigns.map((campaign) => ({
-      id: campaign.id,
-      movie_title: campaign.movie_title,
-      title: campaign.title,
-      hero_image_url: campaign.hero_image_url || localMovieImage(campaign.movie_title),
-      demo: false,
-    })),
+    ...campaigns.map((campaign) => {
+      const movieTitle = String(campaign.movie_title ?? '').trim();
+      const campaignTitle = String(campaign.title ?? '').trim();
+
+      return {
+        id: campaign.id,
+        movie_title: movieTitle || campaignTitle || 'Movie',
+        title: campaignTitle || movieTitle || 'Movie Hunt',
+        // Always prefer our verified local poster for the demo movie names.
+        hero_image_url: localMovieImage(movieTitle) || campaign.hero_image_url || undefined,
+        demo: false,
+      };
+    }),
     ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
   ];
-
   useEffect(() => {
     const activeIndex = activeCampaign ? movies.findIndex((movie) => movie.id === activeCampaign.id) : -1;
     if (activeIndex >= 0) setMovieIndex(activeIndex);
@@ -409,9 +414,13 @@ export function HomeScreen({ onNavigate }: Props) {
                         {movie.demo ? 'Preview' : 'Live'}
                       </span>
                     </div>
-                    <div className="absolute left-4 right-4 bottom-4 pointer-events-none">
-                      <p className="font-display text-[27px] text-white leading-none truncate">{movie.movie_title || movie.title || 'Movie'}</p>
-                      <p className="text-[10px] text-white/65 mt-1.5 truncate">{movie.title}</p>
+                    <div className="absolute z-20 left-4 right-4 bottom-4 pointer-events-none">
+                      <p className="font-display text-[27px] text-white leading-none truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+                        {String(movie.movie_title ?? '').trim() || String(movie.title ?? '').trim() || 'Movie'}
+                      </p>
+                      <p className="text-[10px] text-white/70 mt-1.5 truncate drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                        {String(movie.title ?? '').trim() || 'Movie Hunt'}
+                      </p>
                     </div>
                   </button>
                 );
@@ -915,37 +924,42 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
 
 function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const localFallback = localMovieImage(movie.movie_title);
-  const primaryImage = movie.hero_image_url || localFallback;
 
-  // Reset the error state whenever the selected movie/image changes.
+  const movieTitle = String(movie.movie_title ?? '').trim();
+  const localFallback = localMovieImage(movieTitle);
+  const primaryImage = localFallback || movie.hero_image_url || undefined;
+  const displayTitle = movieTitle || String(movie.title ?? '').trim() || 'Movie';
+
   useEffect(() => {
     setImageFailed(false);
-  }, [movie.id, movie.hero_image_url, movie.movie_title]);
+  }, [movie.id, movie.hero_image_url, movie.movie_title, movie.title]);
 
-  // If a remote campaign image fails, try the local poster.
-  // If the local poster itself fails, stop retrying and show the built-in artwork.
   const imageSrc =
-    !imageFailed
+    !imageFailed && primaryImage
       ? primaryImage
-      : localFallback && localFallback !== primaryImage
-        ? localFallback
-        : undefined;
+      : !imageFailed
+        ? undefined
+        : movie.hero_image_url && movie.hero_image_url !== primaryImage
+          ? movie.hero_image_url
+          : undefined;
 
   return (
-    <div className="absolute inset-0 bg-[#1A0D16]">
+    <div className="absolute inset-0 bg-[#1A0D16] z-0">
       {imageSrc ? (
         <img
+          key={imageSrc}
           src={imageSrc}
-          alt={movie.movie_title || 'Movie'}
+          alt={displayTitle}
           draggable={false}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
+          className="absolute inset-0 z-0 w-full h-full object-cover"
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <PosterArtwork movie={movie} isCenter={isCenter} />
+        <div className="absolute inset-0 z-0">
+          <PosterArtwork movie={{ ...movie, movie_title: displayTitle }} isCenter={isCenter} />
+        </div>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#100911]/95 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#100911]/95 via-[#100911]/5 to-transparent pointer-events-none" />
     </div>
   );
 }
