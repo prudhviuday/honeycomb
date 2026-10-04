@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Map, ScanLine, Award, User as UserIcon } from 'lucide-react';
+import { Home, Map, ScanLine, Target, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { AuthScreen } from './AuthScreen';
 import { HomeScreen } from './HomeScreen';
@@ -7,20 +7,23 @@ import { MapScreen } from './MapScreen';
 import { ScannerScreen } from './ScannerScreen';
 import { RewardsScreen } from './RewardsScreen';
 import { ProfileScreen } from './ProfileScreen';
+import { HuntsScreen } from './HuntsScreen';
 
-export type Tab = 'home' | 'map' | 'scanner' | 'rewards' | 'profile';
+export type Tab = 'home' | 'hunts' | 'scanner' | 'map' | 'rewards' | 'profile';
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'map', label: 'Map', icon: Map },
+  { id: 'hunts', label: 'Hunts', icon: Target },
   { id: 'scanner', label: 'Scan', icon: ScanLine },
-  { id: 'rewards', label: 'Rewards', icon: Award },
+  { id: 'map', label: 'Map', icon: Map },
   { id: 'profile', label: 'Profile', icon: UserIcon },
 ];
 
 export function AppShell() {
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('home');
+
+  const navigate = (tab: Tab) => setActiveTab(tab);
 
   if (authLoading) {
     return (
@@ -37,9 +40,10 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col max-w-md mx-auto relative">
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-        {activeTab === 'home' && <HomeScreen />}
-        {activeTab === 'map' && <MapScreen />}
+        {activeTab === 'home' && <HomeScreen onNavigate={navigate} />}
+        {activeTab === 'hunts' && <HuntsScreen onNavigate={navigate} />}
         {activeTab === 'scanner' && <ScannerScreen onScanComplete={() => setActiveTab('home')} />}
+        {activeTab === 'map' && <MapScreen onNavigate={navigate} />}
         {activeTab === 'rewards' && <RewardsScreen />}
         {activeTab === 'profile' && <ProfileScreen />}
       </div>

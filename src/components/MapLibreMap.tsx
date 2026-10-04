@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { honeybadgerMapStyle } from '@/lib/mapStyle';
 import { buildGeoJSON, buildZoneGeoJSON, type MapFeature } from '@/lib/mapData';
@@ -172,10 +172,25 @@ export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick 
       layers: ['marker-halo'],
     });
 
-    // Also check for clusters
-    const clusters = map.queryRenderedFeatures(undefined, {
-      sources: ['campaigns'],
-    }).filter((f) => f.properties?.cluster_id !== undefined);
+    // Also check for clusters — query all features from campaigns source
+    const allFeatures = map.queryRenderedFeatures(undefined, {
+      layers: ['marker-halo'],
+    });
+    // Clusters won't appear in marker-halo (it has a filter), so query source directly
+    const sourceData = map.getSource('campaigns') as maplibregl.GeoJSONSource;
+    const clusters = allFeatures.filter(
+      (f: maplibregl.MapGeoJSONFeature) => f.properties?.cluster_id !== undefined,
+    );
+    // If no clusters found via layer query, try querying the raw source
+    if (clusters.length === 0 && sourceData) {
+      // Check if any clusters exist at current zoom by querying rendered features without layer filter
+      const rendered = map.queryRenderedFeatures(undefined);
+      rendered.forEach((f: maplibregl.MapGeoJSONFeature) => {
+        if (f.properties?.cluster && f.properties?.cluster_id !== undefined) {
+          clusters.push(f);
+        }
+      });
+    }
 
     // Track which marker IDs are currently visible
     const newMarkerIds = new Set<string>();
@@ -207,7 +222,7 @@ export function MapLibreMap({ features, userLocation, onMarkerClick, onMapClick 
         count,
         () => {
           const src = map.getSource('campaigns') as maplibregl.GeoJSONSource;
-          src.getClusterExpansionZoom(cid).then((zoom) => {
+          src.getClusterExpansionZoom(cid).then((zoom: number) => {
             map.easeTo({
               center: geom.coordinates as [number, number],
               zoom: zoom + 0.5,
