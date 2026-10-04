@@ -4,19 +4,21 @@
 
 @layer base {
   :root {
-    --bg-primary: #0B0B0B;
-    --bg-secondary: #111111;
-    --bg-surface: #151515;
-    --bg-elevated: #1A1A1A;
-    --gold: #D4AF37;
-    --gold-bright: #E8B34D;
-    --gold-dim: #9E8327;
-    --text-primary: #F5F1E8;
+    --bg-primary: #090A10;
+    --bg-secondary: #0E1018;
+    --bg-surface: #141722;
+    --bg-elevated: #1B1E2B;
+    --gold: #FFB84A;
+    --gold-bright: #FFD166;
+    --gold-dim: #B97822;
+    --accent: #8B5CF6;
+    --accent-bright: #A78BFA;
+    --text-primary: #F7F4EC;
     --text-white: #FFFFFF;
-    --text-muted: #8A8A8A;
-    --text-subtle: #666666;
-    --line: rgba(255,255,255,0.08);
-    --line-strong: rgba(255,255,255,0.14);
+    --text-muted: #9A9EAE;
+    --text-subtle: #696E80;
+    --line: rgba(255,255,255,0.075);
+    --line-strong: rgba(255,255,255,0.13);
   }
 
   html, body {
@@ -26,6 +28,7 @@
 
   body {
     background-color: var(--bg-primary);
+    background-image: radial-gradient(circle at 80% -10%, rgba(139,92,246,0.10), transparent 32%), radial-gradient(circle at 10% 30%, rgba(255,184,74,0.045), transparent 28%);
     color: var(--text-primary);
     font-family: 'Work Sans', system-ui, sans-serif;
     font-weight: 400;
@@ -63,15 +66,22 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
   .glass {
-    background: rgba(17,17,17,0.72);
+    background: rgba(20,23,34,0.72);
     backdrop-filter: blur(20px) saturate(1.2);
     -webkit-backdrop-filter: blur(20px) saturate(1.2);
   }
 
   .glass-strong {
-    background: rgba(11,11,11,0.88);
+    background: rgba(9,10,16,0.90);
     backdrop-filter: blur(24px) saturate(1.4);
     -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  }
+
+  .accent-text {
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #8B5CF6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   .gold-text {
@@ -82,6 +92,9 @@
   }
 
   .hairline { border: 1px solid var(--line); }
+
+  .glow-gold { box-shadow: 0 0 28px rgba(255,184,74,0.16); }
+  .glow-accent { box-shadow: 0 0 28px rgba(139,92,246,0.16); }
   .hairline-b { border-bottom: 1px solid var(--line); }
   .hairline-t { border-top: 1px solid var(--line); }
   .hairline-r { border-right: 1px solid var(--line); }
