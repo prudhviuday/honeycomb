@@ -794,9 +794,9 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
   const theme =
     isBaasha
       ? { bg: '#5C160F', accent: '#FF8A5B', glow: '#EF4444', shape: 'action' }
-      : title.includes('mouna')
+      : isMounaRagam
         ? { bg: '#421D3A', accent: '#F7A1D4', glow: '#A78BFA', shape: 'romance' }
-        : title.includes('roja')
+        : isRoja
           ? { bg: '#4A1124', accent: '#FF6B7A', glow: '#8B5CF6', shape: 'dramatic' }
           : isGhilli
             ? { bg: '#163752', accent: '#FF9C54', glow: '#31A8FF', shape: 'energy' }
