@@ -15,17 +15,26 @@ export function AuthScreen() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       if (mode === 'signup') {
-        if (!displayName.trim()) throw new Error('Please enter your name');
-        if (password.length < 6) throw new Error('Password must be at least 6 characters');
-        await signUp(email, password, displayName.trim());
+        // Development-friendly: the name is optional. If omitted, Supabase
+        // receives a harmless default and the user can edit it later.
+        const name = displayName.trim() || 'Honeycomb User';
+        await signUp(email.trim(), password, name);
       } else {
-        await signIn(email, password);
+        await signIn(email.trim(), password);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
-      setError(msg.includes('already registered') ? 'This email is already registered. Try logging in.' : msg);
+
+      if (msg.toLowerCase().includes('already registered')) {
+        setError('This email is already registered. Try logging in.');
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        setError('Email confirmation is enabled in Supabase. Disable it for development so signup can enter the app immediately.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -33,13 +42,11 @@ export function AuthScreen() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-6 py-8">
-      {/* Subtle film grain texture */}
       <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
       }} />
 
       <div className="w-full max-w-sm relative z-10">
-        {/* Brand */}
         <div className="flex flex-col items-center mb-12">
           <div className="flex items-baseline gap-1 mb-2">
             <span className="font-display text-3xl text-text-primary tracking-wide">HONEY</span>
@@ -49,12 +56,15 @@ export function AuthScreen() {
           <p className="text-[11px] text-text-muted mt-3 tracking-[0.3em] uppercase">Media</p>
         </div>
 
-        {/* Mode toggle */}
         <div className="flex mb-8 hairline-b">
           {(['signup', 'login'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              type="button"
+              onClick={() => {
+                setMode(m);
+                setError('');
+              }}
               className={`flex-1 py-3 text-sm font-medium tracking-wide transition-all relative ${
                 mode === m ? 'text-text-primary' : 'text-text-subtle'
               }`}
@@ -67,32 +77,37 @@ export function AuthScreen() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
-            <Field label="Display Name" icon={UserIcon}>
+            <Field label="Display Name (optional)" icon={UserIcon}>
               <input
                 type="text"
                 placeholder="Your name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
+                autoComplete="name"
                 className="w-full bg-transparent text-text-primary placeholder:text-text-subtle focus:outline-none text-sm py-3"
               />
             </Field>
           )}
+
           <Field label="Email" icon={Mail}>
             <input
               type="email"
               placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
               className="w-full bg-transparent text-text-primary placeholder:text-text-subtle focus:outline-none text-sm py-3"
             />
           </Field>
+
           <Field label="Password" icon={Lock}>
             <input
               type={showPassword ? 'text' : 'password'}
-              placeholder="Min. 6 characters"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               required
               className="w-full bg-transparent text-text-primary placeholder:text-text-subtle focus:outline-none text-sm py-3 pr-10"
             />
@@ -100,21 +115,20 @@ export function AuthScreen() {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-0 top-1/2 -translate-y-1/2 text-text-subtle hover:text-text-muted"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
             </button>
           </Field>
 
-          {error && (
-            <p className="text-xs text-red-400/90 px-1">{error}</p>
-          )}
+          {error && <p className="text-xs text-red-400/90 px-1">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm tracking-wide rounded-[10px] hover:bg-gold-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-6"
           >
-            {loading ? 'Please wait...' : mode === 'signup' ? 'Create Account' : 'Log In'}
+            {loading ? 'Creating...' : mode === 'signup' ? 'Create Account' : 'Log In'}
           </button>
         </form>
 
