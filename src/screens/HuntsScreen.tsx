@@ -63,12 +63,13 @@ export function HuntsScreen({ onNavigate }: Props) {
       {/* Title */}
       <div className="flex items-end justify-between mb-6 px-1">
         <div>
-          <div><p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your missions</p><h1 className="font-display text-[34px] text-text-primary leading-none tracking-[-0.02em]">HUNTS</h1>
+          <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your missions</p>
+          <h1 className="font-display text-[34px] text-text-primary leading-none tracking-[-0.02em]">HUNTS</h1>
           <p className="text-[11px] text-text-muted mt-1.5">
             {completedMissions}/{totalMissions} completed · {earnedXP}/{totalXP} XP earned
           </p>
         </div>
-        <div className="flex items-center gap-1.5 bg-bg-surface hairline rounded-full px-3 py-1.5">
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-gold/15 to-accent/10 border border-white/8 rounded-full px-3 py-1.5 shadow-[0_8px_25px_rgba(139,92,246,0.10)]">
           <Zap className="w-3.5 h-3.5 text-gold" fill="currentColor" />
           <span className="font-display text-base text-gold">{points}</span>
         </div>
