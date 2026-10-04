@@ -122,7 +122,10 @@ export function HomeScreen({ onNavigate }: Props) {
     );
   }, []);
 
+  // Keep the four verified local movie posters visible while we are
+  // building out live campaign/movie artwork. Live campaigns follow them.
   const movies: MovieCardData[] = [
+    ...DEMO_MOVIES,
     ...campaigns.map((campaign) => {
       const movieTitle = String(campaign.movie_title ?? '').trim();
       const campaignTitle = String(campaign.title ?? '').trim();
@@ -131,12 +134,13 @@ export function HomeScreen({ onNavigate }: Props) {
         id: campaign.id,
         movie_title: movieTitle || campaignTitle || 'Movie',
         title: campaignTitle || movieTitle || 'Movie Hunt',
-        // Always prefer our verified local poster for the demo movie names.
-        hero_image_url: localMovieImage(movieTitle) || campaign.hero_image_url || undefined,
+        hero_image_url:
+          localMovieImage(movieTitle) ||
+          campaign.hero_image_url ||
+          undefined,
         demo: false,
       };
     }),
-    ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
   ];
   useEffect(() => {
     const activeIndex = activeCampaign ? movies.findIndex((movie) => movie.id === activeCampaign.id) : -1;
