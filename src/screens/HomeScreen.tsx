@@ -8,6 +8,7 @@ import { useCampaign } from '@/context/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/lib/api';
 import { calculateDistance } from '@/lib/mapData';
 import type { Tab } from './AppShell';
+import type { Campaign } from '@/types';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
@@ -172,7 +173,7 @@ export function HomeScreen({ onNavigate }: Props) {
               <button
                 key={campaign.id}
                 type="button"
-                onClick={() => !demo && selectCampaign(campaign as typeof activeCampaign)}
+                onClick={() => !demo && selectCampaign(campaign as Campaign)}
                 className={`relative flex-shrink-0 w-[142px] h-[190px] overflow-hidden rounded-[20px] text-left group transition-all duration-300 ${selected ? 'ring-2 ring-gold shadow-[0_12px_35px_rgba(255,184,74,0.22)] scale-[1.01]' : 'ring-1 ring-white/8 opacity-80'}`}
               >
                 <img src={campaign.hero_image_url} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
