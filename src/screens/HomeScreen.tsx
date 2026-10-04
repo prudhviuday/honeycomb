@@ -50,7 +50,7 @@ const localMovieImage = (movieTitle?: string | null) => {
   if (name.includes('anniyan')) return publicMovieAsset('anniyan.jpg');
   if (name.includes('mandaadi')) return publicMovieAsset('mandaadi.jpg');
   if (name.includes('sholay')) return publicMovieAsset('sholay.jpg');
-  return undefined;
+  return publicMovieAsset('movie.jpg');
 };
 
 const DEMO_MOVIES: MovieCardData[] = [
@@ -93,6 +93,8 @@ export function HomeScreen({ onNavigate }: Props) {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [movieIndex, setMovieIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -362,22 +364,47 @@ export function HomeScreen({ onNavigate }: Props) {
 
           <div
             className="relative overflow-hidden -mx-4 px-4 select-none"
-            onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
+            onTouchStart={(event) => {
+              setTouchStartX(event.touches[0]?.clientX ?? null);
+              setDragOffset(0);
+              setIsDragging(true);
+            }}
+            onTouchMove={(event) => {
+              if (touchStartX === null) return;
+              const currentX = event.touches[0]?.clientX ?? touchStartX;
+              setDragOffset(currentX - touchStartX);
+            }}
             onTouchEnd={(event) => {
               if (touchStartX === null) return;
               const endX = event.changedTouches[0]?.clientX ?? touchStartX;
               const delta = endX - touchStartX;
-              if (Math.abs(delta) > 35) changeMovie(delta < 0 ? 1 : -1);
+              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
               setTouchStartX(null);
+              setDragOffset(0);
+              setIsDragging(false);
             }}
-            onMouseDown={(event) => setTouchStartX(event.clientX)}
+            onMouseDown={(event) => {
+              setTouchStartX(event.clientX);
+              setDragOffset(0);
+              setIsDragging(true);
+            }}
+            onMouseMove={(event) => {
+              if (!isDragging || touchStartX === null) return;
+              setDragOffset(event.clientX - touchStartX);
+            }}
             onMouseUp={(event) => {
               if (touchStartX === null) return;
               const delta = event.clientX - touchStartX;
-              if (Math.abs(delta) > 35) changeMovie(delta < 0 ? 1 : -1);
+              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
               setTouchStartX(null);
+              setDragOffset(0);
+              setIsDragging(false);
             }}
-            onMouseLeave={() => setTouchStartX(null)}
+            onMouseLeave={() => {
+              setTouchStartX(null);
+              setDragOffset(0);
+              setIsDragging(false);
+            }}
           >
             <div className="flex items-center justify-center h-[344px] w-full">
               {[-1, 0, 1].map((offset) => {
@@ -407,7 +434,11 @@ export function HomeScreen({ onNavigate }: Props) {
                         ? 'w-[218px] h-[320px] z-20 -mx-5 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
                         : 'w-[152px] h-[272px] z-10 opacity-55 saturate-[0.6] scale-[0.88] -mx-3')
                     }
-                    style={{ touchAction: 'pan-y' }}
+                    style={{
+                      touchAction: 'pan-y',
+                      transform: `translateX(${dragOffset * 0.28}px)`,
+                      transitionDuration: isDragging ? '0ms' : undefined,
+                    }}
                   >
                     <MovieArtwork movie={movie} isCenter={isCenter} />
                     <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
