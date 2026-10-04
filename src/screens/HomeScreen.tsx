@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
   ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
+  Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
@@ -14,12 +15,58 @@ interface Props {
   onNavigate?: (tab: Tab) => void;
 }
 
-// Every 100 points = 1 level (shared by the user card and leaderboard)
+const LEVEL_NAMES = [
+  'Explorer',
+  'Movie Fan',
+  'Super Fan',
+  'Movie Buff',
+  'Cinema Insider',
+  'Legend',
+];
+
 const levelFor = (pts: number) => Math.floor(pts / 100) + 1;
 
-const FALLBACK_HERO = 'https://images.pexels.com/photos/2873486/pexels-photo-2873486.jpeg';
+type CollectionItem = {
+  id: string;
+  kind: 'card' | 'ticket' | 'merch' | 'badge';
+  label: string;
+  sub: string;
+};
 
-type CollectionItem = { id: string; kind: 'card' | 'ticket' | 'merch' | 'badge'; label: string; sub: string };
+type MovieCardData = {
+  id: string;
+  movie_title: string;
+  title: string;
+  hero_image_url?: string | null;
+  demo: boolean;
+};
+
+const DEMO_MOVIES: MovieCardData[] = [
+  {
+    id: 'demo-baasha',
+    movie_title: 'Baasha',
+    title: 'The Mass Hunt',
+    demo: true,
+  },
+  {
+    id: 'demo-mouna-ragam',
+    movie_title: 'Mouna Ragam',
+    title: 'Chennai Love Story',
+    demo: true,
+  },
+  {
+    id: 'demo-roja',
+    movie_title: 'Roja',
+    title: 'The Secret Trail',
+    demo: true,
+  },
+  {
+    id: 'demo-ghilli',
+    movie_title: 'Ghilli',
+    title: 'Race to the Finish',
+    demo: true,
+  },
+];
 
 export function HomeScreen({ onNavigate }: Props) {
   const { user, profile } = useAuth();
@@ -28,6 +75,8 @@ export function HomeScreen({ onNavigate }: Props) {
   const [loading, setLoading] = useState(true);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [movieIndex, setMovieIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -49,7 +98,6 @@ export function HomeScreen({ onNavigate }: Props) {
     refreshCampaignUser();
   }, [refreshCampaignUser]);
 
-  // Optional — only used to show distance on nearest challenges
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -60,8 +108,8 @@ export function HomeScreen({ onNavigate }: Props) {
 
   if (loading || !dashboard || !activeCampaign) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center p-6 bg-bg-primary">
+        <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -82,17 +130,16 @@ export function HomeScreen({ onNavigate }: Props) {
   const missionDone = nextMissionProgress?.progress ?? 0;
 
   const level = levelFor(points);
-  const levelProgress = points % 100;
+  const levelName = LEVEL_NAMES[Math.min(Math.max(level, 1), LEVEL_NAMES.length) - 1];
+  const levelProgress = level >= LEVEL_NAMES.length ? 100 : points % 100;
   const challengesToNextReward = Math.max(0, 3 - (scanCount % 3));
 
-  // Next reward to show in the reward card
   const nextReward = dashboard.rewards
     .filter((r) => r.points_required > points)
     .sort((a, b) => a.points_required - b.points_required)[0];
   const closestReward = nextReward ?? dashboard.rewards[0];
   const claimableCount = dashboard.rewards.filter((r) => points >= r.points_required).length;
 
-  // Nearest challenges — locations with sources that aren't scanned, closest first when location is known
   const scannedSourceIds = new Set(dashboard.scans.map((s) => s.interaction_source_id));
   const nearbyChallenges = dashboard.locations
     .map((loc) => {
@@ -109,7 +156,6 @@ export function HomeScreen({ onNavigate }: Props) {
     .sort((a, b) => (a.km ?? 0) - (b.km ?? 0))
     .slice(0, 6);
 
-  // Collection — derived from claimed rewards, earned badges and scanned locations
   const collection: CollectionItem[] = [
     ...dashboard.rewardClaims
       .filter((c) => c.status !== 'rejected')
@@ -117,14 +163,14 @@ export function HomeScreen({ onNavigate }: Props) {
         const reward = dashboard.rewards.find((r) => r.id === c.reward_id);
         const title = reward?.title ?? 'Reward';
         return {
-          id: `claim-${c.id}`,
+          id: 'claim-' + c.id,
           kind: /ticket/i.test(title) ? ('ticket' as const) : ('merch' as const),
           label: title,
           sub: c.status,
         };
       }),
     ...dashboard.userBadges.map((ub) => ({
-      id: `badge-${ub.id}`,
+      id: 'badge-' + ub.id,
       kind: 'badge' as const,
       label: dashboard.badges.find((b) => b.id === ub.badge_id)?.name ?? 'Badge',
       sub: 'Badge',
@@ -133,188 +179,258 @@ export function HomeScreen({ onNavigate }: Props) {
       .filter((loc) =>
         dashboard.interactionSources.some((s) => s.location_id === loc.id && scannedSourceIds.has(s.id)),
       )
-      .map((loc) => ({ id: `loc-${loc.id}`, kind: 'card' as const, label: loc.name, sub: 'Campaign card' })),
+      .map((loc) => ({ id: 'loc-' + loc.id, kind: 'card' as const, label: loc.name, sub: 'Campaign card' })),
   ];
 
-  // Leaderboard preview — top 3 plus the user's own row if they're outside it
   const top3 = dashboard.leaderboard.slice(0, 3);
   const me = dashboard.myLeaderboardPosition;
   const showMeSeparately = !!me && !top3.some((e) => e.user_id === me.user_id);
 
-  // Badges
   const earnedBadgeIds = new Set(dashboard.userBadges.map((b) => b.badge_id));
   const allBadges = dashboard.badges;
-
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Player';
+  const locationLabel = profile?.city || 'Chennai';
+
+  const movies: MovieCardData[] = [
+    ...campaigns.map((campaign) => ({
+      id: campaign.id,
+      movie_title: campaign.movie_title,
+      title: campaign.title,
+      hero_image_url: campaign.hero_image_url,
+      demo: false,
+    })),
+    ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
+  ];
+
+  const safeMovieIndex = Math.min(movieIndex, Math.max(movies.length - 1, 0));
+
+  useEffect(() => {
+    const activeIndex = movies.findIndex((movie) => movie.id === activeCampaign.id);
+    if (activeIndex >= 0) setMovieIndex(activeIndex);
+  }, [activeCampaign.id, campaigns.length]);
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const changeMovie = (direction: -1 | 1) => {
+    if (movies.length < 2) return;
+    setMovieIndex((current) => {
+      const next = (current + direction + movies.length) % movies.length;
+      const selectedMovie = movies[next];
+      if (!selectedMovie.demo) {
+        const realCampaign = campaigns.find((campaign) => campaign.id === selectedMovie.id);
+        if (realCampaign) selectCampaign(realCampaign as Campaign);
+      }
+      return next;
+    });
+  };
 
   return (
-    <div className="px-4 pt-10 pb-6 animate-fade-in space-y-4">
-      {/* 2. PERSONALIZED USER CARD — strongest element */}
-      <section className="relative overflow-hidden rounded-[26px] p-5 bg-gradient-to-br from-[#211A12] via-bg-surface to-[#0E1018] border border-gold/20 shadow-[0_18px_55px_-20px_rgba(255,184,74,0.32)]">
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+    <div className="px-4 pt-7 pb-8 animate-fade-in space-y-6 overflow-x-hidden">
+      {/* HERO / USER IDENTITY */}
+      <section className="relative overflow-hidden rounded-[28px] p-5 bg-[linear-gradient(135deg,#341024_0%,#24101D_48%,#160D17_100%)] shadow-[0_22px_65px_-28px_rgba(232,62,140,0.55)]">
+        <div className="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-pink-500/15 blur-3xl pointer-events-none animate-hero-breathe" />
+        <div className="absolute -bottom-24 -left-16 w-48 h-48 rounded-full bg-violet-500/12 blur-3xl pointer-events-none" />
+        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/55 to-transparent" />
+        <div className="absolute right-5 top-5 text-white/15">
+          <Film className="w-12 h-12 rotate-12" />
+        </div>
 
-        <div className="relative flex items-center gap-3.5 mb-5">
-          <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-br from-gold-bright to-gold-dim flex-shrink-0">
+        <div className="relative flex items-center gap-3.5">
+          <div className="w-14 h-14 rounded-[18px] p-[2px] bg-gradient-to-br from-pink-300 via-pink-500 to-violet-500 shadow-lg shadow-pink-500/20 flex-shrink-0">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover bg-bg-elevated" />
+              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-[16px] object-cover bg-bg-elevated" />
             ) : (
-              <div className="w-full h-full rounded-full bg-bg-elevated flex items-center justify-center font-display text-xl text-gold">
+              <div className="w-full h-full rounded-[16px] bg-[#24101D] flex items-center justify-center font-display text-xl text-white">
                 {displayName.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="font-display text-[30px] text-text-white leading-none truncate tracking-[-0.02em]">
+          <div className="flex-1 min-w-0 pr-8">
+            <p className="text-[10px] text-pink-300/80 uppercase tracking-[0.2em] font-semibold mb-1">Your movie journey</p>
+            <h1 className="font-display text-[29px] text-text-white leading-none truncate tracking-[-0.02em]">
               Hello, {displayName}!
             </h1>
-            <p className="text-xs text-text-muted flex items-center gap-1 mt-1.5">
-              <MapPin className="w-3.5 h-3.5 text-gold" />
-              {profile?.city || 'Chennai'}
+            <p className="text-xs text-text-muted flex items-center gap-1.5 mt-2">
+              <MapPin className="w-3.5 h-3.5 text-pink-300" />
+              <span>{locationLabel}</span>
             </p>
           </div>
         </div>
 
-        <div className="relative flex items-end justify-between mb-2.5">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 border border-gold/30">
-            <Crown className="w-3.5 h-3.5 text-gold" />
-            <span className="text-xs font-semibold text-gold">Level {level}</span>
+        <div className="relative mt-6 flex items-end justify-between">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/7 backdrop-blur-sm">
+            <Crown className="w-3.5 h-3.5 text-amber-300" />
+            <span className="text-xs font-semibold text-white">{levelName}</span>
+            <span className="text-[10px] text-white/45">LV.{Math.min(level, LEVEL_NAMES.length)}</span>
           </div>
-          <p className="leading-none">
-            <span className="font-display text-3xl text-gold-bright">{points.toLocaleString()}</span>
-            <span className="text-xs text-text-muted ml-1">points</span>
+          <p className="leading-none text-right">
+            <span className="font-display text-[34px] text-[#FFC857]">{points.toLocaleString()}</span>
+            <span className="block text-[9px] text-white/45 uppercase tracking-[0.16em] mt-1">points</span>
           </p>
         </div>
 
-        <div className="relative h-2 bg-white/8 rounded-full overflow-hidden mb-2">
+        <div className="relative mt-4">
+          <div className="h-2.5 bg-black/25 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#E83E8C] via-[#F04F9B] to-[#FF8A5B] rounded-full transition-all duration-700"
+              style={{ width: levelProgress + '%' }}
+            />
+          </div>
           <div
-            className="h-full bg-gradient-to-r from-gold-dim via-gold to-gold-bright rounded-full transition-all duration-500"
-            style={{ width: `${levelProgress}%` }}
-          />
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-700"
+            style={{ left: 'calc(' + levelProgress + '%)' }}
+          >
+            <div className="w-7 h-7 rounded-full bg-[#27101D]/90 flex items-center justify-center shadow-[0_0_18px_rgba(255,106,74,0.42)] animate-flame">
+              <Flame className="w-3.5 h-3.5 text-[#FF8A5B]" fill="currentColor" />
+            </div>
+          </div>
         </div>
-        <p className="relative text-xs text-text-muted mb-4">
-          <span className="text-text-primary font-medium">{challengesToNextReward}</span>{' '}
-          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to next reward
+
+        <p className="relative text-[11px] text-white/55 mt-2.5 mb-5">
+          <span className="text-white font-semibold">{challengesToNextReward}</span>{' '}
+          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to your next reward
         </p>
 
-        {/* Small stat chips */}
-        <div className="relative flex gap-2">
+        <div className="relative grid grid-cols-3 gap-2">
           <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
-          <StatChip icon={Target} value={`${completedMissions}/${totalMissions}`} label="Missions" onClick={() => onNavigate?.('hunts')} />
-          <StatChip icon={Trophy} value={`#${myRank}`} label="Rank" onClick={() => setLeaderboardOpen(true)} />
+          <StatChip icon={Target} value={completedMissions + '/' + totalMissions} label="Missions" onClick={() => onNavigate?.('hunts')} />
+          <StatChip icon={Trophy} value={'#' + myRank} label="Rank" onClick={() => setLeaderboardOpen(true)} />
         </div>
       </section>
 
-
-      {/* 2. CAMPAIGN RAIL — switch between live movie experiences */}
-      <section className="-mx-4">
-        <div className="flex items-end justify-between px-4 mb-3">
+      {/* QUICK ACTIONS */}
+      <section>
+        <div className="flex items-end justify-between px-1 mb-3">
           <div>
-            <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold">Now playing</p>
-            <h2 className="font-display text-2xl text-text-white leading-none mt-1">MOVIE CAMPAIGNS</h2>
+            <p className="text-[10px] text-pink-300 uppercase tracking-[0.22em] font-semibold">Explore</p>
+            <h2 className="font-display text-[25px] text-text-white leading-none mt-1">FIND YOUR NEXT MOVE</h2>
           </div>
-          <span className="text-[10px] text-text-subtle uppercase tracking-wider">{campaigns.length} live</span>
         </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-          {[
-            ...campaigns.map((campaign) => ({ campaign, demo: false })),
-            ...(campaigns.length < 4 ? [
-              { campaign: { id: 'demo-baasha', movie_title: 'Baasha', title: 'The Mass Hunt', hero_image_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=85' }, demo: true },
-              { campaign: { id: 'demo-mouna-ragam', movie_title: 'Mouna Ragam', title: 'Chennai Love Story', hero_image_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=85' }, demo: true },
-              { campaign: { id: 'demo-roja', movie_title: 'Roja', title: 'The Secret Trail', hero_image_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=85' }, demo: true },
-              { campaign: { id: 'demo-ghilli', movie_title: 'Ghilli', title: 'Race to the Finish', hero_image_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=85' }, demo: true },
-            ].slice(0, 4 - campaigns.length) : []),
-          ].map(({ campaign, demo }) => {
-            const selected = campaign.id === activeCampaign.id;
-            return (
-              <button
-                key={campaign.id}
-                type="button"
-                onClick={() => !demo && selectCampaign(campaign as Campaign)}
-                className={`relative flex-shrink-0 w-[142px] h-[190px] overflow-hidden rounded-[20px] text-left group transition-all duration-300 ${selected ? 'ring-2 ring-gold shadow-[0_12px_35px_rgba(255,184,74,0.22)] scale-[1.01]' : 'ring-1 ring-white/8 opacity-80'}`}
-              >
-                <img src={campaign.hero_image_url} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#080910] via-[#080910]/25 to-transparent" />
-                <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10">
-                  <span className={`w-1.5 h-1.5 rounded-full ${demo ? 'bg-accent' : 'bg-emerald-400'}`} />
-                  <span className="text-[8px] text-white/85 uppercase tracking-[0.16em]">{demo ? 'Demo' : 'Live'}</span>
-                </div>
-                <div className="absolute bottom-0 inset-x-0 p-3">
-                  <p className="font-display text-[21px] text-white leading-none">{campaign.movie_title}</p>
-                  <p className="text-[9px] text-white/60 uppercase tracking-wider mt-1 truncate">{campaign.title}</p>
-                </div>
-              </button>
-            );
-          })}
+
+        <div className="grid grid-cols-3 gap-2.5">
+          <QuickAction icon={Film} label="Movies" tone="pink" onClick={() => scrollToSection('movie-campaigns')} />
+          <QuickAction icon={Target} label="Hunt" tone="orange" onClick={() => onNavigate?.('hunts')} />
+          <QuickAction icon={CalendarDays} label="Events" tone="violet" onClick={() => scrollToSection('featured-hunt')} />
+        </div>
+        <div className="grid grid-cols-4 gap-2.5 mt-2.5">
+          <QuickAction icon={ShoppingBag} label="Malls" tone="cyan" onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction icon={Gamepad2} label="Activities" tone="green" onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction icon={Gift} label="Rewards" tone="gold" onClick={() => onNavigate?.('rewards')} />
+          <QuickAction icon={Medal} label="Leaderboard" tone="purple" onClick={() => setLeaderboardOpen(true)} />
         </div>
       </section>
 
-      {/* 1. PERSONALIZED USER CARD — strongest element */}
-      <section className="relative overflow-hidden rounded-[26px] p-5 bg-gradient-to-br from-[#211A12] via-bg-surface to-[#0E1018] border border-gold/20 shadow-[0_18px_55px_-20px_rgba(255,184,74,0.32)]">
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+      {/* MOVIE CAROUSEL */}
+      {movies.length > 0 && (
+        <section id="movie-campaigns" className="scroll-mt-4">
+          <div className="flex items-end justify-between px-1 mb-3">
+            <div>
+              <p className="text-[10px] text-pink-300 uppercase tracking-[0.24em] font-semibold">Now playing</p>
+              <h2 className="font-display text-[28px] text-text-white leading-none mt-1">MOVIES YOU CAN HUNT</h2>
+            </div>
+            <span className="text-[10px] text-white/38 uppercase tracking-[0.16em]">
+              {campaigns.length} live
+            </span>
+          </div>
 
-        <div className="relative flex items-center gap-3.5 mb-5">
-          <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-br from-gold-bright to-gold-dim flex-shrink-0">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover bg-bg-elevated" />
-            ) : (
-              <div className="w-full h-full rounded-full bg-bg-elevated flex items-center justify-center font-display text-xl text-gold">
-                {displayName.charAt(0).toUpperCase()}
+          <div
+            className="relative overflow-hidden -mx-4 px-4"
+            onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
+            onTouchEnd={(event) => {
+              if (touchStartX === null) return;
+              const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+              const delta = endX - touchStartX;
+              if (Math.abs(delta) > 45) changeMovie(delta < 0 ? 1 : -1);
+              setTouchStartX(null);
+            }}
+          >
+            <div className="flex items-center justify-center h-[344px] w-full">
+              {[-1, 0, 1].map((offset) => {
+                const index = (safeMovieIndex + offset + movies.length) % movies.length;
+                const movie = movies[index];
+                const isCenter = offset === 0;
+
+                return (
+                  <button
+                    key={movie.id + '-' + offset}
+                    type="button"
+                    onClick={() => {
+                      if (offset !== 0) {
+                        setMovieIndex(index);
+                        if (!movie.demo) {
+                          const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                          if (realCampaign) selectCampaign(realCampaign as Campaign);
+                        }
+                      } else if (!movie.demo) {
+                        const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                        if (realCampaign) selectCampaign(realCampaign as Campaign);
+                      }
+                    }}
+                    className={
+                      'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
+                      (isCenter
+                        ? 'w-[218px] h-[320px] z-20 -mx-5 shadow-[0_22px_60px_-18px_rgba(232,62,140,0.58)]'
+                        : 'w-[152px] h-[272px] z-10 opacity-55 saturate-[0.55] scale-[0.88] -mx-3')
+                    }
+                  >
+                    <MovieArtwork movie={movie} isCenter={isCenter} />
+                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent" />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md">
+                      <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-[#A78BFA]' : 'bg-[#45D483]')} />
+                      <span className="text-[8px] text-white/85 uppercase tracking-[0.15em]">
+                        {movie.demo ? 'Preview' : 'Live'}
+                      </span>
+                    </div>
+                    <div className="absolute left-4 right-4 bottom-4">
+                      <p className="font-display text-[27px] text-white leading-none truncate">{movie.movie_title}</p>
+                      <p className="text-[10px] text-white/65 mt-1.5 truncate">{movie.title}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {movies.length > 1 && (
+              <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5">
+                {movies.map((movie, index) => (
+                  <button
+                    key={movie.id}
+                    type="button"
+                    aria-label={'Show ' + movie.movie_title}
+                    onClick={() => {
+                      setMovieIndex(index);
+                      if (!movie.demo) {
+                        const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
+                        if (realCampaign) selectCampaign(realCampaign as Campaign);
+                      }
+                    }}
+                    className={
+                      'rounded-full transition-all duration-300 ' +
+                      (index === safeMovieIndex ? 'w-5 h-1.5 bg-pink-400' : 'w-1.5 h-1.5 bg-white/25')
+                    }
+                  />
+                ))}
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="font-display text-[30px] text-text-white leading-none truncate tracking-[-0.02em]">
-              Hello, {displayName}!
-            </h1>
-            <p className="text-xs text-text-muted flex items-center gap-1 mt-1.5">
-              <MapPin className="w-3.5 h-3.5 text-gold" />
-              {profile?.city || 'Chennai'}
-            </p>
-          </div>
-        </div>
+        </section>
+      )}
 
-        <div className="relative flex items-end justify-between mb-2.5">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 border border-gold/30">
-            <Crown className="w-3.5 h-3.5 text-gold" />
-            <span className="text-xs font-semibold text-gold">Level {level}</span>
-          </div>
-          <p className="leading-none">
-            <span className="font-display text-3xl text-gold-bright">{points.toLocaleString()}</span>
-            <span className="text-xs text-text-muted ml-1">points</span>
-          </p>
-        </div>
-
-        <div className="relative h-2 bg-white/8 rounded-full overflow-hidden mb-2">
-          <div
-            className="h-full bg-gradient-to-r from-gold-dim via-gold to-gold-bright rounded-full transition-all duration-500"
-            style={{ width: `${levelProgress}%` }}
-          />
-        </div>
-        <p className="relative text-xs text-text-muted mb-4">
-          <span className="text-text-primary font-medium">{challengesToNextReward}</span>{' '}
-          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to next reward
-        </p>
-
-        {/* Small stat chips */}
-        <div className="relative flex gap-2">
-          <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
-          <StatChip icon={Target} value={`${completedMissions}/${totalMissions}`} label="Missions" onClick={() => onNavigate?.('hunts')} />
-          <StatChip icon={Trophy} value={`#${myRank}`} label="Rank" onClick={() => setLeaderboardOpen(true)} />
-        </div>
-      </section>
-
-      {/* 3. REWARD / COUPON */}
+      {/* REWARD STRIP */}
       {dashboard.rewards.length > 0 && (
         <button
           onClick={() => onNavigate?.('rewards')}
-          className="w-full flex items-center justify-between rounded-full px-4 py-2.5 bg-gold/10 border border-gold/25 active:scale-[0.99] transition-transform"
+          className="w-full flex items-center justify-between rounded-[18px] px-4 py-3 bg-gradient-to-r from-[#3A191C] to-[#25111C] shadow-[0_10px_28px_-18px_rgba(255,200,87,0.45)] active:scale-[0.99] transition-transform"
         >
           <span className="flex items-center gap-2 text-xs text-text-primary">
-            <Ticket className="w-4 h-4 text-gold" />
+            <Gift className="w-4 h-4 text-[#FFC857]" />
             <span className="font-semibold">{dashboard.rewards.length} rewards</span>
             <span className="text-text-muted">· {claimableCount} ready</span>
           </span>
-          <span className="text-xs font-semibold text-gold flex items-center gap-0.5">
+          <span className="text-xs font-semibold text-[#FFC857] flex items-center gap-0.5">
             Get it <ChevronRight className="w-3.5 h-3.5" />
           </span>
         </button>
@@ -323,11 +439,12 @@ export function HomeScreen({ onNavigate }: Props) {
       {closestReward && (
         <section
           onClick={() => onNavigate?.('rewards')}
-          className="relative overflow-hidden rounded-[20px] bg-bg-surface hairline cursor-pointer active:scale-[0.99] transition-transform"
+          className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#24111C] via-[#1D1019] to-[#160C15] shadow-[0_16px_42px_-26px_rgba(232,62,140,0.45)] cursor-pointer active:scale-[0.99] transition-transform"
         >
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-pink-400/60 via-amber-300/70 to-transparent" />
           <div className="flex">
             <div className="flex-1 p-5 pr-3">
-              <p className="text-[10px] text-gold uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1.5">
+              <p className="text-[10px] text-[#FFC857] uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1.5">
                 <Gift className="w-3.5 h-3.5" />
                 {closestReward.reward_type === 'lucky_draw' ? 'Lucky Draw' : 'Guaranteed Reward'}
               </p>
@@ -340,8 +457,8 @@ export function HomeScreen({ onNavigate }: Props) {
               </p>
               <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gold rounded-full"
-                  style={{ width: `${Math.min((points / Math.max(closestReward.points_required, 1)) * 100, 100)}%` }}
+                  className="h-full bg-gradient-to-r from-[#FFC857] to-[#FF8A5B] rounded-full"
+                  style={{ width: Math.min((points / Math.max(closestReward.points_required, 1)) * 100, 100) + '%' }}
                 />
               </div>
             </div>
@@ -349,15 +466,15 @@ export function HomeScreen({ onNavigate }: Props) {
               {closestReward.image_url ? (
                 <img src={closestReward.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-gold/25 to-gold/5 flex items-center justify-center">
-                  <Gift className="w-10 h-10 text-gold" />
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/25 to-violet-500/10 flex items-center justify-center">
+                  <Gift className="w-10 h-10 text-pink-200" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-r from-bg-surface to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#24111C] to-transparent" />
             </div>
           </div>
           <div className="px-5 pb-4 flex justify-end">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-pink-300">
               {points >= closestReward.points_required ? 'Claim now' : 'Continue Hunt'}
               <ChevronRight className="w-4 h-4" />
             </span>
@@ -365,93 +482,109 @@ export function HomeScreen({ onNavigate }: Props) {
         </section>
       )}
 
-      {/* 4. FEATURED HUNT — hero gameplay card */}
+      {/* FEATURED HUNT */}
       {nextMission && (
-        <section className="rounded-[22px] overflow-hidden bg-bg-surface hairline">
+        <section id="featured-hunt" className="rounded-[24px] overflow-hidden bg-gradient-to-br from-[#29101D] to-[#190D17] shadow-[0_18px_48px_-28px_rgba(139,92,246,0.5)] scroll-mt-4">
           <div className="relative h-52">
-            <img
-              src={activeCampaign.hero_image_url || FALLBACK_HERO}
-              alt={activeCampaign.movie_title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-bg-surface/30 to-transparent" />
-            <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full glass">
-              <Flame className="w-3.5 h-3.5 text-gold" />
-              <span className="text-[10px] text-gold uppercase tracking-[0.18em] font-medium">Active Hunt</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 via-violet-700/10 to-orange-500/10" />
+            {activeCampaign.hero_image_url ? (
+              <img
+                src={activeCampaign.hero_image_url}
+                alt={activeCampaign.movie_title}
+                className="w-full h-full object-cover opacity-85"
+              />
+            ) : (
+              <PosterArtwork
+                movie={{
+                  id: activeCampaign.id,
+                  movie_title: activeCampaign.movie_title,
+                  title: activeCampaign.title,
+                  hero_image_url: null,
+                  demo: false,
+                }}
+                isCenter
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#160C15] via-[#160C15]/25 to-transparent" />
+            <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-md">
+              <Flame className="w-3.5 h-3.5 text-[#FF8A5B]" />
+              <span className="text-[10px] text-white/90 uppercase tracking-[0.18em] font-medium">Active Hunt</span>
             </div>
-            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gold text-bg-primary font-display text-base tabular-nums">
+            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-[#FFC857] text-[#25110E] font-display text-base tabular-nums">
               {missionDone}/{nextMission.target_count}
             </div>
           </div>
 
-          <div className="px-5 pb-5 -mt-6 relative">
+          <div className="px-5 pb-5 -mt-5 relative">
             <h2 className="font-display text-[26px] text-text-white leading-tight mb-1 flex items-center gap-2">
-              {nextMission.title} <Clapperboard className="w-5 h-5 text-gold" />
+              {nextMission.title} <Clapperboard className="w-5 h-5 text-pink-300" />
             </h2>
             <p className="text-sm text-text-muted line-clamp-2 mb-2">{nextMission.description}</p>
             <p className="text-xs text-text-subtle flex items-center gap-1 mb-4">
-              <MapPin className="w-3.5 h-3.5" /> {profile?.city || 'Chennai'} · {activeCampaign.movie_title}
+              <MapPin className="w-3.5 h-3.5" /> {locationLabel} · {activeCampaign.movie_title}
             </p>
 
             <div className="flex items-center gap-3 mb-4">
               <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gold rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min((missionDone / Math.max(nextMission.target_count, 1)) * 100, 100)}%` }}
+                  className="h-full bg-gradient-to-r from-[#E83E8C] to-[#FF8A5B] rounded-full transition-all duration-500"
+                  style={{ width: Math.min((missionDone / Math.max(nextMission.target_count, 1)) * 100, 100) + '%' }}
                 />
               </div>
               <span className="text-xs text-text-primary font-medium tabular-nums">
-                {missionDone} / {nextMission.target_count} completed
+                {missionDone} / {nextMission.target_count}
               </span>
             </div>
 
             <button
               onClick={() => onNavigate?.('scanner')}
-              className="w-full py-3.5 bg-gold text-bg-primary rounded-[12px] font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold/20 active:scale-[0.98] transition-transform"
+              className="w-full py-3.5 bg-gradient-to-r from-[#E83E8C] to-[#FF6B4A] text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-transform"
             >
               {missionDone ? 'Continue Hunt' : 'Start Hunt'}
-              <span className="text-bg-primary/60">· +{nextMission.points_reward} XP</span>
+              <span className="text-white/60">· +{nextMission.points_reward} XP</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </section>
       )}
 
-      {/* 5. NEAREST CHALLENGES — location discovery */}
+      {/* NEAREST CHALLENGES */}
       {nearbyChallenges.length > 0 && (
-        <Section title="Nearest challenges" onMore={() => onNavigate?.('map')}>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
-            {nearbyChallenges.map(({ loc, totalPts, km }) => (
-              <button
-                key={loc.id}
-                onClick={() => onNavigate?.('map')}
-                className="flex-shrink-0 w-44 text-left bg-bg-surface hairline rounded-[16px] p-4 active:scale-[0.97] transition-transform"
-              >
-                <div className="w-9 h-9 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center mb-3">
-                  <Target className="w-4 h-4 text-gold" />
-                </div>
-                <p className="text-sm font-semibold text-text-primary truncate">{loc.name}</p>
-                <p className="text-[11px] text-text-muted truncate mb-3 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 flex-shrink-0" /> {loc.address}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-gold/15 text-[10px] font-semibold text-gold">
-                    +{totalPts} pts
-                  </span>
-                  {km !== null && (
-                    <span className="px-2 py-0.5 rounded-full bg-white/6 text-[10px] text-text-muted flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {km < 2 ? `${Math.max(1, Math.round(km * 12))} min` : `${km.toFixed(1)} km`}
+        <section id="nearby-challenges" className="scroll-mt-4">
+          <Section title="Around you" onMore={() => onNavigate?.('map')}>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+              {nearbyChallenges.map(({ loc, totalPts, km }) => (
+                <button
+                  key={loc.id}
+                  onClick={() => onNavigate?.('map')}
+                  className="flex-shrink-0 w-44 text-left bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] p-4 shadow-[0_12px_30px_-24px_rgba(232,62,140,0.55)] active:scale-[0.97] transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-cyan-300/20 to-violet-500/10 flex items-center justify-center mb-3">
+                    <MapPinned className="w-4.5 h-4.5 text-cyan-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-text-primary truncate">{loc.name}</p>
+                  <p className="text-[11px] text-text-muted truncate mb-3 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 flex-shrink-0" /> {loc.address}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full bg-pink-500/12 text-[10px] font-semibold text-pink-300">
+                      +{totalPts} pts
                     </span>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </Section>
+                    {km !== null && (
+                      <span className="px-2 py-0.5 rounded-full bg-white/6 text-[10px] text-text-muted flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {km < 2 ? Math.max(1, Math.round(km * 12)) + ' min' : km.toFixed(1) + ' km'}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Section>
+        </section>
       )}
 
-      {/* 6. MY COLLECTION */}
+      {/* MY COLLECTION */}
       <Section title="My collection" onMore={() => onNavigate?.('profile')}>
         {collection.length > 0 ? (
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
@@ -462,12 +595,12 @@ export function HomeScreen({ onNavigate }: Props) {
         ) : (
           <button
             onClick={() => onNavigate?.('scanner')}
-            className="w-full bg-bg-surface hairline rounded-[16px] p-4 flex items-center gap-3 text-left"
+            className="w-full bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
           >
             <div className="flex -space-x-2">
               {[Clapperboard, Ticket, Star].map((Icon, i) => (
-                <div key={i} className="w-9 h-9 rounded-[10px] bg-bg-elevated border border-white/8 flex items-center justify-center">
-                  <Icon className="w-4 h-4 text-text-subtle" />
+                <div key={i} className="w-9 h-9 rounded-[11px] bg-white/5 flex items-center justify-center shadow-lg">
+                  <Icon className="w-4 h-4 text-white/45" />
                 </div>
               ))}
             </div>
@@ -477,12 +610,12 @@ export function HomeScreen({ onNavigate }: Props) {
         )}
       </Section>
 
-      {/* 7. LEADERBOARD PREVIEW */}
+      {/* LEADERBOARD PREVIEW */}
       {dashboard.leaderboard.length > 0 && (
         <Section title="Leaderboard" onMore={() => setLeaderboardOpen(true)}>
           <button
             onClick={() => setLeaderboardOpen(true)}
-            className="w-full text-left bg-bg-surface hairline rounded-[16px] px-4 py-1.5"
+            className="w-full text-left bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] px-4 py-1.5"
           >
             {top3.map((entry) => (
               <LeaderRow key={entry.id} entry={entry} isMe={entry.user_id === user?.id} />
@@ -497,7 +630,7 @@ export function HomeScreen({ onNavigate }: Props) {
         </Section>
       )}
 
-      {/* 8. ACHIEVEMENTS */}
+      {/* ACHIEVEMENTS */}
       {allBadges.length > 0 && (
         <Section title="Achievements" onMore={() => onNavigate?.('profile')}>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
@@ -506,19 +639,20 @@ export function HomeScreen({ onNavigate }: Props) {
               return (
                 <div key={badge.id} className="flex-shrink-0 w-[68px] flex flex-col items-center">
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center mb-1.5 ${
-                      earned
-                        ? 'bg-gradient-to-br from-gold/30 to-gold/5 border border-gold/40 shadow-[0_0_16px_rgba(212,175,55,0.25)]'
-                        : 'bg-bg-surface border border-white/8'
-                    }`}
+                    className={
+                      'w-14 h-14 rounded-full flex items-center justify-center mb-1.5 ' +
+                      (earned
+                        ? 'bg-gradient-to-br from-pink-500/25 to-violet-500/10 shadow-[0_0_18px_rgba(232,62,140,0.22)]'
+                        : 'bg-white/5')
+                    }
                   >
                     {earned ? (
-                      <Star className="w-6 h-6 text-gold" fill="currentColor" />
+                      <Star className="w-6 h-6 text-pink-300" fill="currentColor" />
                     ) : (
                       <Award className="w-6 h-6 text-text-subtle" />
                     )}
                   </div>
-                  <p className={`text-[10px] text-center leading-tight ${earned ? 'text-text-primary' : 'text-text-subtle'}`}>
+                  <p className={'text-[10px] text-center leading-tight ' + (earned ? 'text-text-primary' : 'text-text-subtle')}>
                     {badge.name}
                   </p>
                 </div>
@@ -528,22 +662,22 @@ export function HomeScreen({ onNavigate }: Props) {
         </Section>
       )}
 
-      {/* Recent activity */}
+      {/* RECENT ACTIVITY */}
       {dashboard.scans.length > 0 && (
         <Section title="Recent activity">
-          <div className="bg-bg-surface hairline rounded-[16px] px-4 py-1.5">
+          <div className="bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] px-4 py-1.5">
             {dashboard.scans.slice(0, 4).map((scan) => {
               const source = dashboard.interactionSources.find((s) => s.id === scan.interaction_source_id);
               return (
-                <div key={scan.id} className="flex items-center gap-3 py-2.5 hairline-b last:border-b-0">
-                  <ScanLine className="w-4 h-4 text-gold flex-shrink-0" />
+                <div key={scan.id} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-b-0">
+                  <ScanLine className="w-4 h-4 text-pink-300 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-primary truncate">{source?.name ?? 'QR Scan'}</p>
                     <p className="text-[11px] text-text-subtle">
                       {new Date(scan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
-                  <span className="font-display text-base text-gold">+{scan.points_awarded}</span>
+                  <span className="font-display text-base text-pink-300">+{scan.points_awarded}</span>
                 </div>
               );
             })}
@@ -551,26 +685,25 @@ export function HomeScreen({ onNavigate }: Props) {
         </Section>
       )}
 
-      {/* Brand footer */}
-      <div className="flex items-baseline justify-center gap-0.5 pt-4">
-        <span className="font-display text-xs text-text-subtle">HONEY</span>
-        <span className="font-display text-xs text-gold/60">BADGER</span>
-        <span className="text-[9px] text-text-subtle uppercase tracking-[0.2em] ml-1">Media</span>
+      <div className="flex items-baseline justify-center gap-0.5 pt-2">
+        <span className="font-display text-xs text-white/20">HONEY</span>
+        <span className="font-display text-xs text-pink-300/45">BADGER</span>
+        <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] ml-1">Media</span>
       </div>
 
-      {/* Full leaderboard sheet */}
+      {/* LEADERBOARD SHEET */}
       {leaderboardOpen && (
         <div className="fixed inset-0 z-[60] max-w-md mx-auto" onClick={() => setLeaderboardOpen(false)}>
-          <div className="absolute inset-0 bg-black/50 animate-fade-in" />
+          <div className="absolute inset-0 bg-[#0C050B]/75 backdrop-blur-sm animate-fade-in" />
           <div
-            className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[20px] hairline-t animate-slide-up max-h-[80%] flex flex-col"
+            className="absolute bottom-0 left-0 right-0 bg-[#1A0C15] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pt-3 pb-3 px-5">
               <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-xl text-text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-gold" /> Leaderboard
+                  <Trophy className="w-5 h-5 text-[#FFC857]" /> Leaderboard
                 </h3>
                 <button onClick={() => setLeaderboardOpen(false)} className="text-text-subtle hover:text-text-primary">
                   <X className="w-5 h-5" />
@@ -589,22 +722,6 @@ export function HomeScreen({ onNavigate }: Props) {
   );
 }
 
-function Section({ title, onMore, children }: { title: string; onMore?: () => void; children: ReactNode }) {
-  return (
-    <section className="pt-2">
-      <div className="flex items-center justify-between mb-2.5 px-1">
-        <h3 className="font-display text-lg text-text-primary tracking-wide">{title}</h3>
-        {onMore && (
-          <button onClick={onMore} className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-text-muted">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 function StatChip({
   icon: Icon,
   value,
@@ -618,31 +735,168 @@ function StatChip({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex-1 flex items-center gap-2 rounded-[12px] bg-black/30 border border-white/6 px-2.5 py-2 active:scale-[0.97] transition-transform"
+      className="flex items-center gap-2 rounded-[15px] bg-white/5 px-2.5 py-2.5 active:scale-[0.97] transition-transform"
     >
-      <Icon className="w-3.5 h-3.5 text-gold flex-shrink-0" />
-      <span className="text-left leading-none">
+      <div className="w-7 h-7 rounded-[9px] bg-gradient-to-br from-pink-500/22 to-violet-500/10 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-pink-200" />
+      </div>
+      <span className="text-left leading-none min-w-0">
         <span className="block font-display text-sm text-text-primary">{value}</span>
-        <span className="block text-[9px] text-text-subtle uppercase tracking-wide mt-0.5">{label}</span>
+        <span className="block text-[9px] text-white/38 uppercase tracking-wide mt-0.5">{label}</span>
       </span>
     </button>
   );
 }
 
+function QuickAction({
+  icon: Icon,
+  label,
+  tone,
+  onClick,
+}: {
+  icon: typeof Film;
+  label: string;
+  tone: 'pink' | 'orange' | 'violet' | 'cyan' | 'green' | 'gold' | 'purple';
+  onClick: () => void;
+}) {
+  const tones = {
+    pink: 'from-pink-400/25 to-pink-600/5 text-pink-200 shadow-pink-500/10',
+    orange: 'from-orange-400/25 to-orange-600/5 text-orange-200 shadow-orange-500/10',
+    violet: 'from-violet-400/25 to-violet-600/5 text-violet-200 shadow-violet-500/10',
+    cyan: 'from-cyan-300/25 to-cyan-500/5 text-cyan-200 shadow-cyan-500/10',
+    green: 'from-emerald-400/25 to-emerald-600/5 text-emerald-200 shadow-emerald-500/10',
+    gold: 'from-amber-300/25 to-amber-500/5 text-amber-200 shadow-amber-500/10',
+    purple: 'from-fuchsia-400/25 to-violet-500/5 text-fuchsia-200 shadow-fuchsia-500/10',
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-[18px] bg-[#21111A] px-2.5 py-3.5 flex flex-col items-center gap-2.5 active:scale-[0.96] transition-transform shadow-[0_10px_24px_-18px_rgba(0,0,0,0.8)]"
+    >
+      <span className={'w-11 h-11 rounded-[14px] bg-gradient-to-br flex items-center justify-center shadow-lg ' + tones[tone]}>
+        <Icon className="w-5 h-5" />
+      </span>
+      <span className="text-[11px] font-semibold text-white/80">{label}</span>
+    </button>
+  );
+}
+
+function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
+  const title = movie.movie_title.toLowerCase();
+  const theme =
+    title.includes('baasha')
+      ? { bg: '#5C160F', accent: '#FF8A5B', glow: '#EF4444', shape: 'action' }
+      : title.includes('mouna')
+        ? { bg: '#421D3A', accent: '#F7A1D4', glow: '#A78BFA', shape: 'romance' }
+        : title.includes('roja')
+          ? { bg: '#4A1124', accent: '#FF6B7A', glow: '#8B5CF6', shape: 'dramatic' }
+          : title.includes('ghilli')
+            ? { bg: '#163752', accent: '#FF9C54', glow: '#31A8FF', shape: 'energy' }
+            : { bg: '#31152B', accent: '#F04F9B', glow: '#8B5CF6', shape: 'default' };
+
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ background: 'linear-gradient(155deg,' + theme.bg + ' 0%, #120B12 100%)' }}
+    >
+      <div
+        className="absolute w-40 h-40 rounded-full blur-3xl opacity-70"
+        style={{ background: theme.glow, top: '-20%', right: '-18%' }}
+      />
+      <div
+        className="absolute w-52 h-52 rounded-full blur-3xl opacity-25"
+        style={{ background: theme.accent, bottom: '-25%', left: '-18%' }}
+      />
+      {theme.shape === 'action' && (
+        <>
+          <div className="absolute w-28 h-60 rotate-[25deg] -right-8 top-8 bg-[#F97316]/20 blur-xl" />
+          <div className="absolute left-[-25%] top-[28%] w-[150%] h-1 bg-[#FF8A5B]/60 rotate-[-16deg] blur-[1px]" />
+          <div className="absolute left-[15%] top-[42%] w-20 h-20 rounded-full bg-black/40 border border-[#FF8A5B]/35" />
+        </>
+      )}
+      {theme.shape === 'romance' && (
+        <>
+          <div className="absolute w-36 h-36 rounded-full border border-pink-200/20 left-[12%] top-[24%]" />
+          <div className="absolute w-48 h-48 rounded-full border border-violet-300/15 left-[4%] top-[18%]" />
+          <div className="absolute left-[18%] right-[18%] bottom-[24%] h-1 rounded-full bg-pink-200/30 blur-[1px]" />
+        </>
+      )}
+      {theme.shape === 'dramatic' && (
+        <>
+          <div className="absolute inset-x-[-20%] top-[30%] h-40 bg-gradient-to-b from-transparent via-red-500/15 to-transparent rotate-[-14deg]" />
+          <div className="absolute w-32 h-32 rounded-full border border-rose-300/20 right-[8%] top-[25%]" />
+        </>
+      )}
+      {theme.shape === 'energy' && (
+        <>
+          <div className="absolute w-56 h-56 border-[18px] border-cyan-300/10 rounded-full -right-20 top-4" />
+          <div className="absolute left-[-8%] top-[26%] w-[120%] h-24 bg-gradient-to-r from-transparent via-blue-400/20 to-transparent rotate-[22deg] blur-sm" />
+          <div className="absolute right-[15%] top-[44%] w-3 h-16 bg-orange-300/60 rotate-[26deg] shadow-[0_0_18px_rgba(255,156,84,0.6)]" />
+        </>
+      )}
+      {theme.shape === 'default' && (
+        <div className="absolute inset-8 rounded-[28px] border border-white/10" />
+      )}
+
+      <svg viewBox="0 0 100 140" className="absolute inset-0 w-full h-full opacity-70">
+        <defs>
+          <linearGradient id={'posterFade-' + movie.id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="68%" stopColor="rgba(8,5,9,0.2)" />
+            <stop offset="100%" stopColor="rgba(8,5,9,0.92)" />
+          </linearGradient>
+        </defs>
+        <path d="M6 108 C 20 86, 36 91, 49 106 C 64 121, 78 84, 94 70 L 100 140 L 0 140 Z" fill="rgba(5,5,8,0.35)" />
+        <rect width="100" height="140" fill={'url(#posterFade-' + movie.id + ')'} />
+      </svg>
+
+      <div className="absolute left-4 right-4 bottom-16">
+        <div className="text-[9px] uppercase tracking-[0.22em] font-semibold" style={{ color: theme.accent }}>
+          Honeycomb Original
+        </div>
+        <div className={'font-display text-white leading-[0.9] mt-1 ' + (isCenter ? 'text-[33px]' : 'text-[24px]')}>
+          {movie.movie_title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
+  return (
+    <div className="absolute inset-0">
+      <PosterArtwork movie={movie} isCenter={isCenter} />
+      {movie.hero_image_url && (
+        <img
+          src={movie.hero_image_url}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+          onError={(event) => {
+            event.currentTarget.style.opacity = '0';
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 const collectionStyle: Record<CollectionItem['kind'], { icon: typeof Zap; tone: string }> = {
-  card: { icon: Clapperboard, tone: 'from-gold/25 to-gold/5 border-gold/30' },
-  ticket: { icon: Ticket, tone: 'from-rose-400/25 to-rose-400/5 border-rose-400/30' },
-  merch: { icon: Gift, tone: 'from-sky-400/25 to-sky-400/5 border-sky-400/30' },
-  badge: { icon: Star, tone: 'from-emerald-400/25 to-emerald-400/5 border-emerald-400/30' },
+  card: { icon: Clapperboard, tone: 'from-pink-500/25 to-violet-500/5 text-pink-200' },
+  ticket: { icon: Ticket, tone: 'from-rose-400/25 to-orange-400/5 text-rose-200' },
+  merch: { icon: Gift, tone: 'from-cyan-400/25 to-blue-400/5 text-cyan-200' },
+  badge: { icon: Star, tone: 'from-emerald-400/25 to-green-400/5 text-emerald-200' },
 };
 
 function CollectionTile({ item }: { item: CollectionItem }) {
   const { icon: Icon, tone } = collectionStyle[item.kind];
   return (
-    <div className="flex-shrink-0 w-24 bg-bg-surface hairline rounded-[14px] p-2.5">
-      <div className={`h-16 rounded-[10px] bg-gradient-to-br border flex items-center justify-center mb-2 ${tone}`}>
-        <Icon className="w-7 h-7 text-text-white" />
+    <div className="flex-shrink-0 w-24 bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[16px] p-2.5">
+      <div className={'h-16 rounded-[11px] bg-gradient-to-br flex items-center justify-center mb-2 ' + tone}>
+        <Icon className="w-7 h-7" />
       </div>
       <p className="text-[11px] font-medium text-text-primary truncate">{item.label}</p>
       <p className="text-[9px] text-text-subtle uppercase tracking-wide truncate">{item.sub}</p>
@@ -651,19 +905,41 @@ function CollectionTile({ item }: { item: CollectionItem }) {
 }
 
 function LeaderRow({ entry, isMe }: { entry: CampaignDashboard['leaderboard'][number]; isMe: boolean }) {
-  const medal = ['text-gold', 'text-zinc-300', 'text-amber-600'][entry.rank - 1];
+  const medal = ['text-[#FFC857]', 'text-zinc-300', 'text-amber-600'][entry.rank - 1];
   return (
-    <div className={`flex items-center gap-3 py-2.5 hairline-b last:border-b-0 ${isMe ? '-mx-2 px-2 rounded-[10px] bg-gold/10' : ''}`}>
-      <span className={`font-display text-base w-6 text-center ${medal ?? 'text-text-muted'}`}>
+    <div className={'flex items-center gap-3 py-2.5 border-b border-white/5 last:border-b-0 ' + (isMe ? '-mx-2 px-2 rounded-[10px] bg-pink-500/8' : '')}>
+      <span className={'font-display text-base w-6 text-center ' + (medal ?? 'text-text-muted')}>
         {entry.rank <= 3 ? <Trophy className="w-4 h-4 inline" fill="currentColor" /> : entry.rank}
       </span>
       <span className="flex-1 min-w-0">
-        <span className={`block text-sm truncate ${isMe ? 'text-gold font-semibold' : 'text-text-primary'}`}>
+        <span className={'block text-sm truncate ' + (isMe ? 'text-pink-200 font-semibold' : 'text-text-primary')}>
           {isMe ? 'You' : entry.display_name}
         </span>
-        <span className="block text-[10px] text-text-subtle">Lv. {levelFor(entry.points)}</span>
+        <span className="block text-[10px] text-text-subtle">
+          {LEVEL_NAMES[Math.min(Math.max(levelFor(entry.points), 1), LEVEL_NAMES.length) - 1]}
+        </span>
       </span>
       <span className="font-display text-sm text-text-primary tabular-nums">{entry.points.toLocaleString()}</span>
     </div>
+  );
+}
+
+function Section({ title, onMore, children }: { title: string; onMore?: () => void; children: ReactNode }) {
+  return (
+    <section className="pt-1">
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h3 className="font-display text-[22px] text-text-primary tracking-wide">{title}</h3>
+        {onMore && (
+          <button
+            type="button"
+            onClick={onMore}
+            className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-text-muted active:scale-95 transition-transform"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
   );
 }
