@@ -911,19 +911,26 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
 }
 
 function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const localFallback = localMovieImage(movie.movie_title);
+  const imageSrc = !imageFailed ? (movie.hero_image_url || localFallback) : localFallback;
+
   return (
-    <div className="absolute inset-0">
-      {movie.hero_image_url ? null : <PosterArtwork movie={movie} isCenter={isCenter} />}
-      {movie.hero_image_url && (
+    <div className="absolute inset-0 bg-[#1A0D16]">
+      {imageSrc ? (
         <img
-          src={movie.hero_image_url}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-          onError={(event) => {
-            event.currentTarget.style.opacity = '0';
+          src={imageSrc}
+          alt={movie.movie_title || 'Movie'}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
+          onError={() => {
+            if (imageSrc !== localFallback) setImageFailed(true);
+            else setImageFailed(true);
           }}
         />
+      ) : (
+        <PosterArtwork movie={movie} isCenter={isCenter} />
       )}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#100911]/95 via-transparent to-transparent pointer-events-none" />
     </div>
   );
 }
