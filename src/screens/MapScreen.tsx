@@ -102,6 +102,7 @@ export function MapScreen({ onNavigate }: Props) {
       {/* MapLibre Map — full bleed */}
       <MapLibreMap
         features={visibleFeatures}
+        activityScans={activityScans}
         userLocation={userLoc}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
