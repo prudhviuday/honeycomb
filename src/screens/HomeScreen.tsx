@@ -106,6 +106,22 @@ export function HomeScreen({ onNavigate }: Props) {
     );
   }, []);
 
+  const movies: MovieCardData[] = [
+    ...campaigns.map((campaign) => ({
+      id: campaign.id,
+      movie_title: campaign.movie_title,
+      title: campaign.title,
+      hero_image_url: campaign.hero_image_url,
+      demo: false,
+    })),
+    ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
+  ];
+
+  useEffect(() => {
+    const activeIndex = activeCampaign ? movies.findIndex((movie) => movie.id === activeCampaign.id) : -1;
+    if (activeIndex >= 0) setMovieIndex(activeIndex);
+  }, [activeCampaign?.id, campaigns.length]);
+
   if (loading || !dashboard || !activeCampaign) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-bg-primary">
@@ -191,23 +207,7 @@ export function HomeScreen({ onNavigate }: Props) {
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Player';
   const locationLabel = profile?.city || 'Chennai';
 
-  const movies: MovieCardData[] = [
-    ...campaigns.map((campaign) => ({
-      id: campaign.id,
-      movie_title: campaign.movie_title,
-      title: campaign.title,
-      hero_image_url: campaign.hero_image_url,
-      demo: false,
-    })),
-    ...DEMO_MOVIES.slice(0, Math.max(0, 4 - campaigns.length)),
-  ];
-
   const safeMovieIndex = Math.min(movieIndex, Math.max(movies.length - 1, 0));
-
-  useEffect(() => {
-    const activeIndex = movies.findIndex((movie) => movie.id === activeCampaign.id);
-    if (activeIndex >= 0) setMovieIndex(activeIndex);
-  }, [activeCampaign.id, campaigns.length]);
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
