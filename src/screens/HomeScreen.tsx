@@ -41,12 +41,15 @@ type MovieCardData = {
   demo: boolean;
 };
 
+const publicMovieAsset = (fileName: string) =>
+  `${import.meta.env.BASE_URL}movies/${fileName}`;
+
 const localMovieImage = (movieTitle?: string | null) => {
   const name = String(movieTitle ?? '').toLowerCase();
-  if (name.includes('baasha')) return '/movies/baasha.webp';
-  if (name.includes('anniyan')) return '/movies/anniyan.jpg';
-  if (name.includes('mandaadi')) return '/movies/mandaadi.jpg';
-  if (name.includes('sholay')) return '/movies/sholay.jpg';
+  if (name.includes('baasha')) return publicMovieAsset('baasha.webp');
+  if (name.includes('anniyan')) return publicMovieAsset('anniyan.jpg');
+  if (name.includes('mandaadi')) return publicMovieAsset('mandaadi.jpg');
+  if (name.includes('sholay')) return publicMovieAsset('sholay.jpg');
   return undefined;
 };
 
@@ -913,7 +916,21 @@ function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: bo
 function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
   const [imageFailed, setImageFailed] = useState(false);
   const localFallback = localMovieImage(movie.movie_title);
-  const imageSrc = !imageFailed ? (movie.hero_image_url || localFallback) : localFallback;
+  const primaryImage = movie.hero_image_url || localFallback;
+
+  // Reset the error state whenever the selected movie/image changes.
+  useEffect(() => {
+    setImageFailed(false);
+  }, [movie.id, movie.hero_image_url, movie.movie_title]);
+
+  // If a remote campaign image fails, try the local poster.
+  // If the local poster itself fails, stop retrying and show the built-in artwork.
+  const imageSrc =
+    !imageFailed
+      ? primaryImage
+      : localFallback && localFallback !== primaryImage
+        ? localFallback
+        : undefined;
 
   return (
     <div className="absolute inset-0 bg-[#1A0D16]">
@@ -921,11 +938,9 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
         <img
           src={imageSrc}
           alt={movie.movie_title || 'Movie'}
+          draggable={false}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
-          onError={() => {
-            if (imageSrc !== localFallback) setImageFailed(true);
-            else setImageFailed(true);
-          }}
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <PosterArtwork movie={movie} isCenter={isCenter} />
