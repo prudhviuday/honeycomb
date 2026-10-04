@@ -932,41 +932,31 @@ export async function claimReward(
   userId: string,
   reward: Reward
 ): Promise<RewardClaim> {
-  const claimCode =
-    `HB-${Math.random()
-      .toString(36)
-      .substring(2, 8)
-      .toUpperCase()}`;
-
   /*
-   * reward_claims does NOT contain points_used.
-   *
-   * The reward itself already stores points_required.
+   * Reward redemption changes the user's balance, inventory,
+   * claim record, transaction history, and activity log.
+   * Keep all of those changes in one database transaction.
    */
+  void userId;
 
-  const { data, error } = await supabase
-    .from('reward_claims')
-    .insert({
-      campaign_id: campaignId,
-      user_id: userId,
-      reward_id: reward.id,
-      claim_code: claimCode,
-      status: 'pending',
-    })
-    .select()
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('claim_reward', {
+    p_campaign_id: campaignId,
+    p_reward_id: reward.id,
+  });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
-  if (!data) {
+  if (!data?.success || !data.claim) {
     throw new Error(
-      'Reward claim was not created.'
+      data?.message || 'Reward could not be claimed.'
     );
   }
 
   return asAppType<RewardClaim>({
-    ...data,
-    created_at: data.claimed_at,
+    ...data.claim,
+    created_at: data.claim.claimed_at,
   });
 }
 
