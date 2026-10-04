@@ -66,16 +66,9 @@ export function MapScreen({ onNavigate }: Props) {
     : 0;
 
   const q = query.trim();
-  const queryPattern = q
-    ? new RegExp(q.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\  const q = query.trim().toLowerCase();
   const visibleFeatures = q
-    ? features.filter((f) => `${f.location?.name ?? ''} ${f.location?.address ?? ''}`.toLowerCase().includes(q))
-    : features;'), 'i')
-    : null;
-  const visibleFeatures = queryPattern
-    ? features.filter((f) => queryPattern.test(`${f.location?.name ?? ''} ${f.location?.address ?? ''}`))
+    ? features.filter((f) => `${f.location?.name ?? ''} ${f.location?.address ?? ''}`.includes(q))
     : features;
-
   const handleMarkerClick = (feature: MapFeature) => {
     setSelected(feature);
     setPanelOpen(true);
