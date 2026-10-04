@@ -245,7 +245,7 @@ export function HomeScreen({ onNavigate }: Props) {
   const changeMovie = (direction: -1 | 1) => {
     if (movies.length < 2) return;
     setMovieIndex((current) => {
-      const next = (current + direction + movies.length) % movies.length;
+      const next = Math.max(0, Math.min(movies.length - 1, current + direction));
       const selectedMovie = movies[next];
       if (!selectedMovie.demo) {
         const realCampaign = campaigns.find((campaign) => campaign.id === selectedMovie.id);
@@ -432,7 +432,7 @@ export function HomeScreen({ onNavigate }: Props) {
                       }}
                       className={
                         'relative flex-shrink-0 text-left overflow-hidden rounded-[24px] ' +
-                        'transition-[transform,opacity,filter,box-shadow] duration-480 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
+                        'transition-[transform,opacity,filter,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ' +
                         (isCenter
                           ? 'w-[218px] h-[320px] z-20 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
                           : 'w-[218px] h-[320px] z-10 ' +
