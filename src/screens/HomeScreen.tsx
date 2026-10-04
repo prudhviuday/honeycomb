@@ -786,16 +786,19 @@ function QuickAction({
 }
 
 function PosterArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boolean }) {
-  const movieName = movie.movie_title || movie.title || 'Movie';
-  const title = String(movieName).toLowerCase();
+  const movieName = String(movie.movie_title || movie.title || 'Movie');
+  const isBaasha = /baasha/i.test(movieName);
+  const isMounaRagam = /mouna/i.test(movieName);
+  const isRoja = /roja/i.test(movieName);
+  const isGhilli = /ghilli/i.test(movieName);
   const theme =
-    title.includes('baasha')
+    isBaasha
       ? { bg: '#5C160F', accent: '#FF8A5B', glow: '#EF4444', shape: 'action' }
       : title.includes('mouna')
         ? { bg: '#421D3A', accent: '#F7A1D4', glow: '#A78BFA', shape: 'romance' }
         : title.includes('roja')
           ? { bg: '#4A1124', accent: '#FF6B7A', glow: '#8B5CF6', shape: 'dramatic' }
-          : title.includes('ghilli')
+          : isGhilli
             ? { bg: '#163752', accent: '#FF9C54', glow: '#31A8FF', shape: 'energy' }
             : { bg: '#31152B', accent: '#F04F9B', glow: '#8B5CF6', shape: 'default' };
 
