@@ -75,18 +75,18 @@ export function RewardsScreen() {
   const points = campaignUser?.points ?? 0;
 
   return (
-    <div className="px-5 pt-14 pb-8 animate-fade-in">
+    <div className="px-5 pt-12 pb-8 animate-fade-in">
       {/* Title */}
-      <h1 className="font-display text-3xl text-text-primary mb-1">REWARDS</h1>
+      <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your haul</p>\n      <h1 className="font-display text-[36px] text-text-primary leading-none tracking-[-0.02em] mb-1">REWARDS</h1>
       <p className="text-xs text-text-muted mb-8">Redeem points for exclusive merchandise</p>
 
       {/* Points bar — editorial, not a card */}
-      <div className="hairline-t hairline-b py-6 mb-8 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#201A12] via-bg-surface to-[#11131D] border border-gold/15 shadow-[0_18px_45px_-24px_rgba(255,184,74,0.35)] py-5 px-5 mb-8 flex items-center justify-between">
         <div>
           <p className="font-display text-4xl text-gold leading-none">{points}</p>
           <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Available Points</p>
         </div>
-        <div className="h-10 w-px bg-white/8" />
+        <div className="h-10 w-px bg-white/10" />
         <div className="text-right">
           <p className="font-display text-4xl text-text-primary leading-none">{totalEntries}</p>
           <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Draw Entries</p>
@@ -136,10 +136,10 @@ export function RewardsScreen() {
             const rewardClaims = claims.filter(c => c.reward_id === reward.id);
             const alreadyClaimed = rewardClaims.length > 0 && reward.reward_type === 'guaranteed';
             return (
-              <div key={reward.id} className="bg-bg-surface hairline rounded-[10px] overflow-hidden">
+              <div key={reward.id} className="relative overflow-hidden bg-gradient-to-br from-bg-surface to-[#10121B] border border-white/8 rounded-[20px] shadow-[0_14px_40px_-28px_rgba(0,0,0,0.95)]">
                 <div className="p-5">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-[8px] flex items-center justify-center flex-shrink-0 ${
+                    <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center flex-shrink-0 border border-white/8 ${
                       canAfford ? 'bg-gold/10' : 'bg-bg-elevated'
                     }`}>
                       <Icon className={`w-5 h-5 ${canAfford ? 'text-gold' : 'text-text-subtle'}`} />
@@ -174,7 +174,7 @@ export function RewardsScreen() {
                     <button
                       onClick={() => handleClaim(reward)}
                       disabled={claiming === reward.id}
-                      className="w-full py-3 bg-gold text-bg-primary font-semibold text-xs uppercase tracking-wide active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-gradient-to-r from-gold-bright to-gold text-bg-primary font-semibold text-xs uppercase tracking-[0.08em] active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {claiming === reward.id ? (
                         <><Clock className="w-3.5 h-3.5 animate-spin" /> Processing</>
