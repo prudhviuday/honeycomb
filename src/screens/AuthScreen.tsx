@@ -126,7 +126,7 @@ export function AuthScreen() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm tracking-wide rounded-[10px] hover:bg-gold-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-6"
+            className="w-full py-3.5 bg-accent text-white font-semibold text-sm tracking-wide rounded-[10px] hover:bg-accent-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-6"
           >
             {loading ? 'Creating...' : mode === 'signup' ? 'Create Account' : 'Log In'}
           </button>

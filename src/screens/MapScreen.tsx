@@ -173,7 +173,7 @@ export function MapScreen({ onNavigate }: Props) {
 
       {/* Bottom sheet — location detail */}
       {panelOpen && selected && (
-        <div className="fixed inset-0 z-50 max-w-md mx-auto" onClick={() => setPanelOpen(false)}>
+        <div className="fixed inset-0 z-50 max-w-lg mx-auto" onClick={() => setPanelOpen(false)}>
           <div className="absolute inset-0 bg-black/40 animate-fade-in" />
           <div
             className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[16px] hairline-t animate-slide-up max-h-[72%] overflow-y-auto no-scrollbar"
@@ -255,7 +255,7 @@ export function MapScreen({ onNavigate }: Props) {
                   setPanelOpen(false);
                   onNavigate?.('scanner');
                 }}
-                className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               >
                 {selected.isScanned ? 'Already Scanned' : 'Scan Here'}
                 {!selected.isScanned && <Zap className="w-4 h-4" fill="currentColor" />}

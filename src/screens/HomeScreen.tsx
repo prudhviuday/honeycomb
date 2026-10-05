@@ -275,122 +275,54 @@ export function HomeScreen({ onNavigate }: Props) {
   };
 
   return (
-    <div className="px-4 pt-7 pb-8 animate-fade-in space-y-6 overflow-x-hidden">
-      <svg aria-hidden="true" className="absolute w-0 h-0 overflow-hidden pointer-events-none">
-        <defs>
-          <filter id="honeycomb-remove-white-icon-bg" colorInterpolationFilters="sRGB">
-            <feColorMatrix
-              type="matrix"
-              values="
-                1 0 0 0 0
-                0 1 0 0 0
-                0 0 1 0 0
-                -0.333 -0.333 -0.333 0 1
-              "
-            />
-          </filter>
-        </defs>
-      </svg>
-      {/* HERO / USER IDENTITY */}
-      <section className="relative overflow-hidden rounded-[28px] p-5 bg-[linear-gradient(135deg,#341024_0%,#24101D_48%,#160D17_100%)] shadow-[0_22px_65px_-30px_rgba(232,62,140,0.28)]">
-        <div className="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-pink-500/7 blur-3xl pointer-events-none animate-hero-breathe" />
-        <div className="absolute -bottom-24 -left-16 w-48 h-48 rounded-full bg-violet-500/12 blur-3xl pointer-events-none" />
-        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/55 to-transparent" />
-        <div className="absolute right-5 top-5 text-white/15">
-          <Film className="w-12 h-12 rotate-12" />
-        </div>
-
-        <div className="relative flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-[18px] p-[2px] bg-gradient-to-br from-pink-300 via-pink-500 to-violet-500 shadow-lg shadow-pink-500/20 flex-shrink-0">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-[16px] object-cover bg-bg-elevated" />
-            ) : (
-              <div className="w-full h-full rounded-[16px] bg-[#24101D] flex items-center justify-center font-display text-xl text-white">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 pr-8">
-            <p className="text-[10px] text-pink-300/80 uppercase tracking-[0.2em] font-semibold mb-1">Your movie journey</p>
-            <h1 className="font-display text-[29px] text-text-white leading-none truncate tracking-[-0.02em]">
-              Hello, {displayName}!
-            </h1>
-            <p className="text-xs text-text-muted flex items-center gap-1.5 mt-2">
-              <MapPin className="w-3.5 h-3.5 text-pink-300" />
-              <span>{locationLabel}</span>
+    <div className="pb-8 animate-fade-in overflow-x-hidden">
+      {/* TOP BAR */}
+      <header className="sticky top-0 z-40 px-4 pt-3 pb-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.04]">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1 leading-none">
+              <span className="font-display text-[22px] text-white tracking-wide">HONEY</span>
+              <span className="font-display text-[22px] text-accent tracking-wide">BADGER</span>
+            </div>
+            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
+              <span className="font-medium text-text-primary">{locationLabel}</span>
+              <ChevronRight className="w-3 h-3 rotate-90" aria-hidden="true" />
             </p>
           </div>
-        </div>
-
-        <div className="relative mt-6 flex items-end justify-between">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/7 backdrop-blur-sm">
-            <Crown className="w-3.5 h-3.5 text-amber-300" />
-            <span className="text-xs font-semibold text-white">{levelName}</span>
-            <span className="text-[10px] text-white/45">LV.{Math.min(level, LEVEL_NAMES.length)}</span>
-          </div>
-          <p className="leading-none text-right">
-            <span className="font-display text-[34px] text-[#FFC857]">{points.toLocaleString()}</span>
-            <span className="block text-[9px] text-white/45 uppercase tracking-[0.16em] mt-1">points</span>
-          </p>
-        </div>
-
-        <div className="relative mt-4">
-          <div className="h-2.5 bg-black/25 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#E83E8C] via-[#F04F9B] to-[#FF8A5B] rounded-full transition-all duration-700"
-              style={{ width: levelProgress + '%' }}
-            />
-          </div>
-          <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-700"
-            style={{ left: 'calc(' + levelProgress + '%)' }}
+          <button
+            type="button"
+            onClick={() => onNavigate?.('rewards')}
+            className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-full bg-bg-surface border border-white/[0.06]"
+            aria-label={points + ' points, view rewards'}
           >
-            <div className="w-7 h-7 rounded-full bg-[#27101D]/90 flex items-center justify-center shadow-[0_0_18px_rgba(255,106,74,0.42)] animate-flame">
-              <Flame className="w-3.5 h-3.5 text-[#FF8A5B]" fill="currentColor" />
-            </div>
-          </div>
+            <span className="w-5 h-5 rounded-full bg-gold/15 flex items-center justify-center">
+              <Zap className="w-3 h-3 text-gold" fill="currentColor" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-primary tabular-nums">{points.toLocaleString()}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('profile')}
+            className="w-9 h-9 rounded-full overflow-hidden bg-bg-elevated border border-white/10 flex items-center justify-center flex-shrink-0"
+            aria-label="Open profile"
+          >
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-semibold text-white">{displayName.charAt(0).toUpperCase()}</span>
+            )}
+          </button>
         </div>
+      </header>
 
-        <p className="relative text-[11px] text-white/55 mt-2.5 mb-5">
-          <span className="text-white font-semibold">{challengesToNextReward}</span>{' '}
-          {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to your next reward
-        </p>
-
-        <div className="relative grid grid-cols-3 gap-2">
-          <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
-          <StatChip icon={Target} value={completedMissions + '/' + totalMissions} label="Missions" onClick={() => onNavigate?.('hunts')} />
-          <StatChip icon={Trophy} value={'#' + myRank} label="Rank" onClick={() => setLeaderboardOpen(true)} />
-        </div>
-      </section>
-
-      {/* QUICK ACTIONS */}
-      <section>
-        <div className="flex items-end justify-between px-1 mb-3">
-          <div>
-            <p className="text-[10px] text-pink-300 uppercase tracking-[0.22em] font-semibold">Explore</p>
-            <h2 className="font-display text-[25px] text-text-white leading-none mt-1">FIND YOUR NEXT MOVE</h2>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          <QuickAction iconSrc="Movie.png" label="Movies" tone="pink" onClick={() => scrollToSection('movie-campaigns')} />
-          <QuickAction iconSrc="hunt.png" label="Hunt" tone="orange" onClick={() => onNavigate?.('hunts')} />
-          <QuickAction iconSrc="events.png" label="Events" tone="violet" onClick={() => scrollToSection('featured-hunt')} />
-        </div>
-        <div className="grid grid-cols-4 gap-2.5 mt-2.5">
-          <QuickAction iconSrc="Mall.png" label="Malls" tone="cyan" onClick={() => scrollToSection('nearby-challenges')} />
-          <QuickAction iconSrc="activities.png" label="Activities" tone="green" onClick={() => scrollToSection('nearby-challenges')} />
-          <QuickAction iconSrc="Gift.png" label="Rewards" tone="gold" onClick={() => onNavigate?.('rewards')} />
-          <QuickAction iconSrc="leaderboard.png" label="Leaderboard" tone="purple" onClick={() => setLeaderboardOpen(true)} />
-        </div>
-      </section>
-
+      <div className="px-4 pt-4 space-y-8">
       {/* MOVIE CAROUSEL */}
       {movies.length > 0 && (
         <section id="movie-campaigns" className="scroll-mt-4">
           <div className="flex items-end justify-between px-1 mb-3">
             <div>
-              <p className="text-[10px] text-pink-300 uppercase tracking-[0.24em] font-semibold">Now playing</p>
+              <p className="text-[10px] text-accent uppercase tracking-[0.24em] font-semibold">Now playing</p>
               <h2 className="font-display text-[28px] text-text-white leading-none mt-1">MOVIES YOU CAN HUNT</h2>
             </div>
             <span className="text-[10px] text-white/38 uppercase tracking-[0.16em]">
@@ -424,7 +356,7 @@ export function HomeScreen({ onNavigate }: Props) {
                         'relative flex-[0_0_218px] w-[218px] h-[320px] text-left overflow-hidden rounded-[24px] ' +
                         'transition-[transform,opacity,filter,box-shadow] duration-300 ease-out ' +
                         (isCenter
-                          ? 'z-20 scale-100 opacity-100 shadow-[0_20px_52px_-24px_rgba(232,62,140,0.28)]'
+                          ? 'z-20 scale-100 opacity-100 shadow-[0_20px_52px_-24px_rgba(0,0,0,0.9)]'
                           : isVisible
                             ? 'z-10 scale-[0.88] opacity-55 saturate-[0.65]'
                             : 'z-0 scale-[0.78] opacity-0 pointer-events-none')
@@ -433,9 +365,9 @@ export function HomeScreen({ onNavigate }: Props) {
                     >
                       <MovieArtwork movie={movie} isCenter={isCenter} />
                       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#100911] via-[#100911]/55 to-transparent pointer-events-none" />
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#08080A] via-[#08080A]/55 to-transparent pointer-events-none" />
                       <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md pointer-events-none">
-                        <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-[#A78BFA]' : 'bg-[#45D483]')} />
+                        <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-gold' : 'bg-[#45D483]')} />
                         <span className="text-[9px] uppercase tracking-[0.16em] text-white/75">
                           {movie.demo ? 'Demo' : 'Live'}
                         </span>
@@ -463,7 +395,7 @@ export function HomeScreen({ onNavigate }: Props) {
                   onClick={() => selectMovie(index)}
                   className={
                     'h-1.5 rounded-full transition-all duration-300 ' +
-                    (index === movieIndex ? 'w-5 bg-pink-300' : 'w-1.5 bg-white/20')
+                    (index === movieIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/20')
                   }
                 />
               ))}
@@ -472,11 +404,62 @@ export function HomeScreen({ onNavigate }: Props) {
         </section>
       )}
 
+      {/* EXPLORE */}
+      <section aria-labelledby="explore-heading">
+        <div className="flex items-end justify-between mb-3">
+          <h2 id="explore-heading" className="text-[17px] font-bold text-text-white tracking-tight">Explore</h2>
+          <span className="text-[11px] text-text-subtle">Pick your vibe</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          <QuickAction imageSrc="movies.jpg" label="Movies" onClick={() => scrollToSection('movie-campaigns')} />
+          <QuickAction imageSrc="hunt.jpg" label="Hunts" onClick={() => onNavigate?.('hunts')} />
+          <QuickAction imageSrc="events.jpg" label="Events" onClick={() => scrollToSection('featured-hunt')} />
+        </div>
+        <div className="grid grid-cols-4 gap-2.5 mt-2.5">
+          <QuickAction imageSrc="malls.jpg" label="Malls" compact onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction imageSrc="activities.jpg" label="Activities" compact onClick={() => scrollToSection('nearby-challenges')} />
+          <QuickAction imageSrc="rewards.jpg" label="Rewards" compact onClick={() => onNavigate?.('rewards')} />
+          <QuickAction imageSrc="leaderboard.jpg" label="Ranks" compact onClick={() => setLeaderboardOpen(true)} />
+        </div>
+      </section>
+
+      {/* YOUR JOURNEY */}
+      <section aria-label="Your progress" className="rounded-[20px] bg-bg-secondary border border-white/[0.06] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] text-text-muted">Welcome back,</p>
+            <p className="text-base font-bold text-text-white truncate">{displayName}</p>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/10 border border-gold/20">
+            <Crown className="w-3.5 h-3.5 text-gold" aria-hidden="true" />
+            <span className="text-[11px] font-semibold text-gold">{levelName}</span>
+            <span className="text-[10px] text-gold/60">LV {Math.min(level, LEVEL_NAMES.length)}</span>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-[11px] mb-1.5">
+            <span className="text-text-muted">
+              <span className="text-text-primary font-semibold">{challengesToNextReward}</span>{' '}
+              {challengesToNextReward === 1 ? 'challenge' : 'challenges'} to next reward
+            </span>
+            <span className="text-text-subtle tabular-nums">{levelProgress}%</span>
+          </div>
+          <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-full bg-accent rounded-full transition-all duration-700" style={{ width: levelProgress + '%' }} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
+          <StatChip icon={Target} value={completedMissions + '/' + totalMissions} label="Missions" onClick={() => onNavigate?.('hunts')} />
+          <StatChip icon={Trophy} value={'#' + myRank} label="Rank" onClick={() => setLeaderboardOpen(true)} />
+        </div>
+      </section>
+
       {/* FEATURED HUNT */}
       {nextMission && (
-        <section id="featured-hunt" className="rounded-[24px] overflow-hidden bg-gradient-to-br from-[#29101D] to-[#190D17] shadow-[0_18px_48px_-28px_rgba(139,92,246,0.5)] scroll-mt-4">
+        <section id="featured-hunt" className="rounded-[24px] overflow-hidden bg-bg-secondary border border-white/[0.06] scroll-mt-4">
           <div className="relative h-52">
-            <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 via-violet-700/10 to-orange-500/10" />
+            <div className="absolute inset-0 bg-bg-elevated" />
             {activeCampaign.hero_image_url ? (
               <img
                 src={activeCampaign.hero_image_url}
@@ -495,19 +478,19 @@ export function HomeScreen({ onNavigate }: Props) {
                 isCenter
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#160C15] via-[#160C15]/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#101013] via-[#101013]/25 to-transparent" />
             <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-md">
-              <Flame className="w-3.5 h-3.5 text-[#FF8A5B]" />
+              <Flame className="w-3.5 h-3.5 text-accent" />
               <span className="text-[10px] text-white/90 uppercase tracking-[0.18em] font-medium">Active Hunt</span>
             </div>
-            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-[#FFC857] text-[#25110E] font-display text-base tabular-nums">
+            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gold text-black font-display text-base tabular-nums">
               {missionDone}/{nextMission.target_count}
             </div>
           </div>
 
           <div className="px-5 pb-5 -mt-5 relative">
             <h2 className="font-display text-[26px] text-text-white leading-tight mb-1 flex items-center gap-2">
-              {nextMission.title} <Clapperboard className="w-5 h-5 text-pink-300" />
+              {nextMission.title} <Clapperboard className="w-5 h-5 text-accent" />
             </h2>
             <p className="text-sm text-text-muted line-clamp-2 mb-2">{nextMission.description}</p>
             <p className="text-xs text-text-subtle flex items-center gap-1 mb-4">
@@ -517,7 +500,7 @@ export function HomeScreen({ onNavigate }: Props) {
             <div className="flex items-center gap-3 mb-4">
               <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#E83E8C] to-[#FF8A5B] rounded-full transition-all duration-500"
+                  className="h-full bg-accent rounded-full transition-all duration-500"
                   style={{ width: Math.min((missionDone / Math.max(nextMission.target_count, 1)) * 100, 100) + '%' }}
                 />
               </div>
@@ -528,7 +511,7 @@ export function HomeScreen({ onNavigate }: Props) {
 
             <button
               onClick={() => onNavigate?.('scanner')}
-              className="w-full py-3.5 bg-gradient-to-r from-[#E83E8C] to-[#FF6B4A] text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-transform"
+              className="w-full py-3.5 bg-accent hover:bg-accent-bright text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_-10px_rgba(229,9,20,0.6)] active:scale-[0.98] transition-transform"
             >
               {missionDone ? 'Continue Hunt' : 'Start Hunt'}
               <span className="text-white/60">· +{nextMission.points_reward} XP</span>
@@ -547,17 +530,17 @@ export function HomeScreen({ onNavigate }: Props) {
                 <button
                   key={loc.id}
                   onClick={() => onNavigate?.('map')}
-                  className="flex-shrink-0 w-44 text-left bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] p-4 shadow-[0_12px_30px_-24px_rgba(232,62,140,0.55)] active:scale-[0.97] transition-transform"
+                  className="flex-shrink-0 w-44 text-left bg-bg-secondary border border-white/[0.06] rounded-[18px] p-4 shadow-[0_12px_30px_-24px_rgba(232,62,140,0.55)] active:scale-[0.97] transition-transform"
                 >
-                  <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-cyan-300/20 to-violet-500/10 flex items-center justify-center mb-3">
-                    <MapPinned className="w-4.5 h-4.5 text-cyan-300" />
+                  <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-white/10 to-white/[0.02] flex items-center justify-center mb-3">
+                    <MapPinned className="w-4.5 h-4.5 text-text-primary" />
                   </div>
                   <p className="text-sm font-semibold text-text-primary truncate">{loc.name}</p>
                   <p className="text-[11px] text-text-muted truncate mb-3 flex items-center gap-1">
                     <MapPin className="w-3 h-3 flex-shrink-0" /> {loc.address}
                   </p>
                   <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full bg-pink-500/12 text-[10px] font-semibold text-pink-300">
+                    <span className="px-2 py-0.5 rounded-full bg-accent/12 text-[10px] font-semibold text-accent">
                       +{totalPts} pts
                     </span>
                     {km !== null && (
@@ -585,7 +568,7 @@ export function HomeScreen({ onNavigate }: Props) {
         ) : (
           <button
             onClick={() => onNavigate?.('scanner')}
-            className="w-full bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+            className="w-full bg-bg-secondary border border-white/[0.06] rounded-[18px] p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
           >
             <div className="flex -space-x-2">
               {[Clapperboard, Ticket, Star].map((Icon, i) => (
@@ -605,7 +588,7 @@ export function HomeScreen({ onNavigate }: Props) {
         <Section title="Leaderboard" onMore={() => setLeaderboardOpen(true)}>
           <button
             onClick={() => setLeaderboardOpen(true)}
-            className="w-full text-left bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] px-4 py-1.5"
+            className="w-full text-left bg-bg-secondary border border-white/[0.06] rounded-[18px] px-4 py-1.5"
           >
             {top3.map((entry) => (
               <LeaderRow key={entry.id} entry={entry} isMe={entry.user_id === user?.id} />
@@ -632,12 +615,12 @@ export function HomeScreen({ onNavigate }: Props) {
                     className={
                       'w-14 h-14 rounded-full flex items-center justify-center mb-1.5 ' +
                       (earned
-                        ? 'bg-gradient-to-br from-pink-500/25 to-violet-500/10 shadow-[0_0_18px_rgba(232,62,140,0.22)]'
+                        ? 'bg-gradient-to-br from-accent/25 to-accent/5 shadow-[0_0_18px_rgba(229,9,20,0.22)]'
                         : 'bg-white/5')
                     }
                   >
                     {earned ? (
-                      <Star className="w-6 h-6 text-pink-300" fill="currentColor" />
+                      <Star className="w-6 h-6 text-accent" fill="currentColor" />
                     ) : (
                       <Award className="w-6 h-6 text-text-subtle" />
                     )}
@@ -655,19 +638,19 @@ export function HomeScreen({ onNavigate }: Props) {
       {/* RECENT ACTIVITY */}
       {dashboard.scans.length > 0 && (
         <Section title="Recent activity">
-          <div className="bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[18px] px-4 py-1.5">
+          <div className="bg-bg-secondary border border-white/[0.06] rounded-[18px] px-4 py-1.5">
             {dashboard.scans.slice(0, 4).map((scan) => {
               const source = dashboard.interactionSources.find((s) => s.id === scan.interaction_source_id);
               return (
                 <div key={scan.id} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-b-0">
-                  <ScanLine className="w-4 h-4 text-pink-300 flex-shrink-0" />
+                  <ScanLine className="w-4 h-4 text-accent flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-primary truncate">{source?.name ?? 'QR Scan'}</p>
                     <p className="text-[11px] text-text-subtle">
                       {new Date(scan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
-                  <span className="font-display text-base text-pink-300">+{scan.points_awarded}</span>
+                  <span className="font-display text-base text-accent">+{scan.points_awarded}</span>
                 </div>
               );
             })}
@@ -677,23 +660,25 @@ export function HomeScreen({ onNavigate }: Props) {
 
       <div className="flex items-baseline justify-center gap-0.5 pt-2">
         <span className="font-display text-xs text-white/20">HONEY</span>
-        <span className="font-display text-xs text-pink-300/45">BADGER</span>
+        <span className="font-display text-xs text-accent">BADGER</span>
         <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] ml-1">Media</span>
+      </div>
+
       </div>
 
       {/* LEADERBOARD SHEET */}
       {leaderboardOpen && (
-        <div className="fixed inset-0 z-[60] max-w-md mx-auto" onClick={() => setLeaderboardOpen(false)}>
-          <div className="absolute inset-0 bg-[#0C050B]/75 backdrop-blur-sm animate-fade-in" />
+        <div className="fixed inset-0 z-[60] max-w-lg mx-auto" onClick={() => setLeaderboardOpen(false)}>
+          <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm animate-fade-in" />
           <div
-            className="absolute bottom-0 left-0 right-0 bg-[#1A0C15] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
+            className="absolute bottom-0 left-0 right-0 bg-[#101013] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pt-3 pb-3 px-5">
               <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-xl text-text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-[#FFC857]" /> Leaderboard
+                  <Trophy className="w-5 h-5 text-gold" /> Leaderboard
                 </h3>
                 <button onClick={() => setLeaderboardOpen(false)} className="text-text-subtle hover:text-text-primary">
                   <X className="w-5 h-5" />
@@ -727,58 +712,56 @@ function StatChip({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 rounded-[15px] bg-white/5 px-2.5 py-2.5 active:scale-[0.97] transition-transform"
+      className="flex items-center gap-2.5 rounded-[14px] bg-bg-surface border border-white/[0.04] px-2.5 py-2.5 active:scale-[0.97] transition-transform hover:bg-bg-elevated"
     >
-      <div className="w-7 h-7 rounded-[9px] bg-gradient-to-br from-pink-500/22 to-violet-500/10 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-pink-200" />
-      </div>
+      <span className="w-8 h-8 rounded-[10px] bg-white/[0.05] flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-text-primary" aria-hidden="true" />
+      </span>
       <span className="text-left leading-none min-w-0">
-        <span className="block font-display text-sm text-text-primary">{value}</span>
-        <span className="block text-[9px] text-white/38 uppercase tracking-wide mt-0.5">{label}</span>
+        <span className="block text-sm font-bold text-text-white tabular-nums">{value}</span>
+        <span className="block text-[10px] text-text-subtle mt-1">{label}</span>
       </span>
     </button>
   );
 }
 
 function QuickAction({
-  iconSrc,
+  imageSrc,
   label,
-  tone,
+  compact = false,
   onClick,
 }: {
-  iconSrc: string;
+  imageSrc: string;
   label: string;
-  tone: 'pink' | 'orange' | 'violet' | 'cyan' | 'green' | 'gold' | 'purple';
+  compact?: boolean;
   onClick: () => void;
 }) {
-  const tones = {
-    pink: 'from-pink-400/25 to-pink-600/5 shadow-pink-500/10',
-    orange: 'from-orange-400/25 to-orange-600/5 shadow-orange-500/10',
-    violet: 'from-violet-400/25 to-violet-600/5 shadow-violet-500/10',
-    cyan: 'from-cyan-300/25 to-cyan-500/5 shadow-cyan-500/10',
-    green: 'from-emerald-400/25 to-emerald-600/5 shadow-emerald-500/10',
-    gold: 'from-amber-300/25 to-amber-500/5 shadow-amber-500/10',
-    purple: 'from-fuchsia-400/25 to-violet-500/5 shadow-fuchsia-500/10',
-  };
-
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-[18px] bg-gradient-to-b from-[#28131F] to-[#1B0E17] px-2.5 py-3.5 flex flex-col items-center gap-2.5 active:scale-[0.96] transition-transform shadow-[0_10px_24px_-18px_rgba(0,0,0,0.8)]"
+      className={
+        'group relative overflow-hidden rounded-[16px] bg-bg-surface border border-white/[0.06] text-left active:scale-[0.97] transition-transform ' +
+        (compact ? 'aspect-[4/5]' : 'aspect-[3/4]')
+      }
     >
-      <span className={'relative w-12 h-12 rounded-[16px] bg-gradient-to-br flex items-center justify-center shadow-lg ' + tones[tone]}>
-        
-        <img
-          src={`${import.meta.env.BASE_URL}icon/${iconSrc}`}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          className="relative w-[52px] h-[52px] object-contain drop-shadow-[0_4px_5px_rgba(0,0,0,0.45)]"
-          style={{ filter: 'url(#honeycomb-remove-white-icon-bg)' }}
-        />
+      <img
+        src={`${import.meta.env.BASE_URL}categories/${imageSrc}`}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
+      <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+      <span
+        className={
+          'absolute left-2.5 right-2.5 bottom-2.5 font-semibold text-white leading-tight ' +
+          (compact ? 'text-[11px]' : 'text-[13px]')
+        }
+      >
+        {label}
       </span>
-      <span className="text-[11px] font-semibold text-white/80">{label}</span>
     </button>
   );
 }
@@ -890,7 +873,7 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
           : undefined;
 
   return (
-    <div className="absolute inset-0 bg-[#1A0D16] z-0">
+    <div className="absolute inset-0 bg-[#101013] z-0">
       {imageSrc ? (
         <img
           key={imageSrc}
@@ -905,13 +888,13 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
           <PosterArtwork movie={{ ...movie, movie_title: displayTitle }} isCenter={isCenter} />
         </div>
       )}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#100911]/95 via-[#100911]/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#08080A]/95 via-[#08080A]/5 to-transparent pointer-events-none" />
     </div>
   );
 }
 
 const collectionStyle: Record<CollectionItem['kind'], { icon: typeof Zap; tone: string }> = {
-  card: { icon: Clapperboard, tone: 'from-pink-500/25 to-violet-500/5 text-pink-200' },
+  card: { icon: Clapperboard, tone: 'from-accent/25 to-accent/5 text-text-primary' },
   ticket: { icon: Ticket, tone: 'from-rose-400/25 to-orange-400/5 text-rose-200' },
   merch: { icon: Gift, tone: 'from-cyan-400/25 to-blue-400/5 text-cyan-200' },
   badge: { icon: Star, tone: 'from-emerald-400/25 to-green-400/5 text-emerald-200' },
@@ -920,7 +903,7 @@ const collectionStyle: Record<CollectionItem['kind'], { icon: typeof Zap; tone: 
 function CollectionTile({ item }: { item: CollectionItem }) {
   const { icon: Icon, tone } = collectionStyle[item.kind];
   return (
-    <div className="flex-shrink-0 w-24 bg-gradient-to-br from-[#25121D] to-[#1A0F17] rounded-[16px] p-2.5">
+    <div className="flex-shrink-0 w-24 bg-bg-secondary border border-white/[0.06] rounded-[16px] p-2.5">
       <div className={'h-16 rounded-[11px] bg-gradient-to-br flex items-center justify-center mb-2 ' + tone}>
         <Icon className="w-7 h-7" />
       </div>
@@ -931,14 +914,14 @@ function CollectionTile({ item }: { item: CollectionItem }) {
 }
 
 function LeaderRow({ entry, isMe }: { entry: CampaignDashboard['leaderboard'][number]; isMe: boolean }) {
-  const medal = ['text-[#FFC857]', 'text-zinc-300', 'text-amber-600'][entry.rank - 1];
+  const medal = ['text-gold', 'text-zinc-300', 'text-amber-600'][entry.rank - 1];
   return (
-    <div className={'flex items-center gap-3 py-2.5 border-b border-white/5 last:border-b-0 ' + (isMe ? '-mx-2 px-2 rounded-[10px] bg-pink-500/8' : '')}>
+    <div className={'flex items-center gap-3 py-2.5 border-b border-white/5 last:border-b-0 ' + (isMe ? '-mx-2 px-2 rounded-[10px] bg-accent/10' : '')}>
       <span className={'font-display text-base w-6 text-center ' + (medal ?? 'text-text-muted')}>
         {entry.rank <= 3 ? <Trophy className="w-4 h-4 inline" fill="currentColor" /> : entry.rank}
       </span>
       <span className="flex-1 min-w-0">
-        <span className={'block text-sm truncate ' + (isMe ? 'text-pink-200 font-semibold' : 'text-text-primary')}>
+        <span className={'block text-sm truncate ' + (isMe ? 'text-text-primary font-semibold' : 'text-text-primary')}>
           {isMe ? 'You' : entry.display_name}
         </span>
         <span className="block text-[10px] text-text-subtle">

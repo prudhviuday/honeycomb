@@ -189,7 +189,7 @@ export function MapLibreMap({
               16,
               7,
             ],
-            'circle-color': '#ff6b4a',
+            'circle-color': '#E50914',
             'circle-opacity': [
               'interpolate',
               ['linear'],

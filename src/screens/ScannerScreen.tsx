@@ -249,7 +249,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
               <button
                 type="button"
                 onClick={() => setCameraAttempt((value) => value + 1)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
               >
                 <RefreshCw className="w-4 h-4" />
                 Try Camera Again
@@ -291,7 +291,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
       {/* Loading overlay */}
       {loading && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center max-w-md mx-auto">
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center max-w-lg mx-auto">
           <div className="flex flex-col items-center">
             <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-xs text-text-muted tracking-wide uppercase">
@@ -304,7 +304,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
       {/* Manual entry sheet */}
       {showManual && (
         <div
-          className="fixed inset-0 z-50 max-w-md mx-auto"
+          className="fixed inset-0 z-50 max-w-lg mx-auto"
           onClick={() => setShowManual(false)}
         >
           <div className="absolute inset-0 bg-black/50 animate-fade-in" />
@@ -326,12 +326,12 @@ export function ScannerScreen({ onScanComplete }: Props) {
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus
-                  className="w-full px-4 py-4 bg-bg-surface hairline rounded-[10px] text-text-primary placeholder:text-text-subtle font-mono text-center text-lg focus:outline-none focus:border-gold transition-colors mb-3"
+                  className="w-full px-4 py-4 bg-bg-surface hairline rounded-[10px] text-text-primary placeholder:text-text-subtle font-mono text-center text-lg focus:outline-none focus:border-accent transition-colors mb-3"
                 />
                 <button
                   type="submit"
                   disabled={!code.trim() || loading}
-                  className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] disabled:opacity-40 active:scale-[0.98] transition-transform"
+                  className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] disabled:opacity-40 active:scale-[0.98] transition-transform"
                 >
                   Submit
                 </button>
@@ -344,7 +344,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
       {/* Result overlay */}
       {result && (
         <div
-          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center max-w-md mx-auto px-5"
+          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center max-w-lg mx-auto px-5"
           onClick={handleCloseResult}
         >
           <div
@@ -366,7 +366,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
                 <p className="text-xs text-text-muted mb-8">{result.sourceName}</p>
                 <button
                   onClick={handleCloseResult}
-                  className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
+                  className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
                 >
                   Continue
                 </button>
