@@ -98,7 +98,7 @@ export function HuntsScreen({ onNavigate }: Props) {
             <div
               key={mission.id}
               className={`rounded-[20px] overflow-hidden cursor-pointer active:scale-[0.985] transition-all duration-300 shadow-[0_12px_35px_-24px_rgba(0,0,0,0.9)] ${
-                isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#10121B] border border-white/8'
+                isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#0D0D10] border border-white/8'
               }`}
               onClick={() => !isCompleted && onNavigate?.('scanner')}
             >
@@ -163,7 +163,7 @@ export function HuntsScreen({ onNavigate }: Props) {
       {completedMissions < totalMissions && (
         <button
           onClick={() => onNavigate?.('scanner')}
-          className="w-full mt-5 py-4 bg-gradient-to-r from-gold-bright to-gold text-bg-primary font-semibold text-sm rounded-[14px] shadow-[0_12px_30px_rgba(255,184,74,0.18)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full mt-5 py-4 bg-accent text-white font-semibold text-sm rounded-[14px] shadow-[0_12px_30px_rgba(255,184,74,0.18)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <ScanLine className="w-4 h-4" />
           Start Scanning

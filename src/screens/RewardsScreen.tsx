@@ -81,7 +81,7 @@ export function RewardsScreen() {
       <p className="text-xs text-text-muted mb-8">Redeem points for exclusive merchandise</p>
 
       {/* Points bar — editorial, not a card */}
-      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#201A12] via-bg-surface to-[#11131D] border border-gold/15 shadow-[0_18px_45px_-24px_rgba(255,184,74,0.35)] py-5 px-5 mb-8 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#1C1710] via-bg-surface to-[#0D0D10] border border-gold/15 shadow-[0_18px_45px_-24px_rgba(233,180,76,0.22)] py-5 px-5 mb-8 flex items-center justify-between">
         <div>
           <p className="font-display text-4xl text-gold leading-none">{points}</p>
           <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Available Points</p>
@@ -136,7 +136,7 @@ export function RewardsScreen() {
             const rewardClaims = claims.filter(c => c.reward_id === reward.id);
             const alreadyClaimed = rewardClaims.length > 0 && reward.reward_type === 'guaranteed';
             return (
-              <div key={reward.id} className="relative overflow-hidden bg-gradient-to-br from-bg-surface to-[#10121B] border border-white/8 rounded-[20px] shadow-[0_14px_40px_-28px_rgba(0,0,0,0.95)]">
+              <div key={reward.id} className="relative overflow-hidden bg-gradient-to-br from-bg-surface to-[#0D0D10] border border-white/8 rounded-[20px] shadow-[0_14px_40px_-28px_rgba(0,0,0,0.95)]">
                 <div className="p-5">
                   <div className="flex items-start gap-4 mb-4">
                     <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center flex-shrink-0 border border-white/8 ${
@@ -174,7 +174,7 @@ export function RewardsScreen() {
                     <button
                       onClick={() => handleClaim(reward)}
                       disabled={claiming === reward.id}
-                      className="w-full py-3.5 bg-gradient-to-r from-gold-bright to-gold text-bg-primary font-semibold text-xs uppercase tracking-[0.08em] active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-accent text-white font-semibold text-xs uppercase tracking-[0.08em] active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {claiming === reward.id ? (
                         <><Clock className="w-3.5 h-3.5 animate-spin" /> Processing</>
@@ -196,7 +196,7 @@ export function RewardsScreen() {
 
       {/* Claim result */}
       {claimResult && (
-        <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center max-w-md mx-auto px-5" onClick={() => setClaimResult(null)}>
+        <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center max-w-lg mx-auto px-5" onClick={() => setClaimResult(null)}>
           <div className="w-full bg-bg-secondary hairline rounded-[12px] p-8 animate-scale-in text-center" onClick={(e) => e.stopPropagation()}>
             <div className="w-16 h-16 rounded-full bg-gold/10 hairline flex items-center justify-center mx-auto mb-6">
               <Gift className="w-7 h-7 text-gold" />
@@ -209,7 +209,7 @@ export function RewardsScreen() {
             </div>
             <button
               onClick={() => setClaimResult(null)}
-              className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
+              className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform"
             >
               Continue
             </button>

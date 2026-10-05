@@ -28,7 +28,7 @@ export function ProfileEditModal({ profile, onSave, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 max-w-md mx-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 max-w-lg mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 animate-fade-in" />
       <div
         className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[16px] hairline-t animate-slide-up"
@@ -72,7 +72,7 @@ export function ProfileEditModal({ profile, onSave, onClose }: Props) {
           <button
             onClick={handleSave}
             disabled={saving || saved}
-            className="w-full py-3.5 bg-gold text-bg-primary font-semibold text-sm rounded-[10px] flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
+            className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
           >
             {saved ? <><Check className="w-4 h-4" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
           </button>
