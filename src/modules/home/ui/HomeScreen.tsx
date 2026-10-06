@@ -180,9 +180,9 @@ export function HomeScreen({ onNavigate }: Props) {
     );
   }
 
-  const points = campaignUser?.points ?? 0;
+  const points = getHomePoints(dashboard);
   const scanCount = dashboard.scans.length;
-  const completedMissions = dashboard.missionProgress.filter((m) => m.completed).length;
+  const completedMissions = getCompletedMissionCount(dashboard);
   const totalMissions = dashboard.missions.length;
   const myRank = dashboard.myLeaderboardPosition?.rank ?? '—';
 
