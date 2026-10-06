@@ -34,7 +34,8 @@ export function ProfileScreen() {
 
   const handleSaveProfile = async (data: { display_name: string; city: string }) => {
     if (!user) return;
-    await upsertProfile({ user_id: user.id, display_name: data.display_name, city: data.city });
+    const normalized = normalizeProfileInput(data);
+    await upsertProfile({ user_id: user.id, ...normalized });
   };
 
   const points = campaignUser?.points ?? 0;
