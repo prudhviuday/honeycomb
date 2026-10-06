@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 setWorkerUrl(workerUrl);
 
-import { honeybadgerMapStyle, honeycombBuildingLayer } from '@/modules/maps/logic/mapStyle';
+import { honeybadgerMapStyle, honeycombBuildingLayer, honeycombRoadGlowLayers } from '@/modules/maps/logic/mapStyle';
 import type { MapFeature } from '@/modules/maps/logic/mapData';
 import type { Scan, HeatmapPoint } from '@/modules/maps/types';
 import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
@@ -64,6 +64,14 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
         properties: { points: 1, scanId: scan.id },
       })),
   };
+}
+
+function addRoadGlow(map: maplibregl.Map) {
+  if (!map.getSource('openmaptiles')) return;
+  const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id;
+  honeycombRoadGlowLayers.forEach((layer) => {
+    if (!map.getLayer(layer.id)) map.addLayer(layer, firstSymbolLayer);
+  });
 }
 
 function add3DBuildings(map: maplibregl.Map) {
@@ -127,6 +135,7 @@ export function MapLibreMap({
     mapRef.current = map;
 
     const addActivityLayers = () => {
+      addRoadGlow(map);
       add3DBuildings(map);
 
       if (!map.getSource(GENERAL_HEAT_SOURCE)) {
