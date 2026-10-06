@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Gift, Ticket, Shirt, Star, Zap, Check, Clock, Package } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useCampaign } from '@/context/CampaignContext';
+import { useAuth } from '@/application/state/AuthContext';
+import { useCampaign } from '@/application/state/CampaignContext';
 import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';
 import { calculateEntryTotal, canClaimReward } from '@/modules/rewards/logic/rewardLogic';
 import type { Reward, RewardEntry, RewardClaim } from '@/modules/rewards/types';
