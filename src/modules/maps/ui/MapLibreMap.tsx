@@ -102,6 +102,7 @@ export function MapLibreMap({
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const activityScansRef = useRef(activityScans);
+  const hasInitializedLocationRef = useRef(false);
 
   activityScansRef.current = activityScans;
   onMarkerClickRef.current = onMarkerClick;
@@ -302,6 +303,27 @@ export function MapLibreMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !userLocation || hasInitializedLocationRef.current) return;
+
+    const centerOnUser = () => {
+      if (hasInitializedLocationRef.current) return;
+      hasInitializedLocationRef.current = true;
+      map.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 12,
+        pitch: 48,
+        duration: 650,
+      });
+    };
+
+    if (map.isStyleLoaded()) centerOnUser();
+    else map.once('load', centerOnUser);
+
+    return () => map.off('load', centerOnUser);
+  }, [userLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !userLocation || !map.isStyleLoaded()) return;
 
     map.flyTo({
@@ -351,12 +373,4 @@ export function MapLibreMap({
     };
   }, []);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !userLocation) return;
-    userMarkerRef.current?.remove();
-    userMarkerRef.current = createUserMarker(map, userLocation.lng, userLocation.lat).marker;
-  }, [userLocation]);
-
   return <div ref={containerRef} className="absolute inset-0" />;
-}
