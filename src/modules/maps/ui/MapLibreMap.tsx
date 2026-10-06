@@ -20,9 +20,13 @@ interface Props {
   userLocation: { lng: number; lat: number } | null;
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
+  recenterVersion?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
+const TAMIL_NADU_BOUNDS = { south: 8.0, north: 13.6, west: 76.2, east: 80.4 };
+const REGIONAL_MAX_ZOOM = 8.99;
+const DETAILED_MAX_ZOOM = 18;
 const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
 const ACTIVITY_HEAT = 'honeycomb-activity-heat';
 const ACTIVITY_POINTS = 'honeycomb-activity-points';
@@ -90,11 +94,11 @@ export function MapLibreMap({
   userLocation,
   onMarkerClick,
   onMapClick,
+  recenterVersion = 0,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const hasFitRef = useRef(false);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const activityScansRef = useRef(activityScans);
@@ -109,10 +113,10 @@ export function MapLibreMap({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: honeybadgerMapStyle,
-      center: CHENNAI,
-      zoom: 12,
-      minZoom: 3,
-      maxZoom: 18,
+      center: userLocation ? [userLocation.lng, userLocation.lat] : CHENNAI,
+      zoom: userLocation ? 12 : 6,
+      minZoom: 0,
+      maxZoom: userLocation ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM,
       attributionControl: false,
       pitch: 48,
       bearing: 0,
@@ -142,7 +146,7 @@ export function MapLibreMap({
           id: GENERAL_HEAT_LAYER,
           type: 'heatmap',
           source: GENERAL_HEAT_SOURCE,
-          maxzoom: 12,
+          maxzoom: REGIONAL_MAX_ZOOM,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.35, 5, 0.8, 20, 1],
             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.5, 12, 2.2],
@@ -165,7 +169,8 @@ export function MapLibreMap({
           id: CAMPAIGN_HEAT_LAYER,
           type: 'heatmap',
           source: CAMPAIGN_HEAT_SOURCE,
-          maxzoom: 12,
+          minzoom: 9,
+          maxzoom: DETAILED_MAX_ZOOM,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1, 8, 2, 12, 3],
@@ -289,23 +294,62 @@ export function MapLibreMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !userLocation) return;
+
+    userMarkerRef.current?.remove();
+    userMarkerRef.current = createUserMarker(map, userLocation.lng, userLocation.lat).marker;
+  }, [userLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || !map.isStyleLoaded()) return;
+
+    map.flyTo({
+      center: [userLocation.lng, userLocation.lat],
+      zoom: Math.max(map.getZoom(), 12),
+      pitch: 48,
+      duration: 650,
+    });
+  }, [recenterVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    const activityPoints = activityScans
-      .filter((scan) => Number.isFinite(Number(scan.latitude)) && Number.isFinite(Number(scan.longitude)))
-      .map((scan) => [Number(scan.longitude), Number(scan.latitude)] as [number, number]);
-    const locationPoints = features.map((feature) => [feature.location.longitude, feature.location.latitude] as [number, number]);
-    const points = [...activityPoints, ...locationPoints];
-    if (userLocation) points.push([userLocation.lng, userLocation.lat]);
-    if (!points.length || hasFitRef.current) return;
+    const isInsideTamilNadu = (lng: number, lat: number) =>
+      lat >= TAMIL_NADU_BOUNDS.south &&
+      lat <= TAMIL_NADU_BOUNDS.north &&
+      lng >= TAMIL_NADU_BOUNDS.west &&
+      lng <= TAMIL_NADU_BOUNDS.east;
 
-    hasFitRef.current = true;
-    const bounds = points.reduce(
-      (bounds, point) => bounds.extend(point),
-      new maplibregl.LngLatBounds(points[0], points[0]),
-    );
-    map.fitBounds(bounds, { padding: 70, maxZoom: 11, pitch: 48, duration: 700 });
-  }, [activityScans, features, userLocation]);
+    const updateMapMode = () => {
+      const bounds = map.getBounds();
+      const samplePoints = [
+        [bounds.getWest(), bounds.getSouth()],
+        [bounds.getWest(), bounds.getCenter().lat],
+        [bounds.getWest(), bounds.getNorth()],
+        [bounds.getCenter().lng, bounds.getSouth()],
+        [bounds.getCenter().lng, bounds.getCenter().lat],
+        [bounds.getCenter().lng, bounds.getNorth()],
+        [bounds.getEast(), bounds.getSouth()],
+        [bounds.getEast(), bounds.getCenter().lat],
+        [bounds.getEast(), bounds.getNorth()],
+      ];
+      const insideCount = samplePoints.filter(([lng, lat]) => isInsideTamilNadu(lng, lat)).length;
+      const predominantlyTamilNadu = insideCount / samplePoints.length >= 0.7;
+      const maxZoom = predominantlyTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
+
+      if (map.getMaxZoom() !== maxZoom) map.setMaxZoom(maxZoom);
+    };
+
+    updateMapMode();
+    map.on('moveend', updateMapMode);
+    map.on('zoomend', updateMapMode);
+    return () => {
+      map.off('moveend', updateMapMode);
+      map.off('zoomend', updateMapMode);
+    };
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
