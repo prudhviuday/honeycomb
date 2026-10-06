@@ -32,6 +32,7 @@ const ACTIVITY_POINTS = 'honeycomb-activity-points';
 const GENERAL_HEAT_SOURCE = 'honeycomb-general-location-heat';
 const CAMPAIGN_HEAT_SOURCE = 'honeycomb-campaign-location-heat';
 const GENERAL_HEAT_LAYER = 'honeycomb-general-location-heat-layer';
+const GENERAL_POINT_LAYER = 'honeycomb-general-location-point-layer';
 const CAMPAIGN_HEAT_LAYER = 'honeycomb-campaign-location-heat-layer';
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
@@ -115,11 +116,11 @@ export function MapLibreMap({
       minZoom: 0,
       maxZoom: userLocation ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM,
       attributionControl: false,
-      pitch: 48,
+      pitch: 0,
       bearing: 0,
-      dragRotate: true,
-      pitchWithRotate: true,
-      touchPitch: true,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
 
     map.touchZoomRotate.disableRotation();
@@ -159,6 +160,23 @@ export function MapLibreMap({
             ],
           },
         }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
+      }
+
+      if (!map.getLayer(GENERAL_POINT_LAYER)) {
+        map.addLayer({
+          id: GENERAL_POINT_LAYER,
+          type: 'circle',
+          source: GENERAL_HEAT_SOURCE,
+          maxzoom: REGIONAL_MAX_ZOOM,
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 1, 5, 5, 8, 20, 12],
+            'circle-color': '#ffc857',
+            'circle-opacity': 0.85,
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1,
+            'circle-stroke-opacity': 0.55,
+          },
+        });
       }
 
       if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
@@ -306,7 +324,8 @@ export function MapLibreMap({
       map.flyTo({
         center: [userLocation.lng, userLocation.lat],
         zoom: 12,
-        pitch: 48,
+        pitch: 0,
+        bearing: 0,
         duration: 650,
       });
     };
@@ -324,7 +343,8 @@ export function MapLibreMap({
     map.flyTo({
       center: [userLocation.lng, userLocation.lat],
       zoom: Math.max(map.getZoom(), 12),
-      pitch: 48,
+      pitch: 0,
+      bearing: 0,
       duration: 650,
     });
   }, [recenterVersion]);
