@@ -66,77 +66,109 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
   };
 }
 
-function addRoadGlow(map: maplibregl.Map) {
-  // Strava-like visual treatment: use the actual transportation geometry
-  // from the loaded OpenFreeMap style, with a soft orange glow and a bright
-  // orange core. The layers are deliberately placed ABOVE the source road
-  // layer; putting them below it lets the original dark road paint hide them.
-  const styleLayers = map.getStyle().layers ?? [];
-  const roadLayers = styleLayers.filter(
-    (layer) =>
-      layer.type === 'line' &&
-      layer.source === 'openmaptiles' &&
-      layer['source-layer'] === 'transportation',
-  );
-
-  roadLayers.forEach((roadLayer, index) => {
-    const glowId = `honeycomb-road-glow-${index}`;
-    const coreId = `honeycomb-road-core-${index}`;
-
-    const common = {
-      source: 'openmaptiles',
-      'source-layer': 'transportation',
-      ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
-      ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
-      ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
-    };
-
-    // Put the glow immediately ABOVE the source transportation layer.
-    // This is the key fix for the previously invisible orange effect.
-    if (!map.getLayer(glowId)) {
-      map.addLayer({
-        id: glowId,
-        type: 'line',
-        ...common,
-        paint: {
-          'line-color': '#00bfff',
-          'line-width': [
-            'interpolate', ['linear'], ['zoom'],
-            2, 1.5, 5, 2.5, 8, 4, 11, 6, 14, 8, 18, 11,
-          ],
-          'line-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            2, 0.22, 5, 0.30, 8, 0.38, 11, 0.46, 14, 0.52, 18, 0.58,
-          ],
-          'line-blur': 2.8,
-          'line-cap': 'round',
-          'line-join': 'round',
+function buildNeonPointsGeoJSON(general: HeatmapPoint[], campaign: HeatmapPoint[]): GeoJSON.FeatureCollection {
+  // The visual is intentionally point-based: a bright activity node with a
+  // large soft halo. We keep the points separate from the heatmap renderer so
+  // roads remain normal map roads and only nearby areas receive the glow.
+  const points = [...general, ...campaign];
+  return {
+    type: 'FeatureCollection',
+    features: points
+      .filter(
+        (point) =>
+          Number.isFinite(Number(point.latitude)) &&
+          Number.isFinite(Number(point.longitude)) &&
+          Number.isFinite(Number(point.weight)),
+      )
+      .map((point, index) => ({
+        type: 'Feature' as const,
+        id: `neon-${index}-${point.latitude}-${point.longitude}`,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [Number(point.longitude), Number(point.latitude)],
         },
-      }, roadLayer.id);
-    }
+        properties: { weight: Number(point.weight) },
+      })),
+  };
+}
 
-    // Add the bright core above the glow.
-    if (!map.getLayer(coreId)) {
-      map.addLayer({
-        id: coreId,
-        type: 'line',
-        ...common,
-        paint: {
-          'line-color': '#8ffcff',
-          'line-width': [
-            'interpolate', ['linear'], ['zoom'],
-            2, 0.45, 5, 0.7, 8, 1.0, 11, 1.35, 14, 1.8, 18, 2.5,
-          ],
-          'line-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            2, 0.65, 5, 0.72, 8, 0.78, 11, 0.82, 14, 0.88, 18, 0.92,
-          ],
-          'line-cap': 'round',
-          'line-join': 'round',
-        },
-      }, glowId);
-    }
-  });
+function addNeonGlowLayers(
+  map: maplibregl.Map,
+  generalHeatmap: HeatmapPoint[],
+  campaignHeatmap: HeatmapPoint[],
+) {
+  if (!map.getSource(GENERAL_HEAT_SOURCE)) {
+    map.addSource(GENERAL_HEAT_SOURCE, {
+      type: 'geojson',
+      data: buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
+    });
+  }
+
+  // The halo is deliberately rendered ABOVE the normal map/roads. That makes
+  // the translucent blue/violet light wash over nearby roads, creating the
+  // reflected-neon effect from the reference instead of recoloring every road.
+  if (!map.getLayer(GENERAL_HEAT_LAYER)) {
+    map.addLayer({
+      id: GENERAL_HEAT_LAYER,
+      type: 'circle',
+      source: GENERAL_HEAT_SOURCE,
+      paint: {
+        'circle-radius': [
+          'interpolate', ['linear'], ['zoom'],
+          3, ['interpolate', ['linear'], ['get', 'weight'], 1, 18, 3, 24, 8, 32, 20, 42],
+          6, ['interpolate', ['linear'], ['get', 'weight'], 1, 24, 3, 32, 8, 42, 20, 54],
+          10, ['interpolate', ['linear'], ['get', 'weight'], 1, 34, 3, 44, 8, 58, 20, 72],
+          14, ['interpolate', ['linear'], ['get', 'weight'], 1, 42, 3, 54, 8, 70, 20, 88],
+          18, ['interpolate', ['linear'], ['get', 'weight'], 1, 50, 3, 64, 8, 82, 20, 104],
+        ],
+        'circle-color': '#4d4dff',
+        'circle-opacity': 0.16,
+        'circle-blur': 1,
+      },
+    });
+  }
+
+  const neonCoreId = 'honeycomb-neon-core';
+  if (!map.getLayer(neonCoreId)) {
+    map.addLayer({
+      id: neonCoreId,
+      type: 'circle',
+      source: GENERAL_HEAT_SOURCE,
+      paint: {
+        'circle-radius': [
+          'interpolate', ['linear'], ['zoom'],
+          3, 2.2, 6, 2.8, 10, 3.8, 14, 5, 18, 6.5,
+        ],
+        'circle-color': '#fff7ff',
+        'circle-opacity': 0.98,
+        'circle-blur': 0.05,
+      },
+    });
+  }
+
+  if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+    map.addLayer({
+      id: CAMPAIGN_HEAT_LAYER,
+      type: 'circle',
+      source: GENERAL_HEAT_SOURCE,
+      paint: {
+        'circle-radius': [
+          'interpolate', ['linear'], ['zoom'],
+          3, ['interpolate', ['linear'], ['get', 'weight'], 1, 8, 3, 10, 8, 14, 20, 18],
+          6, ['interpolate', ['linear'], ['get', 'weight'], 1, 10, 3, 13, 8, 18, 20, 24],
+          10, ['interpolate', ['linear'], ['get', 'weight'], 1, 12, 3, 16, 8, 22, 20, 30],
+          14, ['interpolate', ['linear'], ['get', 'weight'], 1, 15, 3, 20, 8, 28, 20, 38],
+          18, ['interpolate', ['linear'], ['get', 'weight'], 1, 18, 3, 24, 8, 34, 20, 46],
+        ],
+        'circle-color': '#ff2bd6',
+        'circle-opacity': 0.42,
+        'circle-blur': 0.78,
+      },
+    });
+  }
+
+  const source = map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined;
+  source?.setData(buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap));
 }
 function add3DBuildings(map: maplibregl.Map) {
   if (map.getLayer(honeycombBuildingLayer.id)) return;
@@ -202,68 +234,8 @@ export function MapLibreMap({
       // Put buildings below the luminous road network so close-up extrusions
       // cannot visually swallow the smaller glowing roads.
       add3DBuildings(map);
-      addRoadGlow(map);
-
-      if (!map.getSource(GENERAL_HEAT_SOURCE)) {
-        map.addSource(GENERAL_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(generalHeatmap) });
-      }
-
-      if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
-        map.addSource(CAMPAIGN_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(campaignHeatmap) });
-      }
-
-      if (!map.getLayer(GENERAL_HEAT_LAYER)) {
-        map.addLayer({
-          id: GENERAL_HEAT_LAYER,
-          type: 'heatmap',
-          source: GENERAL_HEAT_SOURCE,
-          maxzoom: 10,
-          paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.28, 3, 0.5, 8, 0.78, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.72, 6, 1.0, 8, 1.25, 10, 1.45],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 34, 5, 52, 7, 72, 9, 92, 10, 108],
-            'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.56, 6, 0.64, 9, 0.68, 10, 0.62],
-            'heatmap-color': [
-              'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(0,0,0,0)',
-              0.10, 'rgba(0,102,255,0.05)',
-              0.22, 'rgba(0,174,255,0.28)',
-              0.38, 'rgba(0,235,255,0.52)',
-              0.55, 'rgba(92,92,255,0.70)',
-              0.72, 'rgba(194,48,255,0.84)',
-              0.88, 'rgba(255,35,177,0.94)',
-              1, 'rgba(255,238,255,0.98)',
-            ],
-          },
-        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
-      }
-
-      if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
-        map.addLayer({
-          id: CAMPAIGN_HEAT_LAYER,
-          type: 'heatmap',
-          source: CAMPAIGN_HEAT_SOURCE,
-          minzoom: 9,
-          maxzoom: DETAILED_MAX_ZOOM,
-          paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.1, 11, 1.45, 14, 1.8, 18, 2.1],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 42, 11, 58, 14, 78, 18, 96],
-            'heatmap-opacity': 0.78,
-            'heatmap-color': [
-              'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(0,102,255,0)',
-              0.12, 'rgba(0,190,255,0.16)',
-              0.28, 'rgba(0,225,255,0.36)',
-              0.45, 'rgba(84,86,255,0.58)',
-              0.62, 'rgba(174,45,255,0.74)',
-              0.80, 'rgba(255,35,180,0.90)',
-              0.92, 'rgba(255,92,202,0.96)',
-              1, 'rgba(255,242,255,1)',
-            ],
-          },
-        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
-      }
+      add3DBuildings(map);
+      addNeonGlowLayers(map, generalHeatmap, campaignHeatmap);
 
       if (!map.getSource(ACTIVITY_SOURCE)) {
         map.addSource(ACTIVITY_SOURCE, {
@@ -303,8 +275,9 @@ export function MapLibreMap({
 
       const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
       source?.setData(buildActivityGeoJSON(activityScansRef.current));
-      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
-      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
+        buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
+      );
     };
 
     map.once('load', addActivityLayers);
@@ -321,8 +294,9 @@ export function MapLibreMap({
     if (!map) return;
     const update = () => {
       (map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildActivityGeoJSON(activityScans));
-      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
-      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
+        buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
+      );
     };
     if (map.isStyleLoaded()) update(); else map.once('load', update);
   }, [activityScans, generalHeatmap, campaignHeatmap]);
