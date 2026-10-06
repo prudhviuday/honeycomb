@@ -3,7 +3,7 @@ import { Gift, Ticket, Shirt, Star, Zap, Check, Clock, Package } from 'lucide-re
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
 import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';
-import { calculateEntryTotal } from '@/modules/rewards/logic/rewardLogic';
+import { calculateEntryTotal, canClaimReward } from '@/modules/rewards/logic/rewardLogic';
 import type { Reward, RewardEntry, RewardClaim } from '@/types';
 
 const rewardIcons: Record<string, typeof Gift> = {
@@ -47,7 +47,7 @@ export function RewardsScreen() {
 
   const handleClaim = async (reward: Reward) => {
     if (!activeCampaign || !user || !campaignUser) return;
-    if (campaignUser.points < reward.points_required) return;
+    if (!canClaimReward(campaignUser.points, reward)) return;
     setClaiming(reward.id);
     try {
       const claim = await claimReward(activeCampaign.id, user.id, reward);
