@@ -24,7 +24,7 @@ export function AuthScreen() {
         const name = normalizeDisplayName(displayName);
         await signUp(normalizeEmail(email), password, name);
       } else {
-        await signIn(email.trim(), password);
+        await signIn(normalizeEmail(email), password);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
