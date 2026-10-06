@@ -5,7 +5,7 @@ import { useCampaign } from '@/context/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
 import { getActivityEvents } from '@/modules/analytics/api/analyticsApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
-import type { ActivityEvent } from '@/types';
+import type { ActivityEvent } from '@/modules/analytics/types';
 import { ProfileEditModal } from '@/screens/ProfileEditModal';
 
 export function ProfileScreen() {
