@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Search, X, MapPin, Check, Navigation, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
+import type { Campaign } from '@/shared/types';
 import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
 
 interface Props {
@@ -13,45 +14,50 @@ interface Props {
 
 export function MapScreen({ onNavigate }: Props) {
   const { user } = useAuth();
-  const { activeCampaign } = useCampaign();
+  const { campaigns, activeCampaign } = useCampaign();
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(activeCampaign);
   const [features, setFeatures] = useState<MapFeature[]>([]);
   const [activityScans, setActivityScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [moviePickerOpen, setMoviePickerOpen] = useState(false);
   const [userLoc, setUserLoc] = useState<{ lng: number; lat: number } | null>(null);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    if (activeCampaign && user) {
+    if (activeCampaign && !selectedCampaign) setSelectedCampaign(activeCampaign);
+  }, [activeCampaign, selectedCampaign]);
+
+  useEffect(() => {
+    if (selectedCampaign && user) {
       (async () => {
         setLoading(true);
+        setSelected(null);
+        setPanelOpen(false);
         try {
           const [locs, srcs, userScans] = await Promise.all([
-            getLocations(activeCampaign.id),
-            getInteractionSources(activeCampaign.id),
-            getUserScans(activeCampaign.id, user.id),
+            getLocations(selectedCampaign.id),
+            getInteractionSources(selectedCampaign.id),
+            getUserScans(selectedCampaign.id, user.id),
           ]);
           setActivityScans(userScans);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
         } catch {
-          // ignore
+          setActivityScans([]);
+          setFeatures([]);
         } finally {
           setLoading(false);
         }
       })();
     }
-  }, [activeCampaign, user]);
+  }, [selectedCampaign, user]);
 
-  // Try to get user location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLoc({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
-        () => {
-          // Fallback to Chennai center
-          setUserLoc({ lng: 80.2707, lat: 13.0827 });
-        },
+        () => setUserLoc({ lng: 80.2707, lat: 13.0827 }),
         { enableHighAccuracy: true, timeout: 5000 },
       );
     } else {
@@ -61,27 +67,28 @@ export function MapScreen({ onNavigate }: Props) {
 
   const scannedCount = features.filter((f) => f.isScanned).length;
   const nearbyCount = userLoc
-    ? features.filter((f) => {
-        const d = calculateDistance(userLoc.lat, userLoc.lng, f.location.latitude, f.location.longitude);
-        return d < 5 && !f.isScanned;
-      }).length
+    ? features.filter((f) => calculateDistance(userLoc.lat, userLoc.lng, f.location.latitude, f.location.longitude) < 5 && !f.isScanned).length
     : 0;
-
-  const q = query.trim();
+  const q = query.trim().toLowerCase();
   const visibleFeatures = q
-    ? features.filter((f) => `${f.location?.name ?? ''} ${f.location?.address ?? ''}`.includes(q))
+    ? features.filter((f) => `${f.location?.name ?? ''} ${f.location?.address ?? ''}`.toLowerCase().includes(q))
     : features;
+
+  const movieOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return campaigns.filter((campaign) => {
+      if (seen.has(campaign.id)) return false;
+      seen.add(campaign.id);
+      return true;
+    });
+  }, [campaigns]);
+
   const handleMarkerClick = (feature: MapFeature) => {
     setSelected(feature);
     setPanelOpen(true);
   };
-
-  const handleMapClick = () => {
-    setPanelOpen(false);
-  };
-
+  const handleMapClick = () => setPanelOpen(false);
   const recenter = () => {
-    // The MapLibreMap handles its own recenter via userLoc; this just triggers a state change
     if (userLoc) setUserLoc({ ...userLoc });
   };
 
@@ -99,7 +106,6 @@ export function MapScreen({ onNavigate }: Props) {
 
   return (
     <div className="relative h-screen pb-20 overflow-hidden">
-      {/* MapLibre Map — full bleed */}
       <MapLibreMap
         features={visibleFeatures}
         activityScans={activityScans}
@@ -108,8 +114,61 @@ export function MapScreen({ onNavigate }: Props) {
         onMapClick={handleMapClick}
       />
 
-      {/* Top overlay — search */}
-      <div className="absolute top-0 left-0 right-0 p-4 z-10 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 p-4 z-10 pointer-events-none space-y-2">
+        <div className="glass-strong hairline rounded-[14px] px-3 py-2 pointer-events-auto shadow-lg shadow-black/40">
+          <button
+            type="button"
+            onClick={() => setMoviePickerOpen((open) => !open)}
+            className="w-full flex items-center gap-3 text-left"
+          >
+            <div className="w-8 h-8 rounded-[9px] bg-accent/15 flex items-center justify-center flex-shrink-0">
+              <Film className="w-4 h-4 text-gold" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] text-text-muted uppercase tracking-[0.18em]">Map campaign</p>
+              <p className="text-sm text-text-primary font-medium truncate">
+                {selectedCampaign?.movie_title || selectedCampaign?.title || 'Select a movie'}
+              </p>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${moviePickerOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {moviePickerOpen && (
+            <div className="mt-2 pt-2 border-t border-white/10 max-h-56 overflow-y-auto no-scrollbar">
+              {movieOptions.length === 0 ? (
+                <p className="text-xs text-text-muted py-3 px-1">No active movie campaigns.</p>
+              ) : movieOptions.map((campaign) => {
+                const isSelected = campaign.id === selectedCampaign?.id;
+                return (
+                  <button
+                    key={campaign.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setMoviePickerOpen(false);
+                      setQuery('');
+                    }}
+                    className={`w-full flex items-center gap-3 rounded-[10px] px-2.5 py-2.5 text-left ${isSelected ? 'bg-gold/10' : 'hover:bg-white/5'}`}
+                  >
+                    <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${isSelected ? 'ring-1 ring-gold/50' : ''}`}>
+                      {campaign.hero_image_url ? (
+                        <img src={campaign.hero_image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white/10 flex items-center justify-center"><Film className="w-3.5 h-3.5 text-text-muted" /></div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-text-primary truncate">{campaign.movie_title || campaign.title}</p>
+                      <p className="text-[10px] text-text-subtle truncate">{campaign.title}</p>
+                    </div>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-gold flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div className="glass-strong hairline rounded-full h-11 pl-4 pr-2 flex items-center gap-2.5 pointer-events-auto shadow-lg shadow-black/40">
           <Search className="w-4 h-4 text-text-muted flex-shrink-0" />
           <input
@@ -123,37 +182,24 @@ export function MapScreen({ onNavigate }: Props) {
               <X className="w-4 h-4" />
             </button>
           ) : (
-            <span className="text-[10px] text-text-muted px-2 whitespace-nowrap">
-              {scannedCount}/{features.length} explored
-            </span>
+            <span className="text-[10px] text-text-muted px-2 whitespace-nowrap">{scannedCount}/{features.length} explored</span>
           )}
         </div>
-        {q && visibleFeatures.length === 0 && (
-          <p className="mt-2 ml-2 text-[11px] text-text-muted">No locations match "{query}"</p>
-        )}
       </div>
 
-      {/* Discovery overlay — nearby opportunities */}
       {!panelOpen && nearbyCount > 0 && (
-        <div className="absolute top-16 left-4 right-4 z-10 pointer-events-none">
+        <div className="absolute top-28 left-4 right-4 z-10 pointer-events-none">
           <div className="glass rounded-[10px] px-3 py-2 flex items-center gap-2 animate-fade-in">
             <Zap className="w-3.5 h-3.5 text-gold flex-shrink-0" />
-            <p className="text-[11px] text-text-primary">
-              <span className="text-gold font-medium">{nearbyCount}</span> {nearbyCount === 1 ? 'mission' : 'missions'} nearby
-            </p>
+            <p className="text-[11px] text-text-primary"><span className="text-gold font-medium">{nearbyCount}</span> {nearbyCount === 1 ? 'mission' : 'missions'} nearby</p>
           </div>
         </div>
       )}
 
-      {/* Recenter button */}
-      <button
-        onClick={recenter}
-        className="absolute right-4 bottom-28 z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform"
-      >
+      <button onClick={recenter} className="absolute right-4 bottom-28 z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform">
         <Navigation className="w-4 h-4 text-gold" />
       </button>
 
-      {/* Bottom info bar — when no panel */}
       {!panelOpen && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-none">
           <div className="glass-strong rounded-[12px] px-4 py-3 flex items-center justify-between pointer-events-auto">
@@ -162,104 +208,45 @@ export function MapScreen({ onNavigate }: Props) {
               <p className="text-sm text-text-primary font-medium">{scannedCount} explored</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-gold" />
-              <span className="text-[10px] text-text-muted">Available</span>
-              <div className="w-2 h-2 rounded-full bg-emerald-500 ml-1.5" />
-              <span className="text-[10px] text-text-muted">Done</span>
+              <div className="w-2 h-2 rounded-full bg-gold" /><span className="text-[10px] text-text-muted">Available</span>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 ml-1.5" /><span className="text-[10px] text-text-muted">Done</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bottom sheet — location detail */}
       {panelOpen && selected && (
         <div className="fixed inset-0 z-50 max-w-lg mx-auto" onClick={() => setPanelOpen(false)}>
           <div className="absolute inset-0 bg-black/40 animate-fade-in" />
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[16px] hairline-t animate-slide-up max-h-[72%] overflow-y-auto no-scrollbar"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Drag handle */}
-            <div className="sticky top-0 bg-bg-secondary pt-3 pb-2 z-10">
-              <div className="w-10 h-1 bg-white/15 rounded-full mx-auto" />
-            </div>
-
+          <div className="absolute bottom-0 left-0 right-0 bg-bg-secondary rounded-t-[16px] hairline-t animate-slide-up max-h-[72%] overflow-y-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-bg-secondary pt-3 pb-2 z-10"><div className="w-10 h-1 bg-white/15 rounded-full mx-auto" /></div>
             <div className="px-5 pb-6">
-              {/* Category tag + title */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <p className="text-[10px] text-gold uppercase tracking-[0.2em] mb-1.5">
-                    {selected.category === 'activation' && 'Movie Campaign'}
-                    {selected.category === 'reward' && 'Reward Location'}
-                    {selected.category === 'mission' && 'Mission'}
-                    {selected.category === 'venue' && 'Venue'}
-                  </p>
+                  <p className="text-[10px] text-gold uppercase tracking-[0.2em] mb-1.5">{selected.category === 'activation' && 'Movie Campaign'}{selected.category === 'reward' && 'Reward Location'}{selected.category === 'mission' && 'Mission'}{selected.category === 'venue' && 'Venue'}</p>
                   <h3 className="font-display text-xl text-text-primary leading-tight">{selected.location.name}</h3>
                   <p className="text-xs text-text-muted mt-1">{selected.location.address}</p>
                 </div>
-                <button onClick={() => setPanelOpen(false)} className="text-text-subtle hover:text-text-primary mt-1">
-                  <X className="w-5 h-5" />
-                </button>
+                <button onClick={() => setPanelOpen(false)} className="text-text-subtle hover:text-text-primary mt-1"><X className="w-5 h-5" /></button>
               </div>
-
-              {/* Distance */}
-              {selectedDist !== null && (
-                <div className="flex items-center gap-2 mb-4 text-text-subtle">
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">{formatDistance(selectedDist)}</span>
-                </div>
-              )}
-
-              {/* Status badge */}
+              {selectedDist !== null && <div className="flex items-center gap-2 mb-4 text-text-subtle"><Navigation className="w-3.5 h-3.5" /><span className="text-[11px]">{formatDistance(selectedDist)}</span></div>}
               <div className="mb-5">
                 {selected.isScanned ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[11px] text-emerald-400 font-medium">Mission completed · +{selected.totalPoints} XP</span>
-                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20"><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-[11px] text-emerald-400 font-medium">Mission completed · +{selected.totalPoints} XP</span></div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20">
-                    <Zap className="w-3.5 h-3.5 text-gold" fill="currentColor" />
-                    <span className="text-[11px] text-gold font-medium">Mission available · +{selected.totalPoints} XP</span>
-                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20"><Zap className="w-3.5 h-3.5 text-gold" fill="currentColor" /><span className="text-[11px] text-gold font-medium">Mission available · +{selected.totalPoints} XP</span></div>
                 )}
               </div>
-
-              {/* QR sources at this location */}
               {selected.sources.length > 0 && (
                 <div className="space-y-px mb-5">
                   <p className="text-[10px] text-text-subtle uppercase tracking-[0.2em] mb-3">Scan Points</p>
                   {selected.sources.map((src) => {
                     const isScanned = selected.isScanned && src.location_id === selected.location.id;
-                    return (
-                      <div key={src.id} className="flex items-center justify-between py-3 hairline-b last:border-b-0">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isScanned ? 'bg-emerald-500/15' : 'bg-gold/10'}`}>
-                            {isScanned ? <Check className="w-4 h-4 text-emerald-400" /> : <MapPin className="w-4 h-4 text-gold" />}
-                          </div>
-                          <div>
-                            <p className="text-sm text-text-primary">{src.name}</p>
-                            <p className="text-[11px] text-text-subtle capitalize">{src.source_type}</p>
-                          </div>
-                        </div>
-                        <span className="font-display text-base text-gold">+{src.points}</span>
-                      </div>
-                    );
+                    return <div key={src.id} className="flex items-center justify-between py-3 hairline-b last:border-b-0"><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center ${isScanned ? 'bg-emerald-500/15' : 'bg-gold/10'}`}>{isScanned ? <Check className="w-4 h-4 text-emerald-400" /> : <MapPin className="w-4 h-4 text-gold" />}</div><div><p className="text-sm text-text-primary">{src.name}</p><p className="text-[11px] text-text-subtle capitalize">{src.source_type}</p></div></div><span className="font-display text-base text-gold">+{src.points}</span></div>;
                   })}
                 </div>
               )}
-
-              {/* Action button */}
-              <button
-                onClick={() => {
-                  setPanelOpen(false);
-                  onNavigate?.('scanner');
-                }}
-                className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-              >
-                {selected.isScanned ? 'Already Scanned' : 'Scan Here'}
-                {!selected.isScanned && <Zap className="w-4 h-4" fill="currentColor" />}
-              </button>
+              <button onClick={() => { setPanelOpen(false); onNavigate?.('scanner'); }} className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">{selected.isScanned ? 'Already Scanned' : 'Scan Here'}{!selected.isScanned && <Zap className="w-4 h-4" fill="currentColor" />}</button>
             </div>
           </div>
         </div>
