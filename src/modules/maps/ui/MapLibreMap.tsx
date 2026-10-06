@@ -26,8 +26,6 @@ const CHENNAI: [number, number] = [80.2707, 13.0827];
 const TAMIL_NADU_BOUNDS = { south: 8.0, north: 13.6, west: 76.2, east: 80.4 };
 const REGIONAL_MAX_ZOOM = 8.99;
 const DETAILED_MAX_ZOOM = 18;
-const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
-const ACTIVITY_HEAT = 'honeycomb-activity-heat';
 const GENERAL_HEAT_SOURCE = 'honeycomb-general-location-heat';
 const CAMPAIGN_HEAT_SOURCE = 'honeycomb-campaign-location-heat';
 const GENERAL_HEAT_LAYER = 'honeycomb-general-location-heat-layer';
@@ -42,27 +40,6 @@ function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection 
       geometry: { type: 'Point' as const, coordinates: [point.longitude, point.latitude] },
       properties: { weight: point.weight },
     })),
-  };
-}
-
-function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: scans
-      .filter(
-        (scan) =>
-          Number.isFinite(Number(scan.latitude)) &&
-          Number.isFinite(Number(scan.longitude)),
-      )
-      .map((scan, index) => ({
-        type: 'Feature' as const,
-        id: scan.id || `scan-${index}`,
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [Number(scan.longitude), Number(scan.latitude)],
-        },
-        properties: { points: 1, scanId: scan.id },
-      })),
   };
 }
 
@@ -231,50 +208,11 @@ export function MapLibreMap({
     mapRef.current = map;
 
     const addActivityLayers = () => {
-      // Put buildings below the luminous road network so close-up extrusions
-      // cannot visually swallow the smaller glowing roads.
-      add3DBuildings(map);
+      // Keep the normal map intact; the neon effect is produced by luminous
+      // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
       addNeonGlowLayers(map, generalHeatmap, campaignHeatmap);
 
-      if (!map.getSource(ACTIVITY_SOURCE)) {
-        map.addSource(ACTIVITY_SOURCE, {
-          type: 'geojson',
-          data: buildActivityGeoJSON(activityScansRef.current),
-        });
-      }
-
-      if (!map.getLayer(ACTIVITY_HEAT)) {
-        map.addLayer(
-          {
-            id: ACTIVITY_HEAT,
-            type: 'heatmap',
-            source: ACTIVITY_SOURCE,
-            maxzoom: 11,
-            paint: {
-              'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.95, 6, 1.2, 8, 1.5, 11, 1.9],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 28, 6, 44, 9, 62, 11, 76],
-              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.62, 8, 0.68, 10, 0.62, 11, 0.34],
-              'heatmap-color': [
-                'interpolate', ['linear'], ['heatmap-density'],
-                0, 'rgba(0,0,0,0)',
-                0.10, 'rgba(0,102,255,0.05)',
-                0.22, 'rgba(0,174,255,0.30)',
-                0.38, 'rgba(0,235,255,0.55)',
-                0.55, 'rgba(92,92,255,0.72)',
-                0.72, 'rgba(194,48,255,0.86)',
-                0.88, 'rgba(255,35,177,0.95)',
-                1, 'rgba(255,238,255,0.99)',
-              ],
-            },
-          },
-          map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id,
-        );
-      }
-
-      const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
-      source?.setData(buildActivityGeoJSON(activityScansRef.current));
       (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
         buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
       );
@@ -293,7 +231,6 @@ export function MapLibreMap({
     const map = mapRef.current;
     if (!map) return;
     const update = () => {
-      (map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildActivityGeoJSON(activityScans));
       (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
         buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
       );
