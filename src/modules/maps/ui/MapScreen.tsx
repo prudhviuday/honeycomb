@@ -27,6 +27,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [moviePickerOpen, setMoviePickerOpen] = useState(false);
   const [userLoc, setUserLoc] = useState<{ lng: number; lat: number } | null>(null);
   const [query, setQuery] = useState('');
+  const [locationVersion, setLocationVersion] = useState(0);
 
   useEffect(() => {
     if (activeCampaign && !selectedCampaign) setSelectedCampaign(activeCampaign);
@@ -60,14 +61,20 @@ export function MapScreen({ onNavigate }: Props) {
         }
       })();
     }
-  }, [selectedCampaign, user]);
+  }, [selectedCampaign, user, locationVersion]);
+
+  useEffect(() => {
+    const handleLocationUpdated = () => setLocationVersion((value) => value + 1);
+    window.addEventListener('honeycomb:location-updated', handleLocationUpdated);
+    return () => window.removeEventListener('honeycomb:location-updated', handleLocationUpdated);
+  }, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLoc({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
         () => setUserLoc(null),
-        { enableHighAccuracy: true, timeout: 5000 },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
       );
     } else {
       setUserLoc(null);
