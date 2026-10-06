@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/hunts/api/huntsApi';
 import { summarizeHunt } from '@/modules/hunts/logic/huntLogic';
-import type { Tab } from './AppShell';
+import type { Tab } from '@/app/AppShell';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
