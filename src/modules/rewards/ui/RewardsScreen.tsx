@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import { Gift, Ticket, Shirt, Star, Zap, Check, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
-import {
-  getRewards, getRewardEntries, getRewardClaims, claimReward,
-  calculateEntryTotal,
-} from '@/lib/api';
+import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';
+import { calculateEntryTotal } from '@/modules/rewards/logic/rewardLogic';
 import type { Reward, RewardEntry, RewardClaim } from '@/types';
 
 const rewardIcons: Record<string, typeof Gift> = {
