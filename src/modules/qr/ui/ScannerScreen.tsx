@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import { ScanLine, Keyboard, X, Zap, AlertCircle, Camera, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useCampaign } from '@/context/CampaignContext';
+import { useAuth } from '@/application/state/AuthContext';
+import { useCampaign } from '@/application/state/CampaignContext';
 import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
 import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
 
