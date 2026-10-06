@@ -3,7 +3,8 @@ import { BrowserQRCodeReader } from '@zxing/browser';
 import { ScanLine, Keyboard, X, Zap, AlertCircle, Camera, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
-import { processScan, type ScanResult } from '@/lib/api';
+import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
+import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
 
 interface Props {
   onScanComplete: () => void;
