@@ -99,7 +99,7 @@ function addRoadGlow(map: maplibregl.Map) {
         type: 'line',
         ...common,
         paint: {
-          'line-color': '#ff5a1f',
+          'line-color': '#00bfff',
           'line-width': [
             'interpolate', ['linear'], ['zoom'],
             2, 1.5, 5, 2.5, 8, 4, 11, 6, 14, 8, 18, 11,
@@ -122,7 +122,7 @@ function addRoadGlow(map: maplibregl.Map) {
         type: 'line',
         ...common,
         paint: {
-          'line-color': '#ffad66',
+          'line-color': '#8ffcff',
           'line-width': [
             'interpolate', ['linear'], ['zoom'],
             2, 0.45, 5, 0.7, 8, 1.0, 11, 1.35, 14, 1.8, 18, 2.5,
@@ -220,18 +220,19 @@ export function MapLibreMap({
           maxzoom: 10,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.28, 3, 0.5, 8, 0.78, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.65, 6, 0.9, 8, 1.15, 10, 1.35],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.72, 6, 1.0, 8, 1.25, 10, 1.45],
             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 34, 5, 52, 7, 72, 9, 92, 10, 108],
-            'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.5, 6, 0.58, 9, 0.62, 10, 0.58],
+            'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.56, 6, 0.64, 9, 0.68, 10, 0.62],
             'heatmap-color': [
               'interpolate', ['linear'], ['heatmap-density'],
               0, 'rgba(0,0,0,0)',
-              0.12, 'rgba(82,45,110,0.10)',
-              0.28, 'rgba(116,55,94,0.18)',
-              0.48, 'rgba(196,72,48,0.30)',
-              0.68, 'rgba(244,116,45,0.48)',
-              0.84, 'rgba(255,174,63,0.70)',
-              1, 'rgba(255,225,150,0.92)',
+              0.10, 'rgba(0,102,255,0.05)',
+              0.22, 'rgba(0,174,255,0.28)',
+              0.38, 'rgba(0,235,255,0.52)',
+              0.55, 'rgba(92,92,255,0.70)',
+              0.72, 'rgba(194,48,255,0.84)',
+              0.88, 'rgba(255,35,177,0.94)',
+              1, 'rgba(255,238,255,0.98)',
             ],
           },
         }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
@@ -246,17 +247,19 @@ export function MapLibreMap({
           maxzoom: DETAILED_MAX_ZOOM,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.05, 11, 1.35, 14, 1.7, 18, 2.0],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.1, 11, 1.45, 14, 1.8, 18, 2.1],
             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 42, 11, 58, 14, 78, 18, 96],
-            'heatmap-opacity': 0.72,
+            'heatmap-opacity': 0.78,
             'heatmap-color': [
               'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(232,62,140,0)',
-              0.15, 'rgba(139,92,246,0.22)',
-              0.35, 'rgba(232,62,140,0.52)',
-              0.55, 'rgba(255,107,74,0.72)',
-              0.75, 'rgba(255,200,87,0.9)',
-              1, 'rgba(255,255,255,0.98)',
+              0, 'rgba(0,102,255,0)',
+              0.12, 'rgba(0,190,255,0.16)',
+              0.28, 'rgba(0,225,255,0.36)',
+              0.45, 'rgba(84,86,255,0.58)',
+              0.62, 'rgba(174,45,255,0.74)',
+              0.80, 'rgba(255,35,180,0.90)',
+              0.92, 'rgba(255,92,202,0.96)',
+              1, 'rgba(255,242,255,1)',
             ],
           },
         }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
@@ -278,9 +281,9 @@ export function MapLibreMap({
             maxzoom: 11,
             paint: {
               'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.9, 6, 1.15, 8, 1.45, 11, 1.8],
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.95, 6, 1.2, 8, 1.5, 11, 1.9],
               'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 28, 6, 44, 9, 62, 11, 76],
-              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.58, 8, 0.62, 10, 0.58, 11, 0.3],
+              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.62, 8, 0.68, 10, 0.62, 11, 0.34],
               'heatmap-color': [
                 'interpolate', ['linear'], ['heatmap-density'],
                 0, 'rgba(232,62,140,0)',
