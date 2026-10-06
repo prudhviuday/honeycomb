@@ -1,1 +1,7 @@
-export { getActivityEvents, logActivity, getLeaderboard, getMyLeaderboardPosition } from '@/application/api/legacyApi';
+export {
+  getActivityEvents,
+  getLeaderboard,
+  getMyLeaderboardPosition,
+} from '@/application/api/legacyApi';
+
+export { logActivity } from '@/modules/shared/api';
