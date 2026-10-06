@@ -67,10 +67,106 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
 }
 
 function addRoadGlow(map: maplibregl.Map) {
-  if (!map.getSource('openmaptiles')) return;
-  const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id;
-  honeycombRoadGlowLayers.forEach((layer) => {
-    if (!map.getLayer(layer.id)) map.addLayer(layer, firstSymbolLayer);
+  // Strava's heatmap look is fundamentally line-based: aggregated activity
+  // traces are drawn along ways, rather than painting the OSM roads themselves.
+  // Our current data is point-based, so for the visual treatment we reuse the
+  // exact transportation layers already supplied by OpenFreeMap and add glow
+  // passes using each layer's real filter/zoom range. This avoids the previous
+  // problem where a guessed source-layer/class combination disappeared.
+  const styleLayers = map.getStyle().layers ?? [];
+  const roadLayers = styleLayers.filter(
+    (layer) =>
+      layer.type === 'line' &&
+      layer.source === 'openmaptiles' &&
+      layer['source-layer'] === 'transportation',
+  );
+
+  if (!roadLayers.length) return;
+
+  roadLayers.forEach((roadLayer, index) => {
+    const glowId = `honeycomb-road-glow-${index}`;
+    const coreId = `honeycomb-road-core-${index}`;
+
+    if (!map.getLayer(glowId)) {
+      map.addLayer(
+        {
+          id: glowId,
+          type: 'line',
+          source: 'openmaptiles',
+          'source-layer': 'transportation',
+          ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
+          ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
+          ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
+          paint: {
+            'line-color': '#ff6a24',
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 2,
+              6, 3,
+              9, 4.5,
+              12, 6,
+              16, 8,
+            ],
+            'line-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 0.20,
+              6, 0.27,
+              9, 0.34,
+              12, 0.42,
+              16, 0.50,
+            ],
+            'line-blur': 2.4,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        },
+        roadLayer.id,
+      );
+    }
+
+    if (!map.getLayer(coreId)) {
+      map.addLayer(
+        {
+          id: coreId,
+          type: 'line',
+          source: 'openmaptiles',
+          'source-layer': 'transportation',
+          ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
+          ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
+          ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
+          paint: {
+            'line-color': '#ffad5a',
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 0.45,
+              6, 0.75,
+              9, 1.1,
+              12, 1.55,
+              16, 2.2,
+            ],
+            'line-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 0.42,
+              6, 0.50,
+              9, 0.60,
+              12, 0.70,
+              16, 0.82,
+            ],
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        },
+        roadLayer.id,
+      );
+    }
   });
 }
 
