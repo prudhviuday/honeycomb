@@ -5,7 +5,7 @@ export function calculateEntryTotal(entries: RewardEntry[]): number {
 }
 
 export function canClaimReward(points: number, reward: Reward): boolean {
-  return points >= reward.points_required && reward.is_active && reward.stock !== 0;
+  return points >= reward.points_required;
 }
 
 export function getRemainingPoints(points: number, reward: Reward): number {
