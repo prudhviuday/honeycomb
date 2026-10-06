@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Target, Check, Zap, ChevronRight, Flame, Crown, MapPin, ScanLine, ShoppingBag, Waves } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
-import { getCampaignDashboard, type CampaignDashboard } from '@/lib/api';
+import { getCampaignDashboard, type CampaignDashboard } from '@/modules/hunts/api/huntsApi';
+import { summarizeHunt } from '@/modules/hunts/logic/huntLogic';
 import type { Tab } from './AppShell';
 
 interface Props {
