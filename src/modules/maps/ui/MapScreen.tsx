@@ -28,6 +28,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [userLoc, setUserLoc] = useState<{ lng: number; lat: number } | null>(null);
   const [query, setQuery] = useState('');
   const [locationVersion, setLocationVersion] = useState(0);
+  const [recenterVersion, setRecenterVersion] = useState(0);
 
   useEffect(() => {
     if (activeCampaign && !selectedCampaign) setSelectedCampaign(activeCampaign);
@@ -105,7 +106,7 @@ export function MapScreen({ onNavigate }: Props) {
   };
   const handleMapClick = () => setPanelOpen(false);
   const recenter = () => {
-    if (userLoc) setUserLoc({ ...userLoc });
+    if (userLoc) setRecenterVersion((value) => value + 1);
   };
 
   if (loading) {
@@ -128,6 +129,7 @@ export function MapScreen({ onNavigate }: Props) {
         generalHeatmap={generalHeatmap}
         campaignHeatmap={campaignHeatmap}
         userLocation={userLoc}
+        recenterVersion={recenterVersion}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
