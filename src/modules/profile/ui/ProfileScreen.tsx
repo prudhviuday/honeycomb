@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Activity, Share2, ScanLine, Pencil } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useCampaign } from '@/context/CampaignContext';
+import { useAuth } from '@/application/state/AuthContext';
+import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
 import { getActivityEvents } from '@/modules/analytics/api/analyticsApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
 import type { ActivityEvent } from '@/modules/analytics/types';
-import { ProfileEditModal } from '@/screens/ProfileEditModal';
+import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
 
 export function ProfileScreen() {
   const { user, profile } = useAuth();
