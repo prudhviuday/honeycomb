@@ -146,7 +146,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
     setResult(null);
 
     try {
-      const res = await processScan(activeCampaign.id, user.id, scanCode);
+      const res = await processScan(activeCampaign.id, user.id, normalizeScanCode(scanCode));
       setResult(res);
       if (res.success) await refreshCampaignUser();
     } catch (err) {
