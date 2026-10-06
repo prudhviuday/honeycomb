@@ -67,12 +67,10 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
 }
 
 function addRoadGlow(map: maplibregl.Map) {
-  // Strava's heatmap look is fundamentally line-based: aggregated activity
-  // traces are drawn along ways, rather than painting the OSM roads themselves.
-  // Our current data is point-based, so for the visual treatment we reuse the
-  // exact transportation layers already supplied by OpenFreeMap and add glow
-  // passes using each layer's real filter/zoom range. This avoids the previous
-  // problem where a guessed source-layer/class combination disappeared.
+  // Strava-like visual treatment: use the actual transportation geometry
+  // from the loaded OpenFreeMap style, with a soft orange glow and a bright
+  // orange core. The layers are deliberately placed ABOVE the source road
+  // layer; putting them below it lets the original dark road paint hide them.
   const styleLayers = map.getStyle().layers ?? [];
   const roadLayers = styleLayers.filter(
     (layer) =>
@@ -81,95 +79,65 @@ function addRoadGlow(map: maplibregl.Map) {
       layer['source-layer'] === 'transportation',
   );
 
-  if (!roadLayers.length) return;
-
   roadLayers.forEach((roadLayer, index) => {
     const glowId = `honeycomb-road-glow-${index}`;
     const coreId = `honeycomb-road-core-${index}`;
 
+    const common = {
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
+      ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
+      ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
+    };
+
+    // Put the glow immediately ABOVE the source transportation layer.
+    // This is the key fix for the previously invisible orange effect.
     if (!map.getLayer(glowId)) {
-      map.addLayer(
-        {
-          id: glowId,
-          type: 'line',
-          source: 'openmaptiles',
-          'source-layer': 'transportation',
-          ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
-          ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
-          ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
-          paint: {
-            'line-color': '#ff6a24',
-            'line-width': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              3, 2,
-              6, 3,
-              9, 4.5,
-              12, 6,
-              16, 8,
-            ],
-            'line-opacity': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              3, 0.20,
-              6, 0.27,
-              9, 0.34,
-              12, 0.42,
-              16, 0.50,
-            ],
-            'line-blur': 2.4,
-            'line-cap': 'round',
-            'line-join': 'round',
-          },
+      map.addLayer({
+        id: glowId,
+        type: 'line',
+        ...common,
+        paint: {
+          'line-color': '#ff5a1f',
+          'line-width': [
+            'interpolate', ['linear'], ['zoom'],
+            2, 1.5, 5, 2.5, 8, 4, 11, 6, 14, 8, 18, 11,
+          ],
+          'line-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            2, 0.22, 5, 0.30, 8, 0.38, 11, 0.46, 14, 0.52, 18, 0.58,
+          ],
+          'line-blur': 2.8,
+          'line-cap': 'round',
+          'line-join': 'round',
         },
-        roadLayer.id,
-      );
+      }, roadLayer.id);
     }
 
+    // Add the bright core above the glow.
     if (!map.getLayer(coreId)) {
-      map.addLayer(
-        {
-          id: coreId,
-          type: 'line',
-          source: 'openmaptiles',
-          'source-layer': 'transportation',
-          ...(roadLayer.minzoom !== undefined ? { minzoom: roadLayer.minzoom } : {}),
-          ...(roadLayer.maxzoom !== undefined ? { maxzoom: roadLayer.maxzoom } : {}),
-          ...(roadLayer.filter ? { filter: roadLayer.filter } : {}),
-          paint: {
-            'line-color': '#ffad5a',
-            'line-width': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              3, 0.45,
-              6, 0.75,
-              9, 1.1,
-              12, 1.55,
-              16, 2.2,
-            ],
-            'line-opacity': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              3, 0.42,
-              6, 0.50,
-              9, 0.60,
-              12, 0.70,
-              16, 0.82,
-            ],
-            'line-cap': 'round',
-            'line-join': 'round',
-          },
+      map.addLayer({
+        id: coreId,
+        type: 'line',
+        ...common,
+        paint: {
+          'line-color': '#ffad66',
+          'line-width': [
+            'interpolate', ['linear'], ['zoom'],
+            2, 0.45, 5, 0.7, 8, 1.0, 11, 1.35, 14, 1.8, 18, 2.5,
+          ],
+          'line-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            2, 0.65, 5, 0.72, 8, 0.78, 11, 0.82, 14, 0.88, 18, 0.92,
+          ],
+          'line-cap': 'round',
+          'line-join': 'round',
         },
-        roadLayer.id,
-      );
+      }, glowId);
     }
   });
 }
-
 function add3DBuildings(map: maplibregl.Map) {
   if (map.getLayer(honeycombBuildingLayer.id)) return;
 
