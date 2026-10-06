@@ -96,6 +96,7 @@ export function LocationTracker() {
           };
 
           console.info('[Location] Successfully persisted:', next);
+          window.dispatchEvent(new CustomEvent('honeycomb:location-updated', { detail: next }));
         }
       } catch (error) {
         console.error('[Location] Failed to persist location:', error);
