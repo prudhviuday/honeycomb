@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
-import { signIn, signUp } from '@/lib/api';
+import { signIn, signUp } from '@/modules/auth/api/authApi';
+import { normalizeDisplayName, normalizeEmail } from '@/modules/auth/logic/authLogic';
 
 export function AuthScreen() {
   const [mode, setMode] = useState<'login' | 'signup'>('signup');
