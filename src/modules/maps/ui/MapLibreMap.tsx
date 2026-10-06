@@ -28,11 +28,9 @@ const REGIONAL_MAX_ZOOM = 8.99;
 const DETAILED_MAX_ZOOM = 18;
 const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
 const ACTIVITY_HEAT = 'honeycomb-activity-heat';
-const ACTIVITY_POINTS = 'honeycomb-activity-points';
 const GENERAL_HEAT_SOURCE = 'honeycomb-general-location-heat';
 const CAMPAIGN_HEAT_SOURCE = 'honeycomb-campaign-location-heat';
 const GENERAL_HEAT_LAYER = 'honeycomb-general-location-heat-layer';
-const GENERAL_POINT_LAYER = 'honeycomb-general-location-point-layer';
 const CAMPAIGN_HEAT_LAYER = 'honeycomb-campaign-location-heat-layer';
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
@@ -146,37 +144,22 @@ export function MapLibreMap({
           source: GENERAL_HEAT_SOURCE,
           maxzoom: 10,
           paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.35, 5, 0.8, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.5, 12, 2.2],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 20, 6, 34, 9, 50, 12, 62],
-            'heatmap-opacity': 0.42,
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.28, 3, 0.5, 8, 0.78, 20, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.65, 6, 0.9, 8, 1.15, 10, 1.35],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 34, 5, 52, 7, 72, 9, 92, 10, 108],
+            'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.5, 6, 0.58, 9, 0.62, 10, 0.58],
             'heatmap-color': [
               'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(99,102,241,0)',
-              0.25, 'rgba(99,102,241,0.18)',
-              0.5, 'rgba(139,92,246,0.35)',
-              0.75, 'rgba(236,72,153,0.48)',
-              1, 'rgba(255,200,87,0.72)',
+              0, 'rgba(0,0,0,0)',
+              0.12, 'rgba(82,45,110,0.10)',
+              0.28, 'rgba(116,55,94,0.18)',
+              0.48, 'rgba(196,72,48,0.30)',
+              0.68, 'rgba(244,116,45,0.48)',
+              0.84, 'rgba(255,174,63,0.70)',
+              1, 'rgba(255,225,150,0.92)',
             ],
           },
         }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
-      }
-
-      if (!map.getLayer(GENERAL_POINT_LAYER)) {
-        map.addLayer({
-          id: GENERAL_POINT_LAYER,
-          type: 'circle',
-          source: GENERAL_HEAT_SOURCE,
-          maxzoom: 10,
-          paint: {
-            'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 1, 5, 5, 8, 20, 12],
-            'circle-color': '#ffc857',
-            'circle-opacity': 0.85,
-            'circle-stroke-color': '#ffffff',
-            'circle-stroke-width': 1,
-            'circle-stroke-opacity': 0.55,
-          },
-        });
       }
 
       if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
@@ -188,9 +171,9 @@ export function MapLibreMap({
           maxzoom: DETAILED_MAX_ZOOM,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1, 8, 2, 12, 3],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 18, 6, 30, 9, 46, 12, 58],
-            'heatmap-opacity': 0.82,
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.05, 11, 1.35, 14, 1.7, 18, 2.0],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 42, 11, 58, 14, 78, 18, 96],
+            'heatmap-opacity': 0.72,
             'heatmap-color': [
               'interpolate', ['linear'], ['heatmap-density'],
               0, 'rgba(232,62,140,0)',
@@ -220,9 +203,9 @@ export function MapLibreMap({
             maxzoom: 11,
             paint: {
               'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 8, 2.4, 11, 3.2],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 16, 6, 28, 9, 42, 11, 55],
-              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.92, 10, 0.82, 11, 0.35],
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.9, 6, 1.15, 8, 1.45, 11, 1.8],
+              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 28, 6, 44, 9, 62, 11, 76],
+              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.58, 8, 0.62, 10, 0.58, 11, 0.3],
               'heatmap-color': [
                 'interpolate', ['linear'], ['heatmap-density'],
                 0, 'rgba(232,62,140,0)',
@@ -236,22 +219,6 @@ export function MapLibreMap({
           },
           map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id,
         );
-      }
-
-      if (!map.getLayer(ACTIVITY_POINTS)) {
-        map.addLayer({
-          id: ACTIVITY_POINTS,
-          type: 'circle',
-          source: ACTIVITY_SOURCE,
-          minzoom: 8.5,
-          paint: {
-            'circle-radius': ['interpolate', ['linear'], ['zoom'], 8.5, 2.5, 12, 5, 16, 7],
-            'circle-color': '#E50914',
-            'circle-opacity': ['interpolate', ['linear'], ['zoom'], 8.5, 0.2, 10, 0.5, 12, 0.82],
-            'circle-stroke-color': 'rgba(255,255,255,0.8)',
-            'circle-stroke-width': 1,
-          },
-        });
       }
 
       const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
