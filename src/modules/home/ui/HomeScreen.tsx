@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
-import { getCampaignDashboard, type CampaignDashboard } from '@/lib/api';
+import { getCampaignDashboard, type CampaignDashboard } from '@/modules/home/api/homeApi';
+import { getHomePoints, getCompletedMissionCount } from '@/modules/home/logic/homeLogic';
 import { calculateDistance } from '@/lib/mapData';
 import type { Tab } from './AppShell';
 import type { Campaign } from '@/types';
