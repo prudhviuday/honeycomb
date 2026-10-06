@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Activity, Share2, ScanLine, Pencil } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
-import { signOut, upsertProfile, getActivityEvents } from '@/lib/api';
+import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
+import { getActivityEvents } from '@/modules/analytics/api/analyticsApi';
+import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
 import type { ActivityEvent } from '@/types';
 import { ProfileEditModal } from '@/screens/ProfileEditModal';
 
