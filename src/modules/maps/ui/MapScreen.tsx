@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Search, X, MapPin, Check, Navigation, Zap } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useCampaign } from '@/context/CampaignContext';
+import { useAuth } from '@/application/state/AuthContext';
+import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
-import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/lib/mapData';
-import { MapLibreMap } from '@/components/MapLibreMap';
+import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
+import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
 
 interface Props {
