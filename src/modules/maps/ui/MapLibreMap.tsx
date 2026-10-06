@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 setWorkerUrl(workerUrl);
 
-import { honeybadgerMapStyle, honeycombBuildingLayer, honeycombRoadGlowLayers } from '@/modules/maps/logic/mapStyle';
+import { honeybadgerMapStyle, honeycombBuildingLayer } from '@/modules/maps/logic/mapStyle';
 import type { MapFeature } from '@/modules/maps/logic/mapData';
 import type { Scan, HeatmapPoint } from '@/modules/maps/types';
 import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
