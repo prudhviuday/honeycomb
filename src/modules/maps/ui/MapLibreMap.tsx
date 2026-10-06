@@ -252,7 +252,6 @@ export function MapLibreMap({
       map.remove();
       mapRef.current = null;
       userMarkerRef.current = null;
-      hasFitRef.current = false;
     };
   }, []);
 
