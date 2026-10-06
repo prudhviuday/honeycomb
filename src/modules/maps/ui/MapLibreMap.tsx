@@ -331,7 +331,7 @@ export function MapLibreMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
     const updateMapMode = () => {
       const center = map.getCenter();
@@ -342,13 +342,20 @@ export function MapLibreMap({
         center.lng <= TAMIL_NADU_BOUNDS.east;
 
       const maxZoom = centerInsideTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
-      if (map.getMaxZoom() !== maxZoom) map.setMaxZoom(maxZoom);
+      if (map.getMaxZoom() !== maxZoom) {
+        map.setMaxZoom(maxZoom);
+      }
     };
 
-    if (map.isStyleLoaded()) updateMapMode();
-    else map.once('load', updateMapMode);
+    if (map.isStyleLoaded()) {
+      updateMapMode();
+    } else {
+      map.once('load', updateMapMode);
+    }
+
     map.on('moveend', updateMapMode);
     map.on('zoomend', updateMapMode);
+
     return () => {
       map.off('load', updateMapMode);
       map.off('moveend', updateMapMode);
