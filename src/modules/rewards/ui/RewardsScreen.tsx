@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCampaign } from '@/context/CampaignContext';
 import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';
 import { calculateEntryTotal, canClaimReward } from '@/modules/rewards/logic/rewardLogic';
-import type { Reward, RewardEntry, RewardClaim } from '@/types';
+import type { Reward, RewardEntry, RewardClaim } from '@/modules/rewards/types';
 
 const rewardIcons: Record<string, typeof Gift> = {
   'Movie T-Shirt': Shirt,
