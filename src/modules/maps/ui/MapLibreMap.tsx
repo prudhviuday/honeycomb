@@ -144,7 +144,7 @@ export function MapLibreMap({
           id: GENERAL_HEAT_LAYER,
           type: 'heatmap',
           source: GENERAL_HEAT_SOURCE,
-          maxzoom: REGIONAL_MAX_ZOOM,
+          maxzoom: 10,
           paint: {
             'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.35, 5, 0.8, 20, 1],
             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.5, 12, 2.2],
@@ -167,7 +167,7 @@ export function MapLibreMap({
           id: GENERAL_POINT_LAYER,
           type: 'circle',
           source: GENERAL_HEAT_SOURCE,
-          maxzoom: REGIONAL_MAX_ZOOM,
+          maxzoom: 10,
           paint: {
             'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 1, 5, 5, 8, 20, 12],
             'circle-color': '#ffc857',
