@@ -2,4 +2,4 @@ export {
   getProfile,
   upsertProfile,
   signOut,
-} from '@/application/api/legacyApi';
+} from '@/modules/shared/api';
