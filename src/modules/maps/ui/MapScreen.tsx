@@ -3,10 +3,11 @@ import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown } from 'lu
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
+import { getLocationHeatmap } from '@/modules/maps/api/locationApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/shared/types';
-import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
+import type { Location, InteractionSource, Scan, HeatmapPoint } from '@/modules/maps/types';
 
 interface Props {
   onNavigate?: (tab: 'scanner') => void;
@@ -18,6 +19,8 @@ export function MapScreen({ onNavigate }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(activeCampaign);
   const [features, setFeatures] = useState<MapFeature[]>([]);
   const [activityScans, setActivityScans] = useState<Scan[]>([]);
+  const [generalHeatmap, setGeneralHeatmap] = useState<HeatmapPoint[]>([]);
+  const [campaignHeatmap, setCampaignHeatmap] = useState<HeatmapPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -36,15 +39,21 @@ export function MapScreen({ onNavigate }: Props) {
         setSelected(null);
         setPanelOpen(false);
         try {
-          const [locs, srcs, userScans] = await Promise.all([
+          const [locs, srcs, userScans, generalPoints, campaignPoints] = await Promise.all([
             getLocations(selectedCampaign.id),
             getInteractionSources(selectedCampaign.id),
             getUserScans(selectedCampaign.id, user.id),
+            getLocationHeatmap(null),
+            getLocationHeatmap(selectedCampaign.id),
           ]);
           setActivityScans(userScans);
+          setGeneralHeatmap(generalPoints);
+          setCampaignHeatmap(campaignPoints);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
         } catch {
           setActivityScans([]);
+          setGeneralHeatmap([]);
+          setCampaignHeatmap([]);
           setFeatures([]);
         } finally {
           setLoading(false);
@@ -57,11 +66,11 @@ export function MapScreen({ onNavigate }: Props) {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLoc({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
-        () => setUserLoc({ lng: 80.2707, lat: 13.0827 }),
+        () => setUserLoc(null),
         { enableHighAccuracy: true, timeout: 5000 },
       );
     } else {
-      setUserLoc({ lng: 80.2707, lat: 13.0827 });
+      setUserLoc(null);
     }
   }, []);
 
@@ -109,6 +118,8 @@ export function MapScreen({ onNavigate }: Props) {
       <MapLibreMap
         features={visibleFeatures}
         activityScans={activityScans}
+        generalHeatmap={generalHeatmap}
+        campaignHeatmap={campaignHeatmap}
         userLocation={userLoc}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
