@@ -52,12 +52,11 @@ export function HuntsScreen({ onNavigate }: Props) {
   }
 
   const points = campaignUser?.points ?? 0;
-  const completedMissions = dashboard.missionProgress.filter((m) => m.completed).length;
-  const totalMissions = dashboard.missions.length;
-  const totalXP = dashboard.missions.reduce((sum, m) => sum + m.points_reward, 0);
-  const earnedXP = dashboard.missions
-    .filter((m) => dashboard.missionProgress.find((p) => p.mission_id === m.id)?.completed)
-    .reduce((sum, m) => sum + m.points_reward, 0);
+  const huntSummary = summarizeHunt(dashboard.missions, dashboard.missionProgress);
+  const completedMissions = huntSummary.completedMissions;
+  const totalMissions = huntSummary.totalMissions;
+  const totalXP = huntSummary.totalXP;
+  const earnedXP = huntSummary.earnedXP;
 
   return (
     <div className="px-4 pt-12 pb-6 animate-fade-in">
