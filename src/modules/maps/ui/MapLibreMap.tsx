@@ -345,22 +345,16 @@ export function MapLibreMap({
       lng <= TAMIL_NADU_BOUNDS.east;
 
     const updateMapMode = () => {
-      const bounds = map.getBounds();
-      const samplePoints = [
-        [bounds.getWest(), bounds.getSouth()],
-        [bounds.getWest(), bounds.getCenter().lat],
-        [bounds.getWest(), bounds.getNorth()],
-        [bounds.getCenter().lng, bounds.getSouth()],
-        [bounds.getCenter().lng, bounds.getCenter().lat],
-        [bounds.getCenter().lng, bounds.getNorth()],
-        [bounds.getEast(), bounds.getSouth()],
-        [bounds.getEast(), bounds.getCenter().lat],
-        [bounds.getEast(), bounds.getNorth()],
-      ];
-      const insideCount = samplePoints.filter(([lng, lat]) => isInsideTamilNadu(lng, lat)).length;
-      const predominantlyTamilNadu = insideCount / samplePoints.length >= 0.7;
-      const maxZoom = predominantlyTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
+      const center = map.getCenter();
+      const centerInsideTamilNadu =
+        center.lat >= TAMIL_NADU_BOUNDS.south &&
+        center.lat <= TAMIL_NADU_BOUNDS.north &&
+        center.lng >= TAMIL_NADU_BOUNDS.west &&
+        center.lng <= TAMIL_NADU_BOUNDS.east;
 
+      // Outside Tamil Nadu, the map is intentionally capped at regional zoom.
+      // Once the viewport is centered in Tamil Nadu, detailed zoom is unlocked.
+      const maxZoom = centerInsideTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
       if (map.getMaxZoom() !== maxZoom) map.setMaxZoom(maxZoom);
     };
 
