@@ -135,8 +135,10 @@ export function MapLibreMap({
     mapRef.current = map;
 
     const addActivityLayers = () => {
-      addRoadGlow(map);
+      // Put buildings below the luminous road network so close-up extrusions
+      // cannot visually swallow the smaller glowing roads.
       add3DBuildings(map);
+      addRoadGlow(map);
 
       if (!map.getSource(GENERAL_HEAT_SOURCE)) {
         map.addSource(GENERAL_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(generalHeatmap) });
