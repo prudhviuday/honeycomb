@@ -5,11 +5,11 @@ import {
   ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
   Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useCampaign } from '@/context/CampaignContext';
+import { useAuth } from '@/application/state/AuthContext';
+import { useCampaign } from '@/application/state/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/home/api/homeApi';
 import { getHomePoints, getCompletedMissionCount } from '@/modules/home/logic/homeLogic';
-import { calculateDistance } from '@/lib/mapData';
+import { calculateDistance } from '@/modules/maps/logic/mapData';
 import type { Tab } from './AppShell';
 import type { Campaign } from '@/types';
 
