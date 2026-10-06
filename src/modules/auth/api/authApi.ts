@@ -3,6 +3,6 @@ export {
   getCurrentUser,
   onAuthStateChange,
   signOut,
-  signUp,
-  signIn,
-} from '@/application/api/legacyApi';
+} from '@/modules/shared/api';
+
+export { signUp, signIn } from '@/application/api/legacyApi';
