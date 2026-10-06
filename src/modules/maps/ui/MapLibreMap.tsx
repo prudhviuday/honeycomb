@@ -4,7 +4,6 @@ import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// MapLibre GL JS v6 requires an explicit worker URL when bundled by Vite.
 setWorkerUrl(workerUrl);
 
 import { honeybadgerMapStyle, honeycombBuildingLayer } from '@/modules/maps/logic/mapStyle';
@@ -71,9 +70,6 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
 function add3DBuildings(map: maplibregl.Map) {
   if (map.getLayer(honeycombBuildingLayer.id)) return;
 
-  // OpenFreeMap's vector style uses the OpenMapTiles building source layer.
-  // If a provider/style revision ever removes it, simply skip the enhancement
-  // and keep the normal 2D map working.
   const style = map.getStyle();
   const hasBuildingSource = Boolean(style.sources?.openmaptiles);
   if (!hasBuildingSource) return;
@@ -337,12 +333,6 @@ export function MapLibreMap({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    const isInsideTamilNadu = (lng: number, lat: number) =>
-      lat >= TAMIL_NADU_BOUNDS.south &&
-      lat <= TAMIL_NADU_BOUNDS.north &&
-      lng >= TAMIL_NADU_BOUNDS.west &&
-      lng <= TAMIL_NADU_BOUNDS.east;
-
     const updateMapMode = () => {
       const center = map.getCenter();
       const centerInsideTamilNadu =
@@ -351,8 +341,6 @@ export function MapLibreMap({
         center.lng >= TAMIL_NADU_BOUNDS.west &&
         center.lng <= TAMIL_NADU_BOUNDS.east;
 
-      // Outside Tamil Nadu, the map is intentionally capped at regional zoom.
-      // Once the viewport is centered in Tamil Nadu, detailed zoom is unlocked.
       const maxZoom = centerInsideTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
       if (map.getMaxZoom() !== maxZoom) map.setMaxZoom(maxZoom);
     };
@@ -369,3 +357,4 @@ export function MapLibreMap({
   }, []);
 
   return <div ref={containerRef} className="absolute inset-0" />;
+}
