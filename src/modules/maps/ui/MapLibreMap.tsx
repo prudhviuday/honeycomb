@@ -364,10 +364,12 @@ export function MapLibreMap({
       if (map.getMaxZoom() !== maxZoom) map.setMaxZoom(maxZoom);
     };
 
-    updateMapMode();
+    if (map.isStyleLoaded()) updateMapMode();
+    else map.once('load', updateMapMode);
     map.on('moveend', updateMapMode);
     map.on('zoomend', updateMapMode);
     return () => {
+      map.off('load', updateMapMode);
       map.off('moveend', updateMapMode);
       map.off('zoomend', updateMapMode);
     };
