@@ -39,7 +39,7 @@ export function ProfileScreen() {
   };
 
   const points = campaignUser?.points ?? 0;
-  const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Player';
+  const displayName = getDisplayName(profile?.display_name, user?.email);
   const scanCount = activities.filter(a => a.event_type === 'scan').length;
 
   return (
