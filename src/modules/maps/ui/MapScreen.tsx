@@ -5,7 +5,7 @@ import { useCampaign } from '@/context/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/lib/mapData';
 import { MapLibreMap } from '@/components/MapLibreMap';
-import type { Location, InteractionSource, Scan } from '@/types';
+import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
 
 interface Props {
   onNavigate?: (tab: 'scanner') => void;
