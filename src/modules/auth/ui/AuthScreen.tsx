@@ -21,8 +21,8 @@ export function AuthScreen() {
       if (mode === 'signup') {
         // Development-friendly: the name is optional. If omitted, Supabase
         // receives a harmless default and the user can edit it later.
-        const name = displayName.trim() || 'Honeycomb User';
-        await signUp(email.trim(), password, name);
+        const name = normalizeDisplayName(displayName);
+        await signUp(normalizeEmail(email), password, name);
       } else {
         await signIn(email.trim(), password);
       }
