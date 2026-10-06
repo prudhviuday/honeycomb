@@ -9,12 +9,14 @@ setWorkerUrl(workerUrl);
 
 import { honeybadgerMapStyle, honeycombBuildingLayer } from '@/modules/maps/logic/mapStyle';
 import type { MapFeature } from '@/modules/maps/logic/mapData';
-import type { Scan } from '@/modules/maps/types';
+import type { Scan, HeatmapPoint } from '@/modules/maps/types';
 import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
 
 interface Props {
   features: MapFeature[];
   activityScans: Scan[];
+  generalHeatmap: HeatmapPoint[];
+  campaignHeatmap: HeatmapPoint[];
   userLocation: { lng: number; lat: number } | null;
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
@@ -24,6 +26,22 @@ const CHENNAI: [number, number] = [80.2707, 13.0827];
 const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
 const ACTIVITY_HEAT = 'honeycomb-activity-heat';
 const ACTIVITY_POINTS = 'honeycomb-activity-points';
+const GENERAL_HEAT_SOURCE = 'honeycomb-general-location-heat';
+const CAMPAIGN_HEAT_SOURCE = 'honeycomb-campaign-location-heat';
+const GENERAL_HEAT_LAYER = 'honeycomb-general-location-heat-layer';
+const CAMPAIGN_HEAT_LAYER = 'honeycomb-campaign-location-heat-layer';
+
+function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: points.map((point, index) => ({
+      type: 'Feature' as const,
+      id: `heat-${index}-${point.latitude}-${point.longitude}`,
+      geometry: { type: 'Point' as const, coordinates: [point.longitude, point.latitude] },
+      properties: { weight: point.weight },
+    })),
+  };
+}
 
 function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
   return {
@@ -67,6 +85,8 @@ function add3DBuildings(map: maplibregl.Map) {
 export function MapLibreMap({
   features,
   activityScans,
+  generalHeatmap,
+  campaignHeatmap,
   userLocation,
   onMarkerClick,
   onMapClick,
@@ -108,6 +128,61 @@ export function MapLibreMap({
 
     const addActivityLayers = () => {
       add3DBuildings(map);
+
+      if (!map.getSource(GENERAL_HEAT_SOURCE)) {
+        map.addSource(GENERAL_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(generalHeatmap) });
+      }
+
+      if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
+        map.addSource(CAMPAIGN_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(campaignHeatmap) });
+      }
+
+      if (!map.getLayer(GENERAL_HEAT_LAYER)) {
+        map.addLayer({
+          id: GENERAL_HEAT_LAYER,
+          type: 'heatmap',
+          source: GENERAL_HEAT_SOURCE,
+          maxzoom: 12,
+          paint: {
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.35, 5, 0.8, 20, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.5, 12, 2.2],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 20, 6, 34, 9, 50, 12, 62],
+            'heatmap-opacity': 0.42,
+            'heatmap-color': [
+              'interpolate', ['linear'], ['heatmap-density'],
+              0, 'rgba(99,102,241,0)',
+              0.25, 'rgba(99,102,241,0.18)',
+              0.5, 'rgba(139,92,246,0.35)',
+              0.75, 'rgba(236,72,153,0.48)',
+              1, 'rgba(255,200,87,0.72)',
+            ],
+          },
+        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
+      }
+
+      if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+        map.addLayer({
+          id: CAMPAIGN_HEAT_LAYER,
+          type: 'heatmap',
+          source: CAMPAIGN_HEAT_SOURCE,
+          maxzoom: 12,
+          paint: {
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1, 8, 2, 12, 3],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 18, 6, 30, 9, 46, 12, 58],
+            'heatmap-opacity': 0.82,
+            'heatmap-color': [
+              'interpolate', ['linear'], ['heatmap-density'],
+              0, 'rgba(232,62,140,0)',
+              0.15, 'rgba(139,92,246,0.22)',
+              0.35, 'rgba(232,62,140,0.52)',
+              0.55, 'rgba(255,107,74,0.72)',
+              0.75, 'rgba(255,200,87,0.9)',
+              1, 'rgba(255,255,255,0.98)',
+            ],
+          },
+        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
+      }
 
       if (!map.getSource(ACTIVITY_SOURCE)) {
         map.addSource(ACTIVITY_SOURCE, {
@@ -161,6 +236,8 @@ export function MapLibreMap({
 
       const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
       source?.setData(buildActivityGeoJSON(activityScansRef.current));
+      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
+      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
     };
 
     map.once('load', addActivityLayers);
@@ -177,11 +254,12 @@ export function MapLibreMap({
     const map = mapRef.current;
     if (!map) return;
     const update = () => {
-      const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
-      source?.setData(buildActivityGeoJSON(activityScans));
+      (map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildActivityGeoJSON(activityScans));
+      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
+      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
     };
     if (map.isStyleLoaded()) update(); else map.once('load', update);
-  }, [activityScans]);
+  }, [activityScans, generalHeatmap, campaignHeatmap]);
 
   useEffect(() => {
     const map = mapRef.current;
