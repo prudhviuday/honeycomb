@@ -12,9 +12,7 @@ export interface Venue {
   name: string;
   address: string;
   city: string;
-  latitude: number;
-  longitude: number;
-  is_active: boolean;
+  active: boolean;
 }
 export async function getNearbyCampaignLocations(
   latitude: number,
@@ -31,8 +29,8 @@ export async function getNearbyCampaignLocations(
 export async function getVenues(): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
-    .select("id,name,address,city,latitude,longitude,is_active")
-    .eq("is_active", true)
+    .select("id,name,address,city,active")
+    .eq("active", true)
     .order("name");
   if (error) throw error;
   return data ?? [];

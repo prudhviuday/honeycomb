@@ -62,6 +62,8 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
     features: scans
       .filter(
         (scan) =>
+          scan.latitude != null &&
+          scan.longitude != null &&
           Number.isFinite(Number(scan.latitude)) &&
           Number.isFinite(Number(scan.longitude)),
       )
