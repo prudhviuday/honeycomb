@@ -88,22 +88,27 @@ export function MapScreen({ onNavigate }: Props) {
       getLocations(selectedCampaign.id),
       getInteractionSources(selectedCampaign.id),
       getUserScans(selectedCampaign.id, user.id),
+      getLocationHeatmap(null),
       getLocationHeatmap(selectedCampaign.id),
-    ]).then(([locations, sources, scans, heatmap]) => {
+    ]).then(([locations, sources, scans, generalHeatmap, heatmap]) => {
       if (!active) return;
       const locs = locations.status === "fulfilled" ? locations.value : [];
       const srcs = sources.status === "fulfilled" ? sources.value : [];
       const userScans = scans.status === "fulfilled" ? scans.value : [];
       setFeatures(buildMapFeatures(locs, srcs, userScans));
       setActivityScans(userScans);
+      if (generalHeatmap.status === "fulfilled") setGeneralHeatmap(generalHeatmap.value);
       if (heatmap.status === "fulfilled") setCampaignHeatmap(heatmap.value);
       if (locations.status === "rejected")
         setLoadError("Locations could not be loaded.");
       else if (sources.status === "rejected" || scans.status === "rejected")
         setLoadError("Some scan details are unavailable.");
-      else if (heatmap.status === "rejected")
+      else if (
+        heatmap.status === "rejected" ||
+        generalHeatmap.status === "rejected"
+      )
         setLoadError(
-          "Activity data is unavailable. Venue markers are still shown.",
+          "Some activity heatmap data is unavailable. Venue markers are still shown.",
         );
       setLoading(false);
     });
