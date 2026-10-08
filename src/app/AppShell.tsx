@@ -1,5 +1,5 @@
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Home, Map, ScanLine, Target, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
@@ -75,16 +75,6 @@ export function AppShell() {
   const closeMovie = () => {
     window.history.pushState({}, "", "/");
     setMovieRoute({ campaignId: null, referralCode: undefined, authMode: false });
-  };
-
-  const authForMovie = () => {
-    if (!movieRoute.campaignId) return;
-    const url = new URL(window.location.origin + "/");
-    url.searchParams.set("campaign", movieRoute.campaignId);
-    if (movieRoute.referralCode) url.searchParams.set("ref", movieRoute.referralCode);
-    url.searchParams.set("auth", "1");
-    window.history.pushState({}, "", url.toString());
-    setMovieRoute((current) => ({ ...current, authMode: true }));
   };
 
   const publicMovie = Boolean(movieRoute.campaignId && !user && !movieRoute.authMode);
