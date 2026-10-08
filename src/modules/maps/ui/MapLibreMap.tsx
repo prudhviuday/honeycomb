@@ -33,7 +33,6 @@ const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
 const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
-const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
   return {
@@ -375,7 +374,12 @@ export function MapLibreMap({
       (
         map.getSource(GENERAL_HEAT_SOURCE) as
           maplibregl.GeoJSONSource | undefined
-      )?.setData(buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap));
+      )?.setData(buildHeatmapGeoJSON(generalHeatmap));
+
+      (
+        map.getSource(CAMPAIGN_HEAT_SOURCE) as
+          maplibregl.GeoJSONSource | undefined
+      )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
     };
     if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) update();
     else map.once("load", update);
