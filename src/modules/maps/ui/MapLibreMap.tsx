@@ -30,17 +30,12 @@ interface Props {
 const CHENNAI: [number, number] = [80.2707, 13.0827];
 const DETAILED_MAX_ZOOM = 18;
 const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
+const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
+const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
 
-function buildNeonPointsGeoJSON(
-  general: HeatmapPoint[],
-  campaign: HeatmapPoint[],
-): GeoJSON.FeatureCollection {
-  // The visual is intentionally point-based: a bright activity node with a
-  // large soft halo. We keep the points separate from the heatmap renderer so
-  // roads remain normal map roads and only nearby areas receive the glow.
-  const points = [...general, ...campaign];
+function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: points
@@ -52,7 +47,7 @@ function buildNeonPointsGeoJSON(
       )
       .map((point, index) => ({
         type: "Feature" as const,
-        id: `neon-${index}-${point.latitude}-${point.longitude}`,
+        id: `heat-${index}-${point.latitude}-${point.longitude}`,
         geometry: {
           type: "Point" as const,
           coordinates: [Number(point.longitude), Number(point.latitude)],
@@ -62,7 +57,28 @@ function buildNeonPointsGeoJSON(
   };
 }
 
-function addNeonGlowLayers(
+function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: scans
+      .filter(
+        (scan) =>
+          Number.isFinite(Number(scan.latitude)) &&
+          Number.isFinite(Number(scan.longitude)),
+      )
+      .map((scan, index) => ({
+        type: "Feature" as const,
+        id: scan.id || `scan-${index}`,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [Number(scan.longitude), Number(scan.latitude)],
+        },
+        properties: { points: 1, scanId: scan.id },
+      })),
+  };
+}
+
+function addHeatmapLayers(
   map: maplibregl.Map,
   generalHeatmap: HeatmapPoint[],
   campaignHeatmap: HeatmapPoint[],
@@ -70,222 +86,205 @@ function addNeonGlowLayers(
   if (!map.getSource(GENERAL_HEAT_SOURCE)) {
     map.addSource(GENERAL_HEAT_SOURCE, {
       type: "geojson",
-      data: buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap),
+      data: buildHeatmapGeoJSON(generalHeatmap),
     });
   }
 
-  // The halo is deliberately rendered ABOVE the normal map/roads. That makes
-  // the translucent blue/violet light wash over nearby roads, creating the
-  // reflected-neon effect from the reference instead of recoloring every road.
+  if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
+    map.addSource(CAMPAIGN_HEAT_SOURCE, {
+      type: "geojson",
+      data: buildHeatmapGeoJSON(campaignHeatmap),
+    });
+  }
+
+  const firstSymbolLayer = map
+    .getStyle()
+    .layers?.find((layer) => layer.type === "symbol")?.id;
+
   if (!map.getLayer(GENERAL_HEAT_LAYER)) {
-    map.addLayer({
-      id: GENERAL_HEAT_LAYER,
-      type: "circle",
-      source: GENERAL_HEAT_SOURCE,
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          3,
-          [
+    map.addLayer(
+      {
+        id: GENERAL_HEAT_LAYER,
+        type: "heatmap",
+        source: GENERAL_HEAT_SOURCE,
+        maxzoom: DETAILED_MAX_ZOOM,
+        paint: {
+          "heatmap-weight": [
             "interpolate",
             ["linear"],
             ["get", "weight"],
             1,
+            0.3,
+            3,
+            0.55,
+            8,
+            0.8,
+            20,
+            1,
+          ],
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            2,
+            0.75,
+            5,
+            0.95,
+            8,
+            1.2,
+            11,
+            1.45,
+            14,
+            1.7,
             18,
-            3,
-            24,
-            8,
-            32,
-            20,
-            42,
+            2.0,
           ],
-          6,
-          [
+          "heatmap-radius": [
             "interpolate",
             ["linear"],
-            ["get", "weight"],
-            1,
-            24,
-            3,
-            32,
-            8,
-            42,
-            20,
-            54,
-          ],
-          10,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "weight"],
-            1,
-            34,
-            3,
-            44,
-            8,
-            58,
-            20,
-            72,
-          ],
-          14,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "weight"],
-            1,
-            42,
-            3,
-            54,
-            8,
-            70,
-            20,
-            88,
-          ],
-          18,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "weight"],
-            1,
+            ["zoom"],
+            2,
+            28,
+            5,
             50,
-            3,
-            64,
             8,
-            82,
-            20,
+            72,
+            11,
+            88,
+            14,
             104,
+            18,
+            120,
           ],
-        ],
-        "circle-color": "#4d4dff",
-        "circle-opacity": 0.16,
-        "circle-blur": 1,
+          "heatmap-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            2,
+            0.55,
+            6,
+            0.62,
+            10,
+            0.68,
+            14,
+            0.72,
+            18,
+            0.76,
+          ],
+          "heatmap-color": [
+            "interpolate",
+            ["linear"],
+            ["heatmap-density"],
+            0,
+            "rgba(0,0,0,0)",
+            0.10,
+            "rgba(0,102,255,0.05)",
+            0.22,
+            "rgba(0,174,255,0.28)",
+            0.38,
+            "rgba(0,235,255,0.52)",
+            0.55,
+            "rgba(92,92,255,0.70)",
+            0.72,
+            "rgba(194,48,255,0.84)",
+            0.88,
+            "rgba(255,35,177,0.94)",
+            1,
+            "rgba(255,238,255,0.98)",
+          ],
+        },
       },
-    });
-  }
-
-  const neonCoreId = "honeycomb-neon-core";
-  if (!map.getLayer(neonCoreId)) {
-    map.addLayer({
-      id: neonCoreId,
-      type: "circle",
-      source: GENERAL_HEAT_SOURCE,
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          3,
-          2.2,
-          6,
-          2.8,
-          10,
-          3.8,
-          14,
-          5,
-          18,
-          6.5,
-        ],
-        "circle-color": "#fff7ff",
-        "circle-opacity": 0.98,
-        "circle-blur": 0.05,
-      },
-    });
+      firstSymbolLayer,
+    );
   }
 
   if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
-    map.addLayer({
-      id: CAMPAIGN_HEAT_LAYER,
-      type: "circle",
-      source: GENERAL_HEAT_SOURCE,
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          3,
-          [
+    map.addLayer(
+      {
+        id: CAMPAIGN_HEAT_LAYER,
+        type: "heatmap",
+        source: CAMPAIGN_HEAT_SOURCE,
+        minzoom: 7,
+        maxzoom: DETAILED_MAX_ZOOM,
+        paint: {
+          "heatmap-weight": [
             "interpolate",
             ["linear"],
             ["get", "weight"],
             1,
-            8,
-            3,
-            10,
-            8,
+            0.55,
+            5,
+            1,
+            20,
+            1,
+          ],
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            0.95,
+            9,
+            1.15,
+            11,
+            1.45,
             14,
-            20,
+            1.8,
             18,
+            2.1,
           ],
-          6,
-          [
+          "heatmap-radius": [
             "interpolate",
             ["linear"],
-            ["get", "weight"],
-            1,
-            10,
-            3,
-            13,
-            8,
-            18,
-            20,
-            24,
-          ],
-          10,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "weight"],
-            1,
-            12,
-            3,
-            16,
-            8,
-            22,
-            20,
-            30,
-          ],
-          14,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "weight"],
-            1,
-            15,
-            3,
-            20,
-            8,
-            28,
-            20,
+            ["zoom"],
+            7,
             38,
+            9,
+            50,
+            11,
+            62,
+            14,
+            80,
+            18,
+            98,
           ],
-          18,
-          [
+          "heatmap-opacity": 0.78,
+          "heatmap-color": [
             "interpolate",
             ["linear"],
-            ["get", "weight"],
+            ["heatmap-density"],
+            0,
+            "rgba(0,102,255,0)",
+            0.12,
+            "rgba(0,190,255,0.16)",
+            0.28,
+            "rgba(0,225,255,0.36)",
+            0.45,
+            "rgba(84,86,255,0.58)",
+            0.62,
+            "rgba(174,45,255,0.74)",
+            0.80,
+            "rgba(255,35,180,0.90)",
+            0.92,
+            "rgba(255,92,202,0.96)",
             1,
-            18,
-            3,
-            24,
-            8,
-            34,
-            20,
-            46,
+            "rgba(255,242,255,1)",
           ],
-        ],
-        "circle-color": "#ff2bd6",
-        "circle-opacity": 0.42,
-        "circle-blur": 0.78,
+        },
       },
-    });
+      firstSymbolLayer,
+    );
   }
 
-  const source = map.getSource(GENERAL_HEAT_SOURCE) as
-    maplibregl.GeoJSONSource | undefined;
-  source?.setData(buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap));
+  (
+    map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
+  )?.setData(buildHeatmapGeoJSON(generalHeatmap));
+
+  (
+    map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
+  )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
 }
+
 function add3DBuildings(map: maplibregl.Map) {
   if (map.getLayer(honeycombBuildingLayer.id)) return;
 
@@ -357,12 +356,7 @@ export function MapLibreMap({
       // Keep the normal map intact; the neon effect is produced by luminous
       // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
-      addNeonGlowLayers(map, generalHeatmap, campaignHeatmap);
-
-      (
-        map.getSource(GENERAL_HEAT_SOURCE) as
-          maplibregl.GeoJSONSource | undefined
-      )?.setData(buildNeonPointsGeoJSON(generalHeatmap, campaignHeatmap));
+      addHeatmapLayers(map, generalHeatmap, campaignHeatmap);
     };
 
     map.once("load", addActivityLayers);
