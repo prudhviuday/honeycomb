@@ -1,15 +1,18 @@
-import { useEffect, useRef } from 'react';
-import * as maplibregl from 'maplibre-gl';
-import { setWorkerUrl } from 'maplibre-gl';
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useEffect, useRef } from "react";
+import * as maplibregl from "maplibre-gl";
+import { setWorkerUrl } from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 setWorkerUrl(workerUrl);
 
-import { honeybadgerMapStyle, honeycombBuildingLayer } from '@/modules/maps/logic/mapStyle';
-import type { MapFeature } from '@/modules/maps/logic/mapData';
-import type { Scan, HeatmapPoint } from '@/modules/maps/types';
-import { createCampaignMarker, createUserMarker } from '@/lib/mapMarkers';
+import {
+  honeybadgerMapStyle,
+  honeycombBuildingLayer,
+} from "@/modules/maps/logic/mapStyle";
+import type { MapFeature } from "@/modules/maps/logic/mapData";
+import type { Scan, HeatmapPoint } from "@/modules/maps/types";
+import { createCampaignMarker, createUserMarker } from "@/lib/mapMarkers";
 
 interface Props {
   features: MapFeature[];
@@ -20,36 +23,42 @@ interface Props {
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
   recenterVersion?: number;
+  fitActivity?: boolean;
+  fitFeatures?: boolean;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
-const TAMIL_NADU_BOUNDS = { south: 8.0, north: 13.6, west: 76.2, east: 80.4 };
-const REGIONAL_MAX_ZOOM = 8.99;
 const DETAILED_MAX_ZOOM = 18;
-const ACTIVITY_SOURCE = 'honeycomb-activity-scans';
-const ACTIVITY_HEAT = 'honeycomb-activity-heat';
-const ACTIVITY_POINTS = 'honeycomb-activity-points';
-const GENERAL_HEAT_SOURCE = 'honeycomb-general-location-heat';
-const CAMPAIGN_HEAT_SOURCE = 'honeycomb-campaign-location-heat';
-const GENERAL_HEAT_LAYER = 'honeycomb-general-location-heat-layer';
-const GENERAL_POINT_LAYER = 'honeycomb-general-location-point-layer';
-const CAMPAIGN_HEAT_LAYER = 'honeycomb-campaign-location-heat-layer';
+const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
+const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
+const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
+const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
   return {
-    type: 'FeatureCollection',
-    features: points.map((point, index) => ({
-      type: 'Feature' as const,
-      id: `heat-${index}-${point.latitude}-${point.longitude}`,
-      geometry: { type: 'Point' as const, coordinates: [point.longitude, point.latitude] },
-      properties: { weight: point.weight },
-    })),
+    type: "FeatureCollection",
+    features: points
+      .filter(
+        (point) =>
+          Number.isFinite(Number(point.latitude)) &&
+          Number.isFinite(Number(point.longitude)) &&
+          Number.isFinite(Number(point.weight)),
+      )
+      .map((point, index) => ({
+        type: "Feature" as const,
+        id: `heat-${index}-${point.latitude}-${point.longitude}`,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [Number(point.longitude), Number(point.latitude)],
+        },
+        properties: { weight: Number(point.weight) },
+      })),
   };
 }
 
 function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
   return {
-    type: 'FeatureCollection',
+    type: "FeatureCollection",
     features: scans
       .filter(
         (scan) =>
@@ -57,15 +66,222 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
           Number.isFinite(Number(scan.longitude)),
       )
       .map((scan, index) => ({
-        type: 'Feature' as const,
+        type: "Feature" as const,
         id: scan.id || `scan-${index}`,
         geometry: {
-          type: 'Point' as const,
+          type: "Point" as const,
           coordinates: [Number(scan.longitude), Number(scan.latitude)],
         },
         properties: { points: 1, scanId: scan.id },
       })),
   };
+}
+
+function addHeatmapLayers(
+  map: maplibregl.Map,
+  generalHeatmap: HeatmapPoint[],
+  campaignHeatmap: HeatmapPoint[],
+) {
+  if (!map.getSource(GENERAL_HEAT_SOURCE)) {
+    map.addSource(GENERAL_HEAT_SOURCE, {
+      type: "geojson",
+      data: buildHeatmapGeoJSON(generalHeatmap),
+    });
+  }
+
+  if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
+    map.addSource(CAMPAIGN_HEAT_SOURCE, {
+      type: "geojson",
+      data: buildHeatmapGeoJSON(campaignHeatmap),
+    });
+  }
+
+  const firstSymbolLayer = map
+    .getStyle()
+    .layers?.find((layer) => layer.type === "symbol")?.id;
+
+  if (!map.getLayer(GENERAL_HEAT_LAYER)) {
+    map.addLayer(
+      {
+        id: GENERAL_HEAT_LAYER,
+        type: "heatmap",
+        source: GENERAL_HEAT_SOURCE,
+        maxzoom: DETAILED_MAX_ZOOM,
+        paint: {
+          "heatmap-weight": [
+            "interpolate",
+            ["linear"],
+            ["get", "weight"],
+            1,
+            0.3,
+            3,
+            0.55,
+            8,
+            0.8,
+            20,
+            1,
+          ],
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            2,
+            0.75,
+            5,
+            0.95,
+            8,
+            1.2,
+            11,
+            1.45,
+            14,
+            1.7,
+            18,
+            2.0,
+          ],
+          "heatmap-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            2,
+            28,
+            5,
+            50,
+            8,
+            72,
+            11,
+            88,
+            14,
+            104,
+            18,
+            120,
+          ],
+          "heatmap-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            2,
+            0.55,
+            6,
+            0.62,
+            10,
+            0.68,
+            14,
+            0.72,
+            18,
+            0.76,
+          ],
+          "heatmap-color": [
+            "interpolate",
+            ["linear"],
+            ["heatmap-density"],
+            0,
+            "rgba(0,0,0,0)",
+            0.10,
+            "rgba(0,102,255,0.05)",
+            0.22,
+            "rgba(0,174,255,0.28)",
+            0.38,
+            "rgba(0,235,255,0.52)",
+            0.55,
+            "rgba(92,92,255,0.70)",
+            0.72,
+            "rgba(194,48,255,0.84)",
+            0.88,
+            "rgba(255,35,177,0.94)",
+            1,
+            "rgba(255,238,255,0.98)",
+          ],
+        },
+      },
+      firstSymbolLayer,
+    );
+  }
+
+  if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+    map.addLayer(
+      {
+        id: CAMPAIGN_HEAT_LAYER,
+        type: "heatmap",
+        source: CAMPAIGN_HEAT_SOURCE,
+        minzoom: 7,
+        maxzoom: DETAILED_MAX_ZOOM,
+        paint: {
+          "heatmap-weight": [
+            "interpolate",
+            ["linear"],
+            ["get", "weight"],
+            1,
+            0.55,
+            5,
+            1,
+            20,
+            1,
+          ],
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            0.95,
+            9,
+            1.15,
+            11,
+            1.45,
+            14,
+            1.8,
+            18,
+            2.1,
+          ],
+          "heatmap-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            38,
+            9,
+            50,
+            11,
+            62,
+            14,
+            80,
+            18,
+            98,
+          ],
+          "heatmap-opacity": 0.78,
+          "heatmap-color": [
+            "interpolate",
+            ["linear"],
+            ["heatmap-density"],
+            0,
+            "rgba(0,102,255,0)",
+            0.12,
+            "rgba(0,190,255,0.16)",
+            0.28,
+            "rgba(0,225,255,0.36)",
+            0.45,
+            "rgba(84,86,255,0.58)",
+            0.62,
+            "rgba(174,45,255,0.74)",
+            0.80,
+            "rgba(255,35,180,0.90)",
+            0.92,
+            "rgba(255,92,202,0.96)",
+            1,
+            "rgba(255,242,255,1)",
+          ],
+        },
+      },
+      firstSymbolLayer,
+    );
+  }
+
+  (
+    map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
+  )?.setData(buildHeatmapGeoJSON(generalHeatmap));
+
+  (
+    map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
+  )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
 }
 
 function add3DBuildings(map: maplibregl.Map) {
@@ -76,7 +292,9 @@ function add3DBuildings(map: maplibregl.Map) {
   if (!hasBuildingSource) return;
 
   try {
-    const firstSymbolLayer = style.layers?.find((layer) => layer.type === 'symbol')?.id;
+    const firstSymbolLayer = style.layers?.find(
+      (layer) => layer.type === "symbol",
+    )?.id;
     map.addLayer(honeycombBuildingLayer, firstSymbolLayer);
   } catch {
     // 3D is an enhancement; never let it break the underlying map.
@@ -92,6 +310,8 @@ export function MapLibreMap({
   onMarkerClick,
   onMapClick,
   recenterVersion = 0,
+  fitActivity = false,
+  fitFeatures = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -114,7 +334,7 @@ export function MapLibreMap({
       center: userLocation ? [userLocation.lng, userLocation.lat] : CHENNAI,
       zoom: userLocation ? 12 : 6,
       minZoom: 0,
-      maxZoom: userLocation ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM,
+      maxZoom: DETAILED_MAX_ZOOM,
       attributionControl: false,
       pitch: 0,
       bearing: 0,
@@ -124,143 +344,21 @@ export function MapLibreMap({
     });
 
     map.touchZoomRotate.disableRotation();
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-    map.on('click', () => onMapClickRef.current());
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: true }),
+      "bottom-right",
+    );
+    map.on("click", () => onMapClickRef.current());
     mapRef.current = map;
 
     const addActivityLayers = () => {
+      // Keep the normal map intact; the neon effect is produced by luminous
+      // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
-
-      if (!map.getSource(GENERAL_HEAT_SOURCE)) {
-        map.addSource(GENERAL_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(generalHeatmap) });
-      }
-
-      if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
-        map.addSource(CAMPAIGN_HEAT_SOURCE, { type: 'geojson', data: buildHeatmapGeoJSON(campaignHeatmap) });
-      }
-
-      if (!map.getLayer(GENERAL_HEAT_LAYER)) {
-        map.addLayer({
-          id: GENERAL_HEAT_LAYER,
-          type: 'heatmap',
-          source: GENERAL_HEAT_SOURCE,
-          maxzoom: 10,
-          paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.35, 5, 0.8, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.5, 12, 2.2],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 20, 6, 34, 9, 50, 12, 62],
-            'heatmap-opacity': 0.42,
-            'heatmap-color': [
-              'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(99,102,241,0)',
-              0.25, 'rgba(99,102,241,0.18)',
-              0.5, 'rgba(139,92,246,0.35)',
-              0.75, 'rgba(236,72,153,0.48)',
-              1, 'rgba(255,200,87,0.72)',
-            ],
-          },
-        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
-      }
-
-      if (!map.getLayer(GENERAL_POINT_LAYER)) {
-        map.addLayer({
-          id: GENERAL_POINT_LAYER,
-          type: 'circle',
-          source: GENERAL_HEAT_SOURCE,
-          maxzoom: 10,
-          paint: {
-            'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 1, 5, 5, 8, 20, 12],
-            'circle-color': '#ffc857',
-            'circle-opacity': 0.85,
-            'circle-stroke-color': '#ffffff',
-            'circle-stroke-width': 1,
-            'circle-stroke-opacity': 0.55,
-          },
-        });
-      }
-
-      if (!map.getLayer(CAMPAIGN_HEAT_LAYER)) {
-        map.addLayer({
-          id: CAMPAIGN_HEAT_LAYER,
-          type: 'heatmap',
-          source: CAMPAIGN_HEAT_SOURCE,
-          minzoom: 9,
-          maxzoom: DETAILED_MAX_ZOOM,
-          paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 1, 0.55, 5, 1, 20, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1, 8, 2, 12, 3],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 18, 6, 30, 9, 46, 12, 58],
-            'heatmap-opacity': 0.82,
-            'heatmap-color': [
-              'interpolate', ['linear'], ['heatmap-density'],
-              0, 'rgba(232,62,140,0)',
-              0.15, 'rgba(139,92,246,0.22)',
-              0.35, 'rgba(232,62,140,0.52)',
-              0.55, 'rgba(255,107,74,0.72)',
-              0.75, 'rgba(255,200,87,0.9)',
-              1, 'rgba(255,255,255,0.98)',
-            ],
-          },
-        }, map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id);
-      }
-
-      if (!map.getSource(ACTIVITY_SOURCE)) {
-        map.addSource(ACTIVITY_SOURCE, {
-          type: 'geojson',
-          data: buildActivityGeoJSON(activityScansRef.current),
-        });
-      }
-
-      if (!map.getLayer(ACTIVITY_HEAT)) {
-        map.addLayer(
-          {
-            id: ACTIVITY_HEAT,
-            type: 'heatmap',
-            source: ACTIVITY_SOURCE,
-            maxzoom: 11,
-            paint: {
-              'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 8, 2.4, 11, 3.2],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 16, 6, 28, 9, 42, 11, 55],
-              'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.92, 10, 0.82, 11, 0.35],
-              'heatmap-color': [
-                'interpolate', ['linear'], ['heatmap-density'],
-                0, 'rgba(232,62,140,0)',
-                0.15, 'rgba(139,92,246,0.28)',
-                0.35, 'rgba(232,62,140,0.55)',
-                0.55, 'rgba(255,107,74,0.72)',
-                0.75, 'rgba(255,200,87,0.88)',
-                1, 'rgba(255,255,255,0.98)',
-              ],
-            },
-          },
-          map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id,
-        );
-      }
-
-      if (!map.getLayer(ACTIVITY_POINTS)) {
-        map.addLayer({
-          id: ACTIVITY_POINTS,
-          type: 'circle',
-          source: ACTIVITY_SOURCE,
-          minzoom: 8.5,
-          paint: {
-            'circle-radius': ['interpolate', ['linear'], ['zoom'], 8.5, 2.5, 12, 5, 16, 7],
-            'circle-color': '#E50914',
-            'circle-opacity': ['interpolate', ['linear'], ['zoom'], 8.5, 0.2, 10, 0.5, 12, 0.82],
-            'circle-stroke-color': 'rgba(255,255,255,0.8)',
-            'circle-stroke-width': 1,
-          },
-        });
-      }
-
-      const source = map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined;
-      source?.setData(buildActivityGeoJSON(activityScansRef.current));
-      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
-      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+      addHeatmapLayers(map, generalHeatmap, campaignHeatmap);
     };
 
-    map.once('load', addActivityLayers);
+    map.once("load", addActivityLayers);
 
     return () => {
       map.remove();
@@ -273,45 +371,68 @@ export function MapLibreMap({
     const map = mapRef.current;
     if (!map) return;
     const update = () => {
-      (map.getSource(ACTIVITY_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildActivityGeoJSON(activityScans));
-      (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
-      (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+      (
+        map.getSource(GENERAL_HEAT_SOURCE) as
+          maplibregl.GeoJSONSource | undefined
+      )?.setData(buildHeatmapGeoJSON(generalHeatmap));
+
+      (
+        map.getSource(CAMPAIGN_HEAT_SOURCE) as
+          maplibregl.GeoJSONSource | undefined
+      )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
     };
-    if (map.isStyleLoaded()) update(); else map.once('load', update);
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) update();
+    else map.once("load", update);
+    return () => {
+      map.off("load", update);
+    };
   }, [activityScans, generalHeatmap, campaignHeatmap]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
-    const markers = features.map((feature) =>
-      createCampaignMarker(
-        map,
-        feature.location.longitude,
-        feature.location.latitude,
-        feature.category,
-        feature.isScanned,
-        () => {
-          onMarkerClickRef.current(feature);
-          map.easeTo({
-            center: [feature.location.longitude, feature.location.latitude],
-            zoom: Math.max(map.getZoom(), 14),
-            pitch: 55,
-            duration: 600,
-          });
-        },
-      ),
-    );
-
-    return () => markers.forEach((marker) => marker.remove());
+    if (!map) return;
+    let markers: maplibregl.Marker[] = [];
+    const addMarkers = () => {
+      markers = features.map((feature) =>
+        createCampaignMarker(
+          map,
+          feature.location.longitude,
+          feature.location.latitude,
+          feature.category,
+          feature.isScanned,
+          () => {
+            onMarkerClickRef.current(feature);
+            map.easeTo({
+              center: [feature.location.longitude, feature.location.latitude],
+              zoom: Math.max(map.getZoom(), 14),
+              pitch: 55,
+              duration: 600,
+            });
+          },
+        ),
+      );
+    };
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) addMarkers();
+    else map.once("load", addMarkers);
+    return () => {
+      map.off("load", addMarkers);
+      markers.forEach((marker) => marker.remove());
+    };
   }, [features]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !userLocation) return;
-
+    if (!map) return;
     userMarkerRef.current?.remove();
-    userMarkerRef.current = createUserMarker(map, userLocation.lng, userLocation.lat).marker;
+    if (!userLocation) {
+      userMarkerRef.current = null;
+      return;
+    }
+    userMarkerRef.current = createUserMarker(
+      map,
+      userLocation.lng,
+      userLocation.lat,
+    ).marker;
   }, [userLocation]);
 
   useEffect(() => {
@@ -330,15 +451,18 @@ export function MapLibreMap({
       });
     };
 
-    if (map.isStyleLoaded()) centerOnUser();
-    else map.once('load', centerOnUser);
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) centerOnUser();
+    else map.once("load", centerOnUser);
 
-    return () => map.off('load', centerOnUser);
+    return () => {
+      map.off("load", centerOnUser);
+    };
   }, [userLocation]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !userLocation || !map.isStyleLoaded()) return;
+    if (!map || !userLocation || !Boolean(map.getSource(GENERAL_HEAT_SOURCE)))
+      return;
 
     map.flyTo({
       center: [userLocation.lng, userLocation.lat],
@@ -351,37 +475,49 @@ export function MapLibreMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !fitActivity || !campaignHeatmap.length) return;
+    const fit = () => {
+      const bounds = new maplibregl.LngLatBounds();
+      campaignHeatmap.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+      map.fitBounds(bounds, { padding: 40, maxZoom: 14, duration: 400 });
+    };
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
+    else map.once("load", fit);
+    return () => {
+      map.off("load", fit);
+    };
+  }, [campaignHeatmap, fitActivity]);
 
-    const updateMapMode = () => {
-      const center = map.getCenter();
-      const centerInsideTamilNadu =
-        center.lat >= TAMIL_NADU_BOUNDS.south &&
-        center.lat <= TAMIL_NADU_BOUNDS.north &&
-        center.lng >= TAMIL_NADU_BOUNDS.west &&
-        center.lng <= TAMIL_NADU_BOUNDS.east;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fitFeatures || !features.length) return;
 
-      const maxZoom = centerInsideTamilNadu ? DETAILED_MAX_ZOOM : REGIONAL_MAX_ZOOM;
-      if (map.getMaxZoom() !== maxZoom) {
-        map.setMaxZoom(maxZoom);
+    const fit = () => {
+      const bounds = new maplibregl.LngLatBounds();
+
+      features.forEach((feature) => {
+        bounds.extend([
+          feature.location.longitude,
+          feature.location.latitude,
+        ]);
+      });
+
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: 44,
+          maxZoom: 13.5,
+          duration: 500,
+        });
       }
     };
 
-    if (map.isStyleLoaded()) {
-      updateMapMode();
-    } else {
-      map.once('load', updateMapMode);
-    }
-
-    map.on('moveend', updateMapMode);
-    map.on('zoomend', updateMapMode);
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
+    else map.once("load", fit);
 
     return () => {
-      map.off('load', updateMapMode);
-      map.off('moveend', updateMapMode);
-      map.off('zoomend', updateMapMode);
+      map.off("load", fit);
     };
-  }, []);
+  }, [features, fitFeatures]);
 
   return <div ref={containerRef} className="absolute inset-0" />;
 }

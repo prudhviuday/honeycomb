@@ -31,7 +31,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
   const stopCamera = () => {
     controlsRef.current?.stop();
     controlsRef.current = null;
-    readerRef.current?.reset();
+
     readerRef.current = null;
 
     const video = videoRef.current;
@@ -128,7 +128,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
       cancelled = true;
       controlsRef.current?.stop();
       controlsRef.current = null;
-      readerRef.current?.reset();
+
       readerRef.current = null;
 
       const video = videoRef.current;
