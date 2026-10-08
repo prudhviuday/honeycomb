@@ -58,6 +58,8 @@ export interface QRCode {
 }
 
 export interface Scan {
+  latitude?: number | null;
+  longitude?: number | null;
   id: string;
   campaign_id: string;
   user_id: string;
