@@ -189,3 +189,48 @@ test("PostgreSQL migration, event idempotency, attribution, access boundaries an
     await db.close();
   }
 });
+
+test('migration supports the supplied production schema without exposing venue contacts', async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+      CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);
+      CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;`);
+    for (const name of ['20261003152644_create_campaign_schema.sql','20261006034800_add_user_location_heatmaps.sql','20261006034900_harden_location_heatmap_rpc.sql','20261006035000_extend_location_heatmaps_to_campaign_events.sql']) {
+      await db.exec(await readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8'));
+    }
+    await db.exec(`
+      ALTER TABLE locations ALTER COLUMN latitude TYPE double precision, ALTER COLUMN longitude TYPE double precision;
+      ALTER TABLE campaigns RENAME COLUMN title TO name;
+      ALTER TABLE missions RENAME COLUMN title TO name;
+      ALTER TABLE mission_progress DROP COLUMN campaign_id;
+      ALTER TABLE reward_claims RENAME COLUMN created_at TO claimed_at;
+      CREATE TABLE venues(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),name text,address text,city text,state text,pincode text,venue_type text,contact_person text,phone text,email text,active boolean,notes text,created_at timestamptz);
+    `);
+    await db.exec(await readFile(new URL('../supabase/migrations/20261007090000_location_intelligence.sql',import.meta.url),'utf8'));
+    const user='10000000-0000-0000-0000-000000000001';
+    const campaign='20000000-0000-0000-0000-000000000001';
+    const location='30000000-0000-0000-0000-000000000001';
+    const mission='40000000-0000-0000-0000-000000000001';
+    const reward='50000000-0000-0000-0000-000000000001';
+    await db.exec(`
+      INSERT INTO auth.users VALUES ('${user}');
+      INSERT INTO campaigns(id,name) VALUES ('${campaign}','Live-shape test');
+      INSERT INTO locations(id,campaign_id,name,latitude,longitude) VALUES ('${location}','${campaign}','Venue',13.0827,80.2707);
+      INSERT INTO missions(id,campaign_id,name) VALUES ('${mission}','${campaign}','Task');
+      INSERT INTO mission_progress(mission_id,user_id,completed) VALUES ('${mission}','${user}',true);
+      INSERT INTO rewards(id,campaign_id,title) VALUES ('${reward}','${campaign}','Reward');
+      INSERT INTO reward_claims(reward_id,campaign_id,user_id,claimed_at) VALUES ('${reward}','${campaign}','${user}','2026-01-02T00:00:00Z');
+    `);
+    await db.query('SELECT record_campaign_event($1,$2,$3,$4,$5)',[campaign,user,'LOCATION_VISITED','visit',location]);
+    const points=await db.query('SELECT * FROM get_location_heatmap($1)',[campaign]);
+    assert.equal(Number(points.rows[0].latitude),13.0827);
+    const completed=await db.query("SELECT campaign_id FROM activity_events WHERE event_type='TASK_COMPLETED'");
+    assert.equal(completed.rows[0].campaign_id,campaign);
+    const claimed=await db.query("SELECT created_at FROM activity_events WHERE event_type='REWARD_CLAIMED'");
+    assert.equal(new Date(claimed.rows[0].created_at).toISOString(),'2026-01-02T00:00:00.000Z');
+    const privileges=await db.query("SELECT has_table_privilege('anon','public.venues','SELECT') AS anonymous_read, has_table_privilege('authenticated','public.venues','SELECT') AS member_read");
+    assert.equal(privileges.rows[0].anonymous_read,false);
+    assert.equal(privileges.rows[0].member_read,false);
+  } finally { await db.close(); }
+});

@@ -12,7 +12,7 @@ Based on prudhviuday/honeycomb feature/organic-orange-heatmap at 7572411.
 
 ## Apply and verify
 
-Do not run the old initial schema against production as a repair script. The repository migration and deployed API have known column differences. Inspect the live schema first, particularly activity_events, venues, locations, interaction_sources, scans, campaign_users, missions, mission_progress and reward_claims. The new migration expects the existing locations coordinates and campaign_id relations.
+Do not run the old initial schema against production as a repair script. The production column list supplied by Rakesh on 2026-10-08 is covered by a compatibility test: venues uses active and contains private contact fields, location coordinates are float8, mission_progress resolves its campaign through missions, and reward_claims uses claimed_at. Existing venue access policies are preserved; this migration does not grant public access to the venue/contact directory.
 
 Apply `20261007090000_location_intelligence.sql` once through the team's migration workflow after all earlier migrations. Its transaction rolls back on failure. No historic event backfill is performed. Do not invent counts for data that was never recorded.
 
@@ -42,7 +42,7 @@ Rollup views are service-role only and all-time. The authorized report RPC appli
 
 ## Pending external verification
 
-Confirm the live schema, apply the migration, assign explicitly approved producer access, test with the actual campaign account, and deploy the reviewed branch through the configured Cloudflare project. Supabase session expiry and Cloudflare sign-in currently prevent that verification. The app's business flow requires Supabase project environment settings and an authenticated test session for full UI validation.
+The supplied production column list has been checked locally. Rakesh will manually apply the migration, assign explicitly approved producer access, and test with the actual campaign account. Cloudflare honeycomb2 is configured to track feature/organic-orange-heatmap; verify its latest successful build matches the correction commit. Production migration execution and deployment success have not yet been verified. The app requires Supabase project environment settings and an authenticated test session for full UI validation.
 
 ## Local validation and preview
 

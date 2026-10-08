@@ -1,19 +1,18 @@
 -- Rakesh: location attribution and campaign intelligence.
 -- Additive migration; apply after the existing campaign/location migrations.
 BEGIN;
+-- Preserve existing venue contact fields and access policies. Coordinates belong
+-- to campaign locations, not the shared venue/contact directory.
 CREATE TABLE IF NOT EXISTS public.venues (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL CHECK (length(trim(name)) > 0),
-  address text NOT NULL DEFAULT '',
-  city text NOT NULL DEFAULT '',
-  latitude numeric(10,7) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
-  longitude numeric(10,7) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
+  name text NOT NULL,
+  address text DEFAULT '',
+  city text DEFAULT '',
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now()
 );
 ALTER TABLE public.venues ENABLE ROW LEVEL SECURITY;
-CREATE POLICY venues_read_active ON public.venues FOR SELECT TO anon, authenticated USING (is_active);
-GRANT SELECT ON public.venues TO anon, authenticated;
+-- Do not grant broad venue SELECT: production has private contact columns.
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS venue_id uuid REFERENCES public.venues(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS locations_venue_idx ON public.locations(venue_id);
 
@@ -101,7 +100,7 @@ BEGIN
     SELECT s.location_id INTO v_location FROM public.interaction_sources s WHERE s.id=v_source AND s.campaign_id=v_campaign;
     IF NOT FOUND THEN v_source := NULL; END IF;
   END IF;
-  v_time := coalesce((r->>'completed_at')::timestamptz,(r->>'scanned_at')::timestamptz,(r->>'joined_at')::timestamptz,(r->>'created_at')::timestamptz,now());
+  v_time := coalesce((r->>'completed_at')::timestamptz,(r->>'scanned_at')::timestamptz,(r->>'joined_at')::timestamptz,(r->>'claimed_at')::timestamptz,(r->>'created_at')::timestamptz,now());
   INSERT INTO public.activity_events(campaign_id,user_id,event_type,entity_type,entity_id,location_id,interaction_source_id,event_key,origin,created_at)
   VALUES(v_campaign,(r->>'user_id')::uuid,v_type,TG_TABLE_NAME,(r->>'id')::uuid,v_location,v_source,TG_TABLE_NAME || ':' || (r->>'id') || ':' || v_type,'domain',v_time)
   ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING;
@@ -181,7 +180,7 @@ END; $$;
 CREATE OR REPLACE FUNCTION public.get_location_heatmap(p_campaign_id uuid DEFAULT NULL)
 RETURNS TABLE(latitude numeric,longitude numeric,weight bigint)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
-  SELECT l.latitude,l.longitude,count(e.id)::bigint
+  SELECT l.latitude::numeric,l.longitude::numeric,count(e.id)::bigint
   FROM public.locations l JOIN public.activity_events e ON e.location_id=l.id AND e.campaign_id=l.campaign_id
   WHERE p_campaign_id IS NOT NULL AND l.campaign_id=p_campaign_id AND l.is_active
     AND e.origin IN ('domain','server') AND e.created_at >= now()-interval '30 days'
