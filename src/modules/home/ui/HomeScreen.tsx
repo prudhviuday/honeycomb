@@ -15,6 +15,7 @@ import type { Campaign } from '@/types';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
+  onOpenMovie?: (campaign: Campaign) => void;
 }
 
 const LEVEL_NAMES = [
@@ -88,7 +89,7 @@ const DEMO_MOVIES: MovieCardData[] = [
   },
 ];
 
-export function HomeScreen({ onNavigate }: Props) {
+export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
   const { campaigns, activeCampaign, campaignUser, refreshCampaignUser, selectCampaign } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
@@ -271,8 +272,12 @@ export function HomeScreen({ onNavigate }: Props) {
   const activateMovie = (index: number) => {
     const movie = movies[index];
     if (!movie || movie.demo) return;
+
     const realCampaign = campaigns.find((campaign) => campaign.id === movie.id);
-    if (realCampaign) selectCampaign(realCampaign as Campaign);
+    if (realCampaign) {
+      void selectCampaign(realCampaign as Campaign);
+      onOpenMovie?.(realCampaign);
+    }
   };
 
   return (
