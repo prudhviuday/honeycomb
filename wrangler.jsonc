@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "honeycomb",
+  "name": "honeycomb2",
   "compatibility_date": "2026-10-06",
   "workers_dev": true,
   "assets": {
