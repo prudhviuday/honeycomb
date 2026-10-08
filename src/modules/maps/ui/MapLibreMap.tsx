@@ -24,6 +24,7 @@ interface Props {
   onMapClick: () => void;
   recenterVersion?: number;
   fitActivity?: boolean;
+  fitFeatures?: boolean;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -312,6 +313,7 @@ export function MapLibreMap({
   onMapClick,
   recenterVersion = 0,
   fitActivity = false,
+  fitFeatures = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -487,5 +489,37 @@ export function MapLibreMap({
       map.off("load", fit);
     };
   }, [campaignHeatmap, fitActivity]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fitFeatures || !features.length) return;
+
+    const fit = () => {
+      const bounds = new maplibregl.LngLatBounds();
+
+      features.forEach((feature) => {
+        bounds.extend([
+          feature.location.longitude,
+          feature.location.latitude,
+        ]);
+      });
+
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: 44,
+          maxZoom: 13.5,
+          duration: 500,
+        });
+      }
+    };
+
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
+    else map.once("load", fit);
+
+    return () => {
+      map.off("load", fit);
+    };
+  }, [features, fitFeatures]);
+
   return <div ref={containerRef} className="absolute inset-0" />;
 }
