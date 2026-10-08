@@ -13,4 +13,16 @@ export default defineConfig({
   optimizeDeps: {
     include: ['maplibre-gl'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          maplibre: ['maplibre-gl'],
+          supabase: ['@supabase/supabase-js'],
+          zxing: ['@zxing/browser', '@zxing/library'],
+        },
+      },
+    },
+  },
 });
