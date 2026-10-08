@@ -223,7 +223,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
   const shareable = Boolean(user && inviteUrl && referral);
 
   return (
-    <div className="min-h-screen bg-bg-primary animate-fade-in pb-10">
+    <div className="min-h-screen w-full max-w-lg mx-auto bg-bg-primary text-text-primary animate-fade-in pb-8 sm:border-x sm:border-white/5 overflow-x-hidden">
       <header className="sticky top-0 z-40 px-4 py-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.05]">
         <div className="flex items-center gap-3">
           <button
@@ -248,7 +248,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
       </header>
 
       <div className="space-y-6">
-        <section className="relative overflow-hidden min-h-[360px]">
+        <section className="relative overflow-hidden min-h-[300px]">
           <div className="absolute inset-0 bg-bg-elevated" />
           {campaign.hero_image_url ? (
             <img
@@ -267,7 +267,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
                 {campaign.active ? 'Live campaign' : 'Campaign'}
               </span>
             </div>
-            <h1 className="font-display text-[42px] leading-[0.9] text-white mt-3 tracking-[-0.02em]">
+            <h1 className="font-display text-[34px] leading-[0.92] text-white mt-3 tracking-[-0.02em]">
               {movieTitle}
             </h1>
             {campaign.title && campaign.title !== movieTitle && (
@@ -276,7 +276,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
           </div>
         </section>
 
-        <div className="px-4 space-y-6">
+        <div className="px-4 pt-1 space-y-5">
           <section className="grid grid-cols-2 gap-2.5">
             <InfoTile
               icon={CalendarDays}
@@ -316,7 +316,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
                 <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">
                   Hunts
                 </p>
-                <h2 className="font-display text-[28px] leading-none text-white mt-1">
+                <h2 className="font-display text-[23px] leading-none text-white mt-1">
                   SMALL MOVIE MISSIONS
                 </h2>
               </div>
@@ -371,7 +371,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
               </span>
             </div>
 
-            <div className="relative h-[250px] overflow-hidden rounded-[22px] border border-white/[0.07] bg-black">
+            <div className="relative h-[220px] overflow-hidden rounded-[18px] border border-white/[0.07] bg-black">
               <MapLibreMap
                 features={mapFeatures}
                 activityScans={[]}
@@ -396,14 +396,14 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
             </div>
           </section>
 
-          <section className="rounded-[24px] overflow-hidden bg-gradient-to-br from-[#17151B] via-bg-secondary to-[#0D0D10] border border-accent/15">
-            <div className="p-5">
+          <section className="rounded-[20px] overflow-hidden bg-gradient-to-br from-[#17151B] via-bg-secondary to-[#0D0D10] border border-accent/15">
+            <div className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">
                     Bring your crew
                   </p>
-                  <h2 className="font-display text-[30px] leading-none text-white mt-1">
+                  <h2 className="font-display text-[24px] leading-none text-white mt-1">
                     INVITE 3 FRIENDS
                   </h2>
                   <p className="text-xs text-text-muted mt-2 leading-5">
@@ -417,8 +417,8 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
               </div>
 
               {shareable ? (
-                <div className="mt-5 grid grid-cols-[auto_1fr] gap-5 items-center">
-                  <div className="w-40 h-40 rounded-[18px] bg-white p-2 shadow-[0_12px_40px_-18px_rgba(255,255,255,0.5)]">
+                <div className="mt-5 flex flex-col items-center text-center gap-4">
+                  <div className="w-[168px] h-[168px] rounded-[18px] bg-white p-2 shadow-[0_12px_40px_-18px_rgba(255,255,255,0.5)]">
                     <img
                       src={buildQrImageUrl(inviteUrl, 240)}
                       alt="Invite friends QR code"
@@ -427,8 +427,8 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
                     />
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="font-display text-3xl text-white leading-none">
+                  <div className="w-full max-w-[250px]">
+                    <p className="font-display text-[28px] text-white leading-none">
                       {Math.min(completedReferrals, 3)} / 3
                     </p>
                     <p className="text-xs text-text-muted mt-1">
