@@ -1,4 +1,4 @@
-import type { StyleSpecification, FillExtrusionLayerSpecification } from 'maplibre-gl';
+import type { StyleSpecification } from 'maplibre-gl';
 
 export const honeybadgerMapStyle =
   'https://tiles.openfreemap.org/styles/dark' as unknown as StyleSpecification;
@@ -113,7 +113,7 @@ export const honeycombRoadGlowLayers = [
   },
 ];
 
-export const honeycombBuildingLayer: FillExtrusionLayerSpecification = {
+export const honeycombBuildingLayer = {
   id: 'honeycomb-3d-buildings',
   type: 'fill-extrusion' as const,
   source: 'openmaptiles',

@@ -367,7 +367,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                             ? 'z-10 scale-[0.88] opacity-55 saturate-[0.65]'
                             : 'z-0 scale-[0.78] opacity-0 pointer-events-none')
                       }
-                      style={{ userSelect: 'none' }}
+                      style={{ userSelect: 'none', WebkitUserDrag: 'none' }}
                     >
                       <MovieArtwork movie={movie} isCenter={isCenter} />
                       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
