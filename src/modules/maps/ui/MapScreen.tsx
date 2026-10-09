@@ -41,21 +41,41 @@ export function MapScreen({ onNavigate }: Props) {
         setSelected(null);
         setPanelOpen(false);
         try {
-          const [locs, srcs, userScans, generalPoints, campaignPoints] = await Promise.all([
+          // Keep the map usable when one optional request (especially the
+          // heatmap RPC) fails. A single rejected request must not erase all
+          // venue markers and otherwise-successful map data.
+          const [
+            locationsResult,
+            sourcesResult,
+            scansResult,
+            generalPointsResult,
+            campaignPointsResult,
+          ] = await Promise.allSettled([
             getLocations(selectedCampaign.id),
             getInteractionSources(selectedCampaign.id),
             getUserScans(selectedCampaign.id, user.id),
             getLocationHeatmap(null),
             getLocationHeatmap(selectedCampaign.id),
           ]);
+
+          const locs = locationsResult.status === 'fulfilled' ? locationsResult.value : [];
+          const srcs = sourcesResult.status === 'fulfilled' ? sourcesResult.value : [];
+          const userScans = scansResult.status === 'fulfilled' ? scansResult.value : [];
+          const generalPoints = generalPointsResult.status === 'fulfilled' ? generalPointsResult.value : [];
+          const campaignPoints = campaignPointsResult.status === 'fulfilled' ? campaignPointsResult.value : [];
+
+          if (locationsResult.status === 'rejected') console.warn('[Map] Locations failed to load:', locationsResult.reason);
+          if (sourcesResult.status === 'rejected') console.warn('[Map] Interaction sources failed to load:', sourcesResult.reason);
+          if (scansResult.status === 'rejected') console.warn('[Map] User scans failed to load:', scansResult.reason);
+          if (generalPointsResult.status === 'rejected') console.warn('[Map] General heatmap failed to load:', generalPointsResult.reason);
+          if (campaignPointsResult.status === 'rejected') console.warn('[Map] Campaign heatmap failed to load:', campaignPointsResult.reason);
+
           setActivityScans(userScans);
           setGeneralHeatmap(generalPoints);
           setCampaignHeatmap(campaignPoints);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
-        } catch {
-          setActivityScans([]);
-          setGeneralHeatmap([]);
-          setCampaignHeatmap([]);
+        } catch (error) {
+          console.error('[Map] Failed to prepare map data:', error);
           setFeatures([]);
         } finally {
           setLoading(false);
