@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
 import { Home, Map, ScanLine, Target, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
@@ -13,7 +14,7 @@ import { useCampaign } from "@/application/state/CampaignContext";
 import type { Campaign } from "@/types";
 
 export type Tab =
-  "home" | "hunts" | "scanner" | "map" | "rewards" | "profile";
+  "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Home", icon: Home },
@@ -119,7 +120,15 @@ export function AppShell() {
         )}
         {activeTab === "map" && <MapScreen onNavigate={navigate} />}
         {activeTab === "rewards" && <RewardsScreen />}
-        {activeTab === "profile" && <ProfileScreen />}
+        {activeTab === "profile" && (
+          <>
+            <button className="m-4 text-gold underline" onClick={() => setActiveTab("analytics")}>
+              Producer analytics
+            </button>
+            <ProfileScreen />
+          </>
+        )}
+        {activeTab === "analytics" && <AnalyticsScreen />}
       </main>
       <nav
         aria-label="Primary"
