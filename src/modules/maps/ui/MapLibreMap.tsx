@@ -56,12 +56,20 @@ function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection 
   };
 }
 
+type ScanWithCoordinates = Scan & {
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
 function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
+  const scansWithCoordinates = scans as ScanWithCoordinates[];
   return {
     type: "FeatureCollection",
-    features: scans
+    features: scansWithCoordinates
       .filter(
         (scan) =>
+          scan.latitude != null &&
+          scan.longitude != null &&
           Number.isFinite(Number(scan.latitude)) &&
           Number.isFinite(Number(scan.longitude)),
       )
