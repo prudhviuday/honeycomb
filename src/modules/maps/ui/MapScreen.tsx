@@ -6,7 +6,7 @@ import { getLocations, getInteractionSources, getUserScans } from '@/modules/map
 import { getLocationHeatmap } from '@/modules/maps/api/locationApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
-import type { Campaign } from '@/shared/types';
+import type { Campaign } from '@/modules/shared/types';
 import type { Location, InteractionSource, Scan, HeatmapPoint } from '@/modules/maps/types';
 
 interface Props {
