@@ -132,7 +132,15 @@ export function ScannerScreen({ onCancel, onScanComplete }: Props) {
         controlsRef.current = controls;
         setCameraReady(true);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled) {
+          try {
+            effectReader?.reset();
+          } catch {
+            // The screen has already gone away; still release any acquired tracks.
+          }
+          stopVideoStream(video);
+          return;
+        }
 
         const name = err instanceof DOMException ? err.name : '';
         if (name === 'NotAllowedError' || name === 'SecurityError') {
