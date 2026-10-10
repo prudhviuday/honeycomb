@@ -43,6 +43,7 @@ export function AppShell() {
   const { user, loading: authLoading } = useAuth();
   const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [visitedTabs, setVisitedTabs] = useState<Tab[]>(["home"]);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
   const [navCompact, setNavCompact] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
@@ -90,6 +91,7 @@ export function AppShell() {
   }, []);
 
   const navigate = (tab: Tab) => {
+    setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
     setActiveTab(tab);
     setNavCompact(false);
     if (movieRoute.campaignId) {
@@ -160,30 +162,42 @@ export function AppShell() {
           inactive content. The scanner is intentionally still conditional so its
           camera is stopped when the user leaves Scan.
         */}
-        <div hidden={activeTab !== "home"}>
-          <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />
-        </div>
-        <div hidden={activeTab !== "hunts"}>
-          <HuntsScreen onNavigate={navigate} />
-        </div>
-        {activeTab === "scanner" && (
-          <ScannerScreen onScanComplete={() => setActiveTab("home")} />
+        {visitedTabs.includes("home") && (
+          <div hidden={activeTab !== "home"}>
+            <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />
+          </div>
         )}
-        <div hidden={activeTab !== "map"}>
-          <MapScreen onNavigate={navigate} />
-        </div>
-        <div hidden={activeTab !== "rewards"}>
-          <RewardsScreen />
-        </div>
-        <div hidden={activeTab !== "profile"}>
-          <button className="m-4 text-gold underline" onClick={() => setActiveTab("analytics")}>
-            Producer analytics
-          </button>
-          <ProfileScreen />
-        </div>
-        <div hidden={activeTab !== "analytics"}>
-          <AnalyticsScreen />
-        </div>
+        {visitedTabs.includes("hunts") && (
+          <div hidden={activeTab !== "hunts"}>
+            <HuntsScreen onNavigate={navigate} />
+          </div>
+        )}
+        {activeTab === "scanner" && (
+          <ScannerScreen onScanComplete={() => navigate("home")} />
+        )}
+        {visitedTabs.includes("map") && (
+          <div hidden={activeTab !== "map"}>
+            <MapScreen onNavigate={navigate} />
+          </div>
+        )}
+        {visitedTabs.includes("rewards") && (
+          <div hidden={activeTab !== "rewards"}>
+            <RewardsScreen />
+          </div>
+        )}
+        {visitedTabs.includes("profile") && (
+          <div hidden={activeTab !== "profile"}>
+            <button className="m-4 text-gold underline" onClick={() => navigate("analytics")}>
+              Producer analytics
+            </button>
+            <ProfileScreen />
+          </div>
+        )}
+        {visitedTabs.includes("analytics") && (
+          <div hidden={activeTab !== "analytics"}>
+            <AnalyticsScreen />
+          </div>
+        )}
       </main>
 
       <nav
