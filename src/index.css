@@ -595,3 +595,58 @@
     transition: none !important;
   }
 }
+
+
+/* Scanner-open state: the elevated Scan action morphs into a warm-glass Cancel control. */
+.honey-nav-scan-cancel {
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 50%;
+  border-color: rgba(233, 180, 76, 0.48);
+  background: linear-gradient(145deg, rgba(45, 36, 19, 0.97), rgba(20, 20, 22, 0.98));
+  color: #F5C96B;
+  box-shadow:
+    0 0 0 3px rgba(233, 180, 76, 0.075),
+    0 5px 18px rgba(0, 0, 0, 0.42),
+    0 0 22px rgba(233, 180, 76, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.honey-nav-scan-cancel span {
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 201, 107, 0.94);
+}
+
+.honey-nav-scan-cancel:hover {
+  filter: brightness(1.12);
+  border-color: rgba(245, 201, 107, 0.78);
+  box-shadow:
+    0 0 0 3px rgba(233, 180, 76, 0.1),
+    0 5px 18px rgba(0, 0, 0, 0.42),
+    0 0 25px rgba(233, 180, 76, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.honey-nav-scan-cancel:active,
+.honey-nav-pill-compact .honey-nav-scan-cancel:active {
+  transform: translateY(-2px) scale(0.95);
+}
+
+.honey-nav-pill-compact .honey-nav-scan-cancel {
+  border-radius: 50%;
+  gap: 1px;
+}
+
+.honey-nav-pill-compact .honey-nav-scan-cancel svg {
+  width: 16px;
+  height: 16px;
+}
+
+.honey-nav-pill-compact .honey-nav-scan-cancel span {
+  font-size: 5.5px;
+  letter-spacing: 0.08em;
+}
