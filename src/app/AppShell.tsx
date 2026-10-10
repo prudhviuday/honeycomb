@@ -152,22 +152,38 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col w-full max-w-lg mx-auto relative overflow-x-hidden sm:border-x sm:border-white/5">
       <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar pb-28">
-        {activeTab === "home" && <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />}
-        {activeTab === "hunts" && <HuntsScreen onNavigate={navigate} />}
+        {/*
+          Keep regular tabs mounted after their first visit. Several screens fetch
+          data in effects and show a full-screen spinner while loading; conditional
+          rendering here used to unmount them on every tab change and restart those
+          requests. The hidden attribute preserves component state without exposing
+          inactive content. The scanner is intentionally still conditional so its
+          camera is stopped when the user leaves Scan.
+        */}
+        <div hidden={activeTab !== "home"}>
+          <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />
+        </div>
+        <div hidden={activeTab !== "hunts"}>
+          <HuntsScreen onNavigate={navigate} />
+        </div>
         {activeTab === "scanner" && (
           <ScannerScreen onScanComplete={() => setActiveTab("home")} />
         )}
-        {activeTab === "map" && <MapScreen onNavigate={navigate} />}
-        {activeTab === "rewards" && <RewardsScreen />}
-        {activeTab === "profile" && (
-          <>
-            <button className="m-4 text-gold underline" onClick={() => setActiveTab("analytics")}>
-              Producer analytics
-            </button>
-            <ProfileScreen />
-          </>
-        )}
-        {activeTab === "analytics" && <AnalyticsScreen />}
+        <div hidden={activeTab !== "map"}>
+          <MapScreen onNavigate={navigate} />
+        </div>
+        <div hidden={activeTab !== "rewards"}>
+          <RewardsScreen />
+        </div>
+        <div hidden={activeTab !== "profile"}>
+          <button className="m-4 text-gold underline" onClick={() => setActiveTab("analytics")}>
+            Producer analytics
+          </button>
+          <ProfileScreen />
+        </div>
+        <div hidden={activeTab !== "analytics"}>
+          <AnalyticsScreen />
+        </div>
       </main>
 
       <nav
