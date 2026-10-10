@@ -25,19 +25,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
+    let mounted = true;
+    let authEventReceived = false;
 
+    // Subscribe before restoring the persisted session. This prevents a slower
+    // getSession() response from overwriting a newer sign-in/sign-out event.
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      authEventReceived = true;
+      if (!mounted) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
     });
 
+    void supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (!mounted || authEventReceived) return;
+        if (error) {
+          console.error('[Auth] Could not restore session:', error.message);
+          setSession(null);
+          setUser(null);
+          return;
+        }
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      })
+      .catch((error: unknown) => {
+        if (!mounted || authEventReceived) return;
+        console.error('[Auth] Session restore failed:', error);
+        setSession(null);
+        setUser(null);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
