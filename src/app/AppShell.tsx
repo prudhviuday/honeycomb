@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
-import { Home, Map, ScanLine, Target, User as UserIcon } from "lucide-react";
+import { House, Map, ScanLine, Ticket, UserRound } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
 import { HomeScreen } from "@/modules/home/ui/HomeScreen";
@@ -17,11 +17,11 @@ export type Tab =
   "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "hunts", label: "Hunts", icon: Target },
+  { id: "home", label: "Home", icon: House },
+  { id: "hunts", label: "Hunts", icon: Ticket },
   { id: "scanner", label: "Scan", icon: ScanLine },
   { id: "map", label: "Map", icon: Map },
-  { id: "profile", label: "Profile", icon: UserIcon },
+  { id: "profile", label: "Profile", icon: UserRound },
 ];
 
 interface MovieRoute {
@@ -130,63 +130,45 @@ export function AppShell() {
         )}
         {activeTab === "analytics" && <AnalyticsScreen />}
       </main>
+
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-6 bg-gradient-to-t from-bg-primary via-bg-primary/90 to-transparent pointer-events-none"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-3 pb-[max(env(safe-area-inset-bottom),14px)] pt-5 pointer-events-none"
       >
-        <div className="pointer-events-auto flex items-center justify-between rounded-[22px] bg-[#141418] border border-white/[0.08] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] px-2 py-1.5">
+        <div className="honey-nav-pill pointer-events-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const isScanner = tab.id === "scanner";
-            if (isScanner)
+
+            if (isScanner) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  type="button"
+                  onClick={() => navigate(tab.id)}
                   aria-label="Scan QR code"
                   aria-current={isActive ? "page" : undefined}
-                  className="flex-1 flex justify-center"
+                  title="Scan"
+                  className={"honey-nav-scan" + (isActive ? " honey-nav-scan-active" : "")}
                 >
-                  <span className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(229,9,20,0.65)] transition-transform active:scale-95 hover:bg-accent-bright">
-                    <Icon
-                      className="w-[22px] h-[22px] text-white"
-                      strokeWidth={2.4}
-                    />
-                  </span>
+                  <Icon className="h-[21px] w-[21px]" strokeWidth={2.35} />
                 </button>
               );
+            }
+
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                type="button"
+                onClick={() => navigate(tab.id)}
+                aria-label={tab.label}
                 aria-current={isActive ? "page" : undefined}
-                className="flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-colors"
+                title={tab.label}
+                className={"honey-nav-button" + (isActive ? " honey-nav-button-active" : "")}
               >
-                <Icon
-                  className={
-                    "w-[21px] h-[21px] transition-colors " +
-                    (isActive ? "text-white" : "text-white/40")
-                  }
-                  strokeWidth={isActive ? 2.3 : 1.8}
-                  fill={isActive && tab.id === "home" ? "currentColor" : "none"}
-                  fillOpacity={0.12}
-                />
-                <span
-                  className={
-                    "text-[10px] font-semibold tracking-wide transition-colors " +
-                    (isActive ? "text-white" : "text-white/40")
-                  }
-                >
-                  {tab.label}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className={
-                    "h-[3px] rounded-full bg-accent transition-all " +
-                    (isActive ? "w-4 opacity-100" : "w-0 opacity-0")
-                  }
-                />
+                <Icon className="h-[19px] w-[19px] shrink-0" strokeWidth={1.9} />
+                <span className="honey-nav-label">{tab.label}</span>
               </button>
             );
           })}
