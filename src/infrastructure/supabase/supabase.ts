@@ -34,6 +34,8 @@ console.log(
  *
  * even though the Supabase client was initialized with the key.
  */
+const SUPABASE_REQUEST_TIMEOUT_MS = 15_000;
+
 const supabaseFetch: typeof fetch = async (
   input,
   init
@@ -60,10 +62,41 @@ const supabaseFetch: typeof fetch = async (
     );
   }
 
-  return globalThis.fetch(input, {
-    ...init,
-    headers,
-  });
+  /*
+   * A screen can aggregate many Supabase requests before it clears its
+   * loading state. If a request never receives response headers, that
+   * screen can remain on its spinner forever. Apply a finite request
+   * deadline while preserving caller cancellation.
+   */
+  const controller = new AbortController();
+  const requestSignal =
+    init?.signal ??
+    (typeof Request !== 'undefined' && input instanceof Request
+      ? input.signal
+      : undefined);
+
+  const abortFromCaller = () => controller.abort();
+  if (requestSignal?.aborted) {
+    controller.abort();
+  } else {
+    requestSignal?.addEventListener('abort', abortFromCaller, { once: true });
+  }
+
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    SUPABASE_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    return await globalThis.fetch(input, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+    requestSignal?.removeEventListener('abort', abortFromCaller);
+  }
 };
 
 export const supabase = createClient(
