@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
-import { House, Map, ScanLine, Ticket, UserRound } from "lucide-react";
+import { House, Map, ScanLine } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
 import { HomeScreen } from "@/modules/home/ui/HomeScreen";
@@ -18,10 +18,8 @@ export type Tab =
 
 const tabs: { id: Tab; label: string; icon: typeof House }[] = [
   { id: "home", label: "Home", icon: House },
-  { id: "hunts", label: "Hunts", icon: Ticket },
   { id: "scanner", label: "Scan", icon: ScanLine },
   { id: "map", label: "Map", icon: Map },
-  { id: "profile", label: "Profile", icon: UserRound },
 ];
 
 interface MovieRoute {
