@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
-import { House, Map, ScanLine, Ticket, UserRound } from "lucide-react";
+import { House, Map, ScanLine, Ticket, UserRound, X } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
 import { HomeScreen } from "@/modules/home/ui/HomeScreen";
@@ -173,10 +173,7 @@ export function AppShell() {
           </div>
         )}
         {activeTab === "scanner" && (
-          <ScannerScreen
-            onCancel={() => navigate("home")}
-            onScanComplete={() => navigate("home")}
-          />
+          <ScannerScreen onScanComplete={() => navigate("home")} />
         )}
         {visitedTabs.includes("map") && (
           <div hidden={activeTab !== "map"}>
@@ -209,22 +206,32 @@ export function AppShell() {
       >
         <div className={"honey-nav-pill pointer-events-auto" + (navCompact ? " honey-nav-pill-compact" : "")}>
           {tabs.map((tab) => {
-            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const isScanner = tab.id === "scanner";
+            const Icon = isScanner && isActive ? X : tab.icon;
 
             if (isScanner) {
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => navigate(tab.id)}
-                  aria-label="Scan QR code"
+                  onClick={() => navigate(isActive ? "home" : tab.id)}
+                  aria-label={isActive ? "Cancel QR scanner and return Home" : "Scan QR code"}
                   aria-current={isActive ? "page" : undefined}
-                  title="Scan"
-                  className={"honey-nav-scan" + (isActive ? " honey-nav-scan-active" : "")}
+                  title={isActive ? "Cancel scan · Back to Home" : "Scan"}
+                  className={
+                    "honey-nav-scan" +
+                    (isActive ? " honey-nav-scan-active honey-nav-scan-cancel" : "")
+                  }
                 >
-                  <Icon className="h-[24px] w-[24px]" strokeWidth={2.35} />
+                  {isActive ? (
+                    <>
+                      <Icon className="h-[19px] w-[19px]" strokeWidth={2.4} />
+                      <span>Cancel</span>
+                    </>
+                  ) : (
+                    <Icon className="h-[24px] w-[24px]" strokeWidth={2.35} />
+                  )}
                 </button>
               );
             }
