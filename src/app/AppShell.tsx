@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
 import { House, Map, ScanLine, Ticket, UserRound } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
@@ -44,6 +44,32 @@ export function AppShell() {
   const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
+  const [navCompact, setNavCompact] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const scroller = mainRef.current;
+    if (!scroller) return;
+
+    let previousTop = scroller.scrollTop;
+    const onScroll = () => {
+      const currentTop = scroller.scrollTop;
+      const delta = currentTop - previousTop;
+
+      // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
+      if (Math.abs(delta) >= 6) {
+        if (currentTop <= 12 || delta < 0) {
+          setNavCompact(false);
+        } else if (delta > 0 && currentTop > 36) {
+          setNavCompact(true);
+        }
+        previousTop = currentTop;
+      }
+    };
+
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => setMovieRoute(readMovieRoute());
@@ -53,6 +79,7 @@ export function AppShell() {
 
   const navigate = (tab: Tab) => {
     setActiveTab(tab);
+    setNavCompact(false);
     if (movieRoute.campaignId) {
       window.history.pushState({}, "", "/");
       setMovieRoute({ campaignId: null, referralCode: undefined, authMode: false });
@@ -112,7 +139,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col w-full max-w-lg mx-auto relative overflow-x-hidden sm:border-x sm:border-white/5">
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-28">
+      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar pb-28">
         {activeTab === "home" && <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />}
         {activeTab === "hunts" && <HuntsScreen onNavigate={navigate} />}
         {activeTab === "scanner" && (
@@ -135,7 +162,7 @@ export function AppShell() {
         aria-label="Primary"
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-3 pb-[max(env(safe-area-inset-bottom),14px)] pt-5 pointer-events-none"
       >
-        <div className="honey-nav-pill pointer-events-auto">
+        <div className={"honey-nav-pill pointer-events-auto" + (navCompact ? " honey-nav-pill-compact" : "")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
