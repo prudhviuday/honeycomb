@@ -48,30 +48,37 @@ export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const scroller = mainRef.current;
-    if (!scroller) return;
+    // Scroll may happen on <main>, an ancestor with overflow, or the document.
+    // A capture-phase document listener sees scroll events from all of them.
+    const previousPositions = new WeakMap<EventTarget, number>();
 
-    let previousTop = Math.max(scroller.scrollTop, window.scrollY);
     const onScroll = (event: Event) => {
-      // Support either the app's inner scroll container or document-level scrolling.
-      const currentTop = event.currentTarget === window ? window.scrollY : scroller.scrollTop;
+      const target = event.target;
+      if (!target || (typeof target !== "object" && typeof target !== "function")) return;
+
+      const currentTop =
+        target === document
+          ? window.scrollY || document.documentElement.scrollTop
+          : (target as HTMLElement).scrollTop ?? 0;
+      const previousTop = previousPositions.get(target) ?? currentTop;
       const delta = currentTop - previousTop;
+      previousPositions.set(target, currentTop);
 
       // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
-      if (Math.abs(delta) >= 6) {
-        if (currentTop <= 12 || delta < 0) {
-          setNavCompact(false);
-        } else if (delta > 0 && currentTop > 36) {
-          setNavCompact(true);
-        }
-        previousTop = currentTop;
+      if (Math.abs(delta) < 3) return;
+
+      if (currentTop <= 12 || delta < 0) {
+        setNavCompact(false);
+      } else if (delta > 0 && currentTop > 24) {
+        setNavCompact(true);
       }
     };
 
-    scroller.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    // Also listen to window scroll for browser/document scrolling implementations.
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      scroller.removeEventListener("scroll", onScroll);
+      document.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
