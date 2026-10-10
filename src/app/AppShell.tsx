@@ -167,8 +167,8 @@ export function AppShell() {
                 title={tab.label}
                 className={"honey-nav-button" + (isActive ? " honey-nav-button-active" : "")}
               >
-                <Icon className="h-[19px] w-[19px] shrink-0" strokeWidth={isActive ? 2.2 : 1.9} />
-                {isActive && <span className="honey-nav-label">{tab.label}</span>}
+                <Icon className="h-[19px] w-[19px] shrink-0" strokeWidth={1.9} />
+                <span className="honey-nav-label">{tab.label}</span>
               </button>
             );
           })}
