@@ -7,7 +7,6 @@ import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
 import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
 
 interface Props {
-  onCancel: () => void;
   onScanComplete: () => void;
 }
 
@@ -21,7 +20,7 @@ function stopVideoStream(video: HTMLVideoElement | null) {
   }
 }
 
-export function ScannerScreen({ onCancel, onScanComplete }: Props) {
+export function ScannerScreen({ onScanComplete }: Props) {
   const { user } = useAuth();
   const { activeCampaign, refreshCampaignUser } = useCampaign();
 
@@ -215,12 +214,6 @@ export function ScannerScreen({ onCancel, onScanComplete }: Props) {
     }
   };
 
-  const handleCancel = () => {
-    setShowManual(false);
-    stopCamera();
-    onCancel();
-  };
-
   const handleCloseResult = () => {
     setResult(null);
     if (result?.success) {
@@ -278,17 +271,6 @@ export function ScannerScreen({ onCancel, onScanComplete }: Props) {
             </div>
           </div>
         </div>
-
-        {/* Cancel scanner */}
-        <button
-          type="button"
-          onClick={handleCancel}
-          aria-label="Cancel QR scanner"
-          className="absolute top-4 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-black/55 border border-white/20 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md active:scale-[0.98] transition-transform"
-        >
-          <X className="w-4 h-4" />
-          Cancel
-        </button>
 
         {/* Top label */}
         <div className="absolute top-14 left-0 right-0 text-center px-8">
