@@ -326,3 +326,178 @@
 .maplibregl-ctrl-compass {
   display: none !important;
 }
+
+
+/* Floating capsule navigation — spacious slate state */
+.honey-nav-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-inline: auto;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(28, 29, 34, 0.58), rgba(13, 14, 17, 0.58));
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.42),
+    0 2px 7px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.honey-nav-button {
+  appearance: none;
+  display: inline-flex;
+  flex: 0 0 46px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 46px;
+  height: 50px;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgba(235, 238, 243, 0.62);
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.honey-nav-button:hover {
+  color: rgba(245, 247, 250, 0.92);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.honey-nav-button:active,
+.honey-nav-scan:active {
+  transform: scale(0.95);
+}
+
+.honey-nav-button:focus-visible,
+.honey-nav-scan:focus-visible {
+  outline: 2px solid rgba(173, 190, 211, 0.8);
+  outline-offset: 2px;
+}
+
+.honey-nav-button-active {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 50px;
+  gap: 3px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: #DCE6F2;
+  box-shadow: none;
+}
+
+.honey-nav-button-active:hover {
+  background: transparent;
+  color: #E7EEF7;
+}
+
+.honey-nav-button-active svg {
+  color: #DCE6F2;
+}
+
+.honey-nav-label {
+  color: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  animation: none;
+}
+
+.honey-nav-scan {
+  appearance: none;
+  display: inline-flex;
+  flex: 0 0 46px;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-inline: 2px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #f02b38 0%, #d91622 72%);
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 4px 12px rgba(217, 22, 34, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, border-radius 160ms ease;
+}
+
+.honey-nav-scan:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 5px 15px rgba(217, 22, 34, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.honey-nav-scan-active {
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px rgba(217, 22, 34, 0.12),
+    0 4px 13px rgba(217, 22, 34, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@keyframes honey-nav-label-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 360px) {
+  .honey-nav-pill {
+    width: max-content;
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .honey-nav-button,
+  .honey-nav-button-active {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 47px;
+  }
+
+  .honey-nav-label {
+    font-size: 9px;
+  }
+
+  .honey-nav-scan {
+    flex-basis: 43px;
+    width: 43px;
+    height: 43px;
+    border-radius: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .honey-nav-button,
+  .honey-nav-scan,
+  .honey-nav-label {
+    animation: none !important;
+    transition: none !important;
+  }
+}
