@@ -93,8 +93,14 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
   const { campaigns, activeCampaign, campaignUser, selectCampaign, loading: campaignsLoading } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
+  const [dashboardKey, setDashboardKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // Depend on stable IDs rather than Supabase object identities. Auth token
+  // refreshes can replace the User object without changing which user is signed in.
+  const campaignId = activeCampaign?.id ?? null;
+  const userId = user?.id ?? null;
+  const currentDashboardKey = campaignId && userId ? `${campaignId}:${userId}` : null;
   const [retryCount, setRetryCount] = useState(0);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -110,24 +116,32 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    if (!activeCampaign || !user) {
+    if (!campaignId || !userId) {
       setLoading(false);
       setDashboard(null);
+      setDashboardKey(null);
+      setLoadError(false);
       return () => {
         cancelled = true;
       };
     }
 
+    const requestKey = `${campaignId}:${userId}`;
     setLoading(true);
     setLoadError(false);
-    void getCampaignDashboard(activeCampaign.id, user.id)
+
+    void getCampaignDashboard(campaignId, userId)
       .then((data) => {
-        if (!cancelled) setDashboard(data);
+        if (!cancelled) {
+          setDashboard(data);
+          setDashboardKey(requestKey);
+        }
       })
       .catch((error) => {
         console.error('[Home] Failed to load campaign dashboard:', error);
         if (!cancelled) {
           setDashboard(null);
+          setDashboardKey(null);
           setLoadError(true);
         }
       })
@@ -138,7 +152,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [activeCampaign, user, retryCount]);
+  }, [campaignId, userId, retryCount]);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -188,7 +202,10 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     }
   }, [activeCampaign?.id, campaigns.length, emblaApi]);
 
-  if (loading || campaignsLoading) {
+  // Only block the screen for the first load of this user/campaign pair.
+  // A refreshed auth object with the same user ID must not put Home back into
+  // a full-screen spinner while its existing dashboard is already usable.
+  if (campaignsLoading || (loading && dashboardKey !== currentDashboardKey)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-bg-primary">
         <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
