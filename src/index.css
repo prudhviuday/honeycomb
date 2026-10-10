@@ -333,12 +333,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
   width: max-content;
   max-width: 100%;
   box-sizing: border-box;
   margin-inline: auto;
-  padding: 5px;
+  padding: 7px;
   border: 1px solid rgba(255, 255, 255, 0.085);
   border-radius: 9999px;
   background: linear-gradient(180deg, rgba(28, 29, 34, 0.58), rgba(13, 14, 17, 0.58));
@@ -353,14 +353,14 @@
 .honey-nav-button {
   appearance: none;
   display: inline-flex;
-  flex: 0 0 46px;
+  flex: 0 0 62px;
   min-width: 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: 46px;
-  height: 50px;
+  width: 62px;
+  height: 54px;
   padding: 0;
   overflow: visible;
   border: 1px solid transparent;
@@ -397,9 +397,9 @@
 }
 
 .honey-nav-button-active {
-  flex: 0 0 46px;
-  width: 46px;
-  height: 50px;
+  flex: 0 0 62px;
+  width: 62px;
+  height: 54px;
   gap: 3px;
   padding: 0;
   border-color: transparent;
@@ -430,12 +430,12 @@
 .honey-nav-scan {
   appearance: none;
   display: inline-flex;
-  flex: 0 0 56px;
+  flex: 0 0 58px;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  margin-inline: 3px;
+  width: 58px;
+  height: 58px;
+  margin-inline: 4px;
   transform: translateY(-5px);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.17);
@@ -475,15 +475,15 @@
 @media (max-width: 360px) {
   .honey-nav-pill {
     width: max-content;
-    gap: 2px;
-    padding: 3px;
+    gap: 4px;
+    padding: 5px;
   }
 
   .honey-nav-button,
   .honey-nav-button-active {
-    flex: 0 0 42px;
-    width: 42px;
-    height: 47px;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 50px;
   }
 
   .honey-nav-label {
@@ -491,9 +491,9 @@
   }
 
   .honey-nav-scan {
-    flex-basis: 50px;
-    width: 50px;
-    height: 50px;
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
     margin-inline: 2px;
     transform: translateY(-4px);
     border-radius: 14px;
