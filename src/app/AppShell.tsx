@@ -51,9 +51,10 @@ export function AppShell() {
     const scroller = mainRef.current;
     if (!scroller) return;
 
-    let previousTop = scroller.scrollTop;
-    const onScroll = () => {
-      const currentTop = scroller.scrollTop;
+    let previousTop = Math.max(scroller.scrollTop, window.scrollY);
+    const onScroll = (event: Event) => {
+      // Support either the app's inner scroll container or document-level scrolling.
+      const currentTop = event.currentTarget === window ? window.scrollY : scroller.scrollTop;
       const delta = currentTop - previousTop;
 
       // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
@@ -68,7 +69,11 @@ export function AppShell() {
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
-    return () => scroller.removeEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   useEffect(() => {
