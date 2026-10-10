@@ -173,7 +173,10 @@ export function AppShell() {
           </div>
         )}
         {activeTab === "scanner" && (
-          <ScannerScreen onScanComplete={() => navigate("home")} />
+          <ScannerScreen
+            onCancel={() => navigate("home")}
+            onScanComplete={() => navigate("home")}
+          />
         )}
         {visitedTabs.includes("map") && (
           <div hidden={activeTab !== "map"}>
