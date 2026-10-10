@@ -382,7 +382,10 @@
   background: rgba(255, 255, 255, 0.045);
 }
 
-.honey-nav-button:active,
+.honey-nav-button:active {
+  transform: scale(0.95);
+}
+
 .honey-nav-scan:active {
   transform: translateY(-5px) scale(0.95);
 }
