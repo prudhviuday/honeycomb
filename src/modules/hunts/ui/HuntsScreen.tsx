@@ -23,30 +23,70 @@ const missionIcons: Record<string, typeof Target> = {
 
 export function HuntsScreen({ onNavigate }: Props) {
   const { user } = useAuth();
-  const { activeCampaign, campaignUser } = useCampaign();
+  const { activeCampaign, campaignUser, loading: campaignsLoading } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (activeCampaign && user) {
-      (async () => {
-        setLoading(true);
-        try {
-          const data = await getCampaignDashboard(activeCampaign.id, user.id);
-          setDashboard(data);
-        } catch {
-          setDashboard(null);
-        } finally {
-          setLoading(false);
-        }
-      })();
-    }
-  }, [activeCampaign, user]);
+    let cancelled = false;
 
-  if (loading || !dashboard || !activeCampaign) {
+    if (!activeCampaign || !user) {
+      setLoading(false);
+      setDashboard(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+    setLoadError(false);
+    void getCampaignDashboard(activeCampaign.id, user.id)
+      .then((data) => {
+        if (!cancelled) setDashboard(data);
+      })
+      .catch((error) => {
+        console.error('[Hunts] Failed to load campaign dashboard:', error);
+        if (!cancelled) {
+          setDashboard(null);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCampaign, user, retryCount]);
+
+  if (loading || campaignsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!activeCampaign) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-text-primary font-semibold">No active movie campaigns</p>
+        <p className="text-sm text-text-muted">Your hunts will appear here when a campaign is available.</p>
+      </div>
+    );
+  }
+
+  if (!dashboard || loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-text-primary font-semibold">Couldn’t load your hunts</p>
+        <p className="text-sm text-text-muted">Try loading your campaign data again.</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold">
+          Try again
+        </button>
       </div>
     );
   }

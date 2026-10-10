@@ -81,6 +81,8 @@ export function MapScreen({ onNavigate }: Props) {
           setLoading(false);
         }
       })();
+    } else {
+      setLoading(false);
     }
   }, [selectedCampaign, user, locationVersion]);
 
