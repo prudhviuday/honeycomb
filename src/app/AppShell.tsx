@@ -41,12 +41,47 @@ export function AppShell() {
   const { user, loading: authLoading } = useAuth();
   const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [navCompact, setNavCompact] = useState(false);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
 
   useEffect(() => {
     const handlePopState = () => setMovieRoute(readMovieRoute());
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    // Capture scroll events from the actual scroll container, including nested containers.
+    const previousPositions = new WeakMap<EventTarget, number>();
+
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!target || (typeof target !== "object" && typeof target !== "function")) return;
+
+      const currentTop =
+        target === document
+          ? window.scrollY || document.documentElement.scrollTop
+          : (target as HTMLElement).scrollTop ?? 0;
+      const previousTop = previousPositions.get(target) ?? currentTop;
+      const delta = currentTop - previousTop;
+      previousPositions.set(target, currentTop);
+
+      // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
+      if (Math.abs(delta) < 3) return;
+
+      if (currentTop <= 12 || delta < 0) {
+        setNavCompact(false);
+      } else if (delta > 0 && currentTop > 24) {
+        setNavCompact(true);
+      }
+    };
+
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   const navigate = (tab: Tab) => {
@@ -133,7 +168,7 @@ export function AppShell() {
         aria-label="Primary"
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-3 pb-[max(env(safe-area-inset-bottom),14px)] pt-5 pointer-events-none"
       >
-        <div className="honey-nav-pill pointer-events-auto">
+        <div className={"honey-nav-pill pointer-events-auto" + (navCompact ? " honey-nav-pill-compact" : "")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
