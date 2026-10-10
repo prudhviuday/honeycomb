@@ -30,11 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Subscribe before restoring the persisted session. This prevents a slower
     // getSession() response from overwriting a newer sign-in/sign-out event.
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       authEventReceived = true;
       if (!mounted) return;
       setSession(newSession);
-      setUser(newSession?.user ?? null);
+
+      const nextUser = newSession?.user ?? null;
+      setUser((currentUser) => {
+        // Supabase emits TOKEN_REFRESHED when a session's access token rotates.
+        // The user identity has not changed in that case; retain the same object
+        // so consumers don't refetch dashboards/profile data for a token-only update.
+        if (
+          event === 'TOKEN_REFRESHED' &&
+          currentUser?.id &&
+          currentUser.id === nextUser?.id
+        ) {
+          return currentUser;
+        }
+        return nextUser;
+      });
       setLoading(false);
     });
 
