@@ -469,7 +469,7 @@
 
 @media (max-width: 360px) {
   .honey-nav-pill {
-    width: 88vw;
+    width: 75vw;
     gap: 1px;
     padding: 3px;
   }
