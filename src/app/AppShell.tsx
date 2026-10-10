@@ -16,7 +16,7 @@ import type { Campaign } from "@/types";
 export type Tab =
   "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
 
-const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
+const tabs: { id: Tab; label: string; icon: typeof House }[] = [
   { id: "home", label: "Home", icon: House },
   { id: "hunts", label: "Hunts", icon: Ticket },
   { id: "scanner", label: "Scan", icon: ScanLine },
@@ -152,7 +152,7 @@ export function AppShell() {
                   title="Scan"
                   className={"honey-nav-scan" + (isActive ? " honey-nav-scan-active" : "")}
                 >
-                  <Icon className="h-[21px] w-[21px]" strokeWidth={2.35} />
+                  <Icon className="h-[24px] w-[24px]" strokeWidth={2.35} />
                 </button>
               );
             }

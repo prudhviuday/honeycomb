@@ -382,9 +382,12 @@
   background: rgba(255, 255, 255, 0.045);
 }
 
-.honey-nav-button:active,
-.honey-nav-scan:active {
+.honey-nav-button:active {
   transform: scale(0.95);
+}
+
+.honey-nav-scan:active {
+  transform: translateY(-5px) scale(0.95);
 }
 
 .honey-nav-button:focus-visible,
@@ -427,12 +430,13 @@
 .honey-nav-scan {
   appearance: none;
   display: inline-flex;
-  flex: 0 0 46px;
+  flex: 0 0 56px;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  margin-inline: 2px;
+  width: 56px;
+  height: 56px;
+  margin-inline: 3px;
+  transform: translateY(-5px);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.17);
   border-radius: 14px;
@@ -442,8 +446,9 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
   box-shadow:
-    0 4px 12px rgba(217, 22, 34, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 6px 18px rgba(217, 22, 34, 0.34),
+    0 0 0 3px rgba(217, 22, 34, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
   transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, border-radius 160ms ease;
 }
 
@@ -486,10 +491,16 @@
   }
 
   .honey-nav-scan {
-    flex-basis: 43px;
-    width: 43px;
-    height: 43px;
-    border-radius: 13px;
+    flex-basis: 50px;
+    width: 50px;
+    height: 50px;
+    margin-inline: 2px;
+    transform: translateY(-4px);
+    border-radius: 14px;
+  }
+
+  .honey-nav-scan:active {
+    transform: translateY(-4px) scale(0.95);
   }
 }
 
