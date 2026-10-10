@@ -91,9 +91,11 @@ const DEMO_MOVIES: MovieCardData[] = [
 
 export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { campaigns, activeCampaign, campaignUser, selectCampaign } = useCampaign();
+  const { campaigns, activeCampaign, campaignUser, selectCampaign, loading: campaignsLoading } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -106,20 +108,37 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   });
 
   useEffect(() => {
-    if (activeCampaign && user) {
-      (async () => {
-        setLoading(true);
-        try {
-          const data = await getCampaignDashboard(activeCampaign.id, user.id);
-          setDashboard(data);
-        } catch {
-          setDashboard(null);
-        } finally {
-          setLoading(false);
-        }
-      })();
+    let cancelled = false;
+
+    if (!activeCampaign || !user) {
+      setLoading(false);
+      setDashboard(null);
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [activeCampaign, user]);
+
+    setLoading(true);
+    setLoadError(false);
+    void getCampaignDashboard(activeCampaign.id, user.id)
+      .then((data) => {
+        if (!cancelled) setDashboard(data);
+      })
+      .catch((error) => {
+        console.error('[Home] Failed to load campaign dashboard:', error);
+        if (!cancelled) {
+          setDashboard(null);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCampaign, user, retryCount]);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -169,10 +188,31 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     }
   }, [activeCampaign?.id, campaigns.length, emblaApi]);
 
-  if (loading || !dashboard || !activeCampaign) {
+  if (loading || campaignsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-bg-primary">
         <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!activeCampaign) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 bg-bg-primary text-center">
+        <p className="text-text-primary font-semibold">No active movie campaigns</p>
+        <p className="text-sm text-text-muted">Please check back when a campaign is available.</p>
+      </div>
+    );
+  }
+
+  if (!dashboard || loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 bg-bg-primary text-center">
+        <p className="text-text-primary font-semibold">Couldn’t load your campaign</p>
+        <p className="text-sm text-text-muted">Your session is still active. Try loading the campaign data again.</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold">
+          Try again
+        </button>
       </div>
     );
   }
