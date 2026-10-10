@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
 import { House, Map, ScanLine, Ticket, UserRound } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
@@ -43,7 +43,46 @@ export function AppShell() {
   const { user, loading: authLoading } = useAuth();
   const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [visitedTabs, setVisitedTabs] = useState<Tab[]>(["home"]);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
+  const [navCompact, setNavCompact] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // Scroll may happen on <main>, an ancestor with overflow, or the document.
+    // A capture-phase document listener sees scroll events from all of them.
+    const previousPositions = new WeakMap<EventTarget, number>();
+
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!target || (typeof target !== "object" && typeof target !== "function")) return;
+
+      const currentTop =
+        target === document
+          ? window.scrollY || document.documentElement.scrollTop
+          : (target as HTMLElement).scrollTop ?? 0;
+      const previousTop = previousPositions.get(target) ?? currentTop;
+      const delta = currentTop - previousTop;
+      previousPositions.set(target, currentTop);
+
+      // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
+      if (Math.abs(delta) < 3) return;
+
+      if (currentTop <= 12 || delta < 0) {
+        setNavCompact(false);
+      } else if (delta > 0 && currentTop > 24) {
+        setNavCompact(true);
+      }
+    };
+
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    // Also listen to window scroll for browser/document scrolling implementations.
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => setMovieRoute(readMovieRoute());
@@ -52,7 +91,9 @@ export function AppShell() {
   }, []);
 
   const navigate = (tab: Tab) => {
+    setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
     setActiveTab(tab);
+    setNavCompact(false);
     if (movieRoute.campaignId) {
       window.history.pushState({}, "", "/");
       setMovieRoute({ campaignId: null, referralCode: undefined, authMode: false });
@@ -112,30 +153,58 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col w-full max-w-lg mx-auto relative overflow-x-hidden sm:border-x sm:border-white/5">
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-28">
-        {activeTab === "home" && <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />}
-        {activeTab === "hunts" && <HuntsScreen onNavigate={navigate} />}
-        {activeTab === "scanner" && (
-          <ScannerScreen onScanComplete={() => setActiveTab("home")} />
+      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar pb-28">
+        {/*
+          Keep regular tabs mounted after their first visit. Several screens fetch
+          data in effects and show a full-screen spinner while loading; conditional
+          rendering here used to unmount them on every tab change and restart those
+          requests. The hidden attribute preserves component state without exposing
+          inactive content. The scanner is intentionally still conditional so its
+          camera is stopped when the user leaves Scan.
+        */}
+        {visitedTabs.includes("home") && (
+          <div hidden={activeTab !== "home"}>
+            <HomeScreen onNavigate={navigate} onOpenMovie={openMovie} />
+          </div>
         )}
-        {activeTab === "map" && <MapScreen onNavigate={navigate} />}
-        {activeTab === "rewards" && <RewardsScreen />}
-        {activeTab === "profile" && (
-          <>
-            <button className="m-4 text-gold underline" onClick={() => setActiveTab("analytics")}>
+        {visitedTabs.includes("hunts") && (
+          <div hidden={activeTab !== "hunts"}>
+            <HuntsScreen onNavigate={navigate} />
+          </div>
+        )}
+        {activeTab === "scanner" && (
+          <ScannerScreen onScanComplete={() => navigate("home")} />
+        )}
+        {visitedTabs.includes("map") && (
+          <div hidden={activeTab !== "map"}>
+            <MapScreen onNavigate={navigate} />
+          </div>
+        )}
+        {visitedTabs.includes("rewards") && (
+          <div hidden={activeTab !== "rewards"}>
+            <RewardsScreen />
+          </div>
+        )}
+        {visitedTabs.includes("profile") && (
+          <div hidden={activeTab !== "profile"}>
+            <button className="m-4 text-gold underline" onClick={() => navigate("analytics")}>
               Producer analytics
             </button>
             <ProfileScreen />
-          </>
+          </div>
         )}
-        {activeTab === "analytics" && <AnalyticsScreen />}
+        {visitedTabs.includes("analytics") && (
+          <div hidden={activeTab !== "analytics"}>
+            <AnalyticsScreen />
+          </div>
+        )}
       </main>
 
       <nav
         aria-label="Primary"
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-3 pb-[max(env(safe-area-inset-bottom),14px)] pt-5 pointer-events-none"
       >
-        <div className="honey-nav-pill pointer-events-auto">
+        <div className={"honey-nav-pill pointer-events-auto" + (navCompact ? " honey-nav-pill-compact" : "")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Campaign, CampaignUser } from '@/types';
 import { getCampaigns, ensureCampaignUser } from '@/lib/api';
 import { useAuth } from './AuthContext';
@@ -59,7 +59,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeCampaign, user]);
 
-  const selectCampaign = async (campaign: Campaign) => {
+  // Keep context actions referentially stable. Consumers use these callbacks
+  // in effects; recreating them on every provider render can retrigger effects
+  // and create repeated Supabase requests.
+  const selectCampaign = useCallback(async (campaign: Campaign) => {
     setActiveCampaign(campaign);
     if (user) {
       try {
@@ -68,22 +71,29 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       } catch {
         setCampaignUser(null);
       }
+    } else {
+      setCampaignUser(null);
     }
-  };
+  }, [user]);
 
-  const refreshCampaignUser = async () => {
+  const refreshCampaignUser = useCallback(async () => {
     if (activeCampaign && user) {
       try {
         const cu = await ensureCampaignUser(activeCampaign.id, user.id);
         setCampaignUser(cu);
       } catch {
-        // ignore
+        // Keep the last known campaign-user state if a refresh fails.
       }
     }
-  };
+  }, [activeCampaign, user]);
+
+  const contextValue = useMemo(
+    () => ({ campaigns, activeCampaign, campaignUser, loading, selectCampaign, refreshCampaignUser }),
+    [campaigns, activeCampaign, campaignUser, loading, selectCampaign, refreshCampaignUser],
+  );
 
   return (
-    <CampaignContext.Provider value={{ campaigns, activeCampaign, campaignUser, loading, selectCampaign, refreshCampaignUser }}>
+    <CampaignContext.Provider value={contextValue}>
       {children}
     </CampaignContext.Provider>
   );

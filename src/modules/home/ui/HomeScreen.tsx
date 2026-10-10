@@ -91,9 +91,17 @@ const DEMO_MOVIES: MovieCardData[] = [
 
 export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { campaigns, activeCampaign, campaignUser, refreshCampaignUser, selectCampaign } = useCampaign();
+  const { campaigns, activeCampaign, campaignUser, selectCampaign, loading: campaignsLoading } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
+  const [dashboardKey, setDashboardKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Depend on stable IDs rather than Supabase object identities. Auth token
+  // refreshes can replace the User object without changing which user is signed in.
+  const campaignId = activeCampaign?.id ?? null;
+  const userId = user?.id ?? null;
+  const currentDashboardKey = campaignId && userId ? `${campaignId}:${userId}` : null;
+  const [retryCount, setRetryCount] = useState(0);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -106,24 +114,45 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   });
 
   useEffect(() => {
-    if (activeCampaign && user) {
-      (async () => {
-        setLoading(true);
-        try {
-          const data = await getCampaignDashboard(activeCampaign.id, user.id);
-          setDashboard(data);
-        } catch {
-          setDashboard(null);
-        } finally {
-          setLoading(false);
-        }
-      })();
-    }
-  }, [activeCampaign, user]);
+    let cancelled = false;
 
-  useEffect(() => {
-    refreshCampaignUser();
-  }, [refreshCampaignUser]);
+    if (!campaignId || !userId) {
+      setLoading(false);
+      setDashboard(null);
+      setDashboardKey(null);
+      setLoadError(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const requestKey = `${campaignId}:${userId}`;
+    setLoading(true);
+    setLoadError(false);
+
+    void getCampaignDashboard(campaignId, userId)
+      .then((data) => {
+        if (!cancelled) {
+          setDashboard(data);
+          setDashboardKey(requestKey);
+        }
+      })
+      .catch((error) => {
+        console.error('[Home] Failed to load campaign dashboard:', error);
+        if (!cancelled) {
+          setDashboard(null);
+          setDashboardKey(null);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, userId, retryCount]);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -173,10 +202,34 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     }
   }, [activeCampaign?.id, campaigns.length, emblaApi]);
 
-  if (loading || !dashboard || !activeCampaign) {
+  // Only block the screen for the first load of this user/campaign pair.
+  // A refreshed auth object with the same user ID must not put Home back into
+  // a full-screen spinner while its existing dashboard is already usable.
+  if (campaignsLoading || (loading && dashboardKey !== currentDashboardKey)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-bg-primary">
         <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!activeCampaign) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 bg-bg-primary text-center">
+        <p className="text-text-primary font-semibold">No active movie campaigns</p>
+        <p className="text-sm text-text-muted">Please check back when a campaign is available.</p>
+      </div>
+    );
+  }
+
+  if (!dashboard || loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 bg-bg-primary text-center">
+        <p className="text-text-primary font-semibold">Couldn’t load your campaign</p>
+        <p className="text-sm text-text-muted">Your session is still active. Try loading the campaign data again.</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold">
+          Try again
+        </button>
       </div>
     );
   }
@@ -757,7 +810,14 @@ function QuickAction({
         aria-hidden="true"
         draggable={false}
         loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        className={
+          'absolute inset-0 w-full h-full object-cover transition-transform duration-500 ' +
+          // The Movies artwork has a thin white edge in the source image.
+          // Crop it slightly at rest, while keeping a subtle extra hover zoom.
+          (imageSrc === 'movies.jpg'
+            ? 'scale-[1.08] group-hover:scale-[1.13]'
+            : 'group-hover:scale-105')
+        }
       />
       <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
       <span
