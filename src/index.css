@@ -333,15 +333,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  width: 75vw;
-  max-width: 520px;
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
   box-sizing: border-box;
   margin-inline: auto;
   padding: 5px;
   border: 1px solid rgba(255, 255, 255, 0.085);
   border-radius: 9999px;
-  background: linear-gradient(180deg, rgba(28, 29, 34, 0.78), rgba(13, 14, 17, 0.78));
+  background: linear-gradient(180deg, rgba(28, 29, 34, 0.58), rgba(13, 14, 17, 0.58));
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.42),
     0 2px 7px rgba(0, 0, 0, 0.2),
@@ -353,13 +353,13 @@
 .honey-nav-button {
   appearance: none;
   display: inline-flex;
-  flex: 1 1 0;
+  flex: 0 0 46px;
   min-width: 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: auto;
+  width: 46px;
   height: 50px;
   padding: 0;
   overflow: visible;
@@ -394,8 +394,8 @@
 }
 
 .honey-nav-button-active {
-  flex: 1 1 0;
-  width: auto;
+  flex: 0 0 46px;
+  width: 46px;
   height: 50px;
   gap: 3px;
   padding: 0;
@@ -469,15 +469,15 @@
 
 @media (max-width: 360px) {
   .honey-nav-pill {
-    width: 75vw;
-    gap: 1px;
+    width: max-content;
+    gap: 2px;
     padding: 3px;
   }
 
   .honey-nav-button,
   .honey-nav-button-active {
-    flex: 1 1 0;
-    width: auto;
+    flex: 0 0 42px;
+    width: 42px;
     height: 47px;
   }
 
