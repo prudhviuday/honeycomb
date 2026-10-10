@@ -25,7 +25,10 @@ export function RewardsScreen() {
   const [claimResult, setClaimResult] = useState<RewardClaim | null>(null);
 
   const loadData = async () => {
-    if (!activeCampaign || !user) return;
+    if (!activeCampaign || !user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [rwds, rEntries, rClaims] = await Promise.all([
