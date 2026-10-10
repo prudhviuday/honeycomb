@@ -810,7 +810,14 @@ function QuickAction({
         aria-hidden="true"
         draggable={false}
         loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        className={
+          'absolute inset-0 w-full h-full object-cover transition-transform duration-500 ' +
+          // The Movies artwork has a thin white edge in the source image.
+          // Crop it slightly at rest, while keeping a subtle extra hover zoom.
+          (imageSrc === 'movies.jpg'
+            ? 'scale-[1.08] group-hover:scale-[1.13]'
+            : 'group-hover:scale-105')
+        }
       />
       <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
       <span
