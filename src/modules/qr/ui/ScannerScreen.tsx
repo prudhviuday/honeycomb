@@ -10,6 +10,16 @@ interface Props {
   onScanComplete: () => void;
 }
 
+function stopVideoStream(video: HTMLVideoElement | null) {
+  if (!video) return;
+
+  const stream = video.srcObject;
+  if (stream instanceof MediaStream) {
+    stream.getTracks().forEach((track) => track.stop());
+    video.srcObject = null;
+  }
+}
+
 export function ScannerScreen({ onScanComplete }: Props) {
   const { user } = useAuth();
   const { activeCampaign, refreshCampaignUser } = useCampaign();
@@ -29,22 +39,30 @@ export function ScannerScreen({ onScanComplete }: Props) {
   const [cameraAttempt, setCameraAttempt] = useState(0);
 
   const stopCamera = () => {
-    controlsRef.current?.stop();
+    // Always stop the actual media tracks, even if ZXing cleanup throws.
+    try {
+      controlsRef.current?.stop();
+    } catch {
+      // The camera may already have been stopped by a scan callback or unmount.
+    }
     controlsRef.current = null;
-    readerRef.current?.reset();
+
+    try {
+      readerRef.current?.reset();
+    } catch {
+      // Continue releasing the camera stream regardless of decoder state.
+    }
     readerRef.current = null;
 
-    const video = videoRef.current;
-    if (video?.srcObject instanceof MediaStream) {
-      video.srcObject.getTracks().forEach((track) => track.stop());
-      video.srcObject = null;
-    }
-
+    stopVideoStream(videoRef.current);
     setCameraReady(false);
   };
 
   useEffect(() => {
     let cancelled = false;
+    let cameraVideo: HTMLVideoElement | null = null;
+    let effectReader: BrowserQRCodeReader | null = null;
+    let effectControls: { stop: () => void } | null = null;
 
     const startCamera = async () => {
       setCameraError('');
@@ -58,10 +76,13 @@ export function ScannerScreen({ onScanComplete }: Props) {
         return;
       }
 
-      if (!videoRef.current) return;
+      const video = videoRef.current;
+      if (!video) return;
+      cameraVideo = video;
 
       try {
         const reader = new BrowserQRCodeReader();
+        effectReader = reader;
         readerRef.current = reader;
 
         const controls = await reader.decodeFromConstraints(
@@ -73,7 +94,7 @@ export function ScannerScreen({ onScanComplete }: Props) {
               height: { ideal: 720 },
             },
           },
-          videoRef.current,
+          video,
           (decoded, scanError) => {
             if (cancelled || scanHandledRef.current) return;
 
@@ -91,15 +112,34 @@ export function ScannerScreen({ onScanComplete }: Props) {
           }
         );
 
+        effectControls = controls;
         if (cancelled) {
-          controls.stop();
+          try {
+            controls.stop();
+          } catch {
+            // The decoder may already have stopped during unmount.
+          }
+          try {
+            reader.reset();
+          } catch {
+            // Still release any media tracks below.
+          }
+          stopVideoStream(video);
           return;
         }
 
         controlsRef.current = controls;
         setCameraReady(true);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled) {
+          try {
+            effectReader?.reset();
+          } catch {
+            // The screen has already gone away; still release any acquired tracks.
+          }
+          stopVideoStream(video);
+          return;
+        }
 
         const name = err instanceof DOMException ? err.name : '';
         if (name === 'NotAllowedError' || name === 'SecurityError') {
@@ -126,16 +166,24 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
     return () => {
       cancelled = true;
-      controlsRef.current?.stop();
-      controlsRef.current = null;
-      readerRef.current?.reset();
-      readerRef.current = null;
 
-      const video = videoRef.current;
-      if (video?.srcObject instanceof MediaStream) {
-        video.srcObject.getTracks().forEach((track) => track.stop());
-        video.srcObject = null;
+      try {
+        effectControls?.stop();
+      } catch {
+        // The decoder may already be stopped; media tracks are released below.
       }
+      if (controlsRef.current === effectControls) controlsRef.current = null;
+
+      try {
+        effectReader?.reset();
+      } catch {
+        // Ignore decoder cleanup errors so camera tracks still get released.
+      }
+      if (readerRef.current === effectReader) readerRef.current = null;
+
+      // Use the video element captured by this effect. The React ref may already
+      // point elsewhere by the time an async camera start settles after unmount.
+      stopVideoStream(cameraVideo);
     };
   }, [cameraAttempt]);
 
