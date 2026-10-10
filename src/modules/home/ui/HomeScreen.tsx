@@ -91,7 +91,7 @@ const DEMO_MOVIES: MovieCardData[] = [
 
 export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { campaigns, activeCampaign, campaignUser, refreshCampaignUser, selectCampaign } = useCampaign();
+  const { campaigns, activeCampaign, campaignUser, selectCampaign } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -120,10 +120,6 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
       })();
     }
   }, [activeCampaign, user]);
-
-  useEffect(() => {
-    refreshCampaignUser();
-  }, [refreshCampaignUser]);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
