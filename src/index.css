@@ -431,10 +431,16 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
   transition:
+    flex-basis 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    gap 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 220ms ease,
     color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease;
 }
 
 .honey-nav-button:hover {
@@ -484,6 +490,15 @@
   line-height: 1;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  max-height: 14px;
+  max-width: 46px;
+  overflow: hidden;
+  transition:
+    max-height 220ms ease,
+    max-width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 220ms ease,
+    margin 220ms ease;
   animation: none;
 }
 
@@ -509,7 +524,15 @@
     0 6px 18px rgba(217, 22, 34, 0.34),
     0 0 0 3px rgba(217, 22, 34, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, border-radius 160ms ease;
+  transition:
+    flex-basis 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 220ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease,
+    filter 160ms ease,
+    border-radius 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .honey-nav-scan:hover {
