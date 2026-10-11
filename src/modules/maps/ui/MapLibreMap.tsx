@@ -377,6 +377,7 @@ export function MapLibreMap({
       // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
       addHeatmapLayers(map, generalHeatmap, campaignHeatmap, heatIntensityScale, zoomFalloffSpeed);
+      applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth);
     };
 
     map.once("load", addActivityLayers);
