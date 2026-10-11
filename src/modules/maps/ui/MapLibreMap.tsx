@@ -436,10 +436,14 @@ export function MapLibreMap({
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const activityScansRef = useRef(activityScans);
+  const generalHeatmapRef = useRef(generalHeatmap);
+  const campaignHeatmapRef = useRef(campaignHeatmap);
   const hasInitializedLocationRef = useRef(false);
   const lastFitHeatmapVersionRef = useRef(0);
 
   activityScansRef.current = activityScans;
+  generalHeatmapRef.current = generalHeatmap;
+  campaignHeatmapRef.current = campaignHeatmap;
   onMarkerClickRef.current = onMarkerClick;
   onMapClickRef.current = onMapClick;
 
@@ -464,7 +468,7 @@ export function MapLibreMap({
 
     map.touchZoomRotate.disableRotation();
     map.on("zoomend", () => {
-      refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
+      refreshHeatmapSources(map, generalHeatmapRef.current, campaignHeatmapRef.current);
       const zoom = map.getZoom();
       const targetPitch = zoom >= 15 ? 48 : zoom >= 13 ? 34 : zoom < 10 ? 0 : 12;
       if (Math.abs(map.getPitch() - targetPitch) > 8) {
