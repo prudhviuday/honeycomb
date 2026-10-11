@@ -16,7 +16,6 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
-  const readerRef = useRef<BrowserQRCodeReader | null>(null);
   const scanHandledRef = useRef(false);
 
   const [showManual, setShowManual] = useState(false);
@@ -31,8 +30,6 @@ export function ScannerScreen({ onScanComplete }: Props) {
   const stopCamera = () => {
     controlsRef.current?.stop();
     controlsRef.current = null;
-    readerRef.current?.reset();
-    readerRef.current = null;
 
     const video = videoRef.current;
     if (video?.srcObject instanceof MediaStream) {
@@ -62,7 +59,6 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
       try {
         const reader = new BrowserQRCodeReader();
-        readerRef.current = reader;
 
         const controls = await reader.decodeFromConstraints(
           {
@@ -128,8 +124,6 @@ export function ScannerScreen({ onScanComplete }: Props) {
       cancelled = true;
       controlsRef.current?.stop();
       controlsRef.current = null;
-      readerRef.current?.reset();
-      readerRef.current = null;
 
       const video = videoRef.current;
       if (video?.srcObject instanceof MediaStream) {
