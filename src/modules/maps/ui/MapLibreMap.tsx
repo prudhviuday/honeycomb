@@ -32,8 +32,13 @@ const CHENNAI: [number, number] = [80.2707, 13.0827];
 const DETAILED_MAX_ZOOM = 18;
 const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
 const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
+const GENERAL_GRID_SOURCE = "honeycomb-general-activity-grid";
+const CAMPAIGN_GRID_SOURCE = "honeycomb-campaign-activity-grid";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
+const GENERAL_GRID_LAYER = "honeycomb-general-activity-grid-layer";
+const CAMPAIGN_GRID_LAYER = "honeycomb-campaign-activity-grid-layer";
+const GRID_MAX_ZOOM = 5.5;
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
   return {
@@ -55,6 +60,100 @@ function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection 
         properties: { weight: Number(point.weight) },
       })),
   };
+}
+
+/**
+ * At country/region zooms, aggregate points into geographic cells rather than
+ * blurring hundreds of point kernels together. Cell size follows zoom so the
+ * overview stays legible without turning whole countries red.
+ */
+function buildAggregatedGridGeoJSON(
+  points: HeatmapPoint[],
+  zoom: number,
+): GeoJSON.FeatureCollection {
+  const cellSize = zoom < 3.5 ? 2.4 : zoom < 4.5 ? 1.25 : 0.62;
+  const cells = new Map<string, { lng: number; lat: number; count: number }>();
+
+  points.forEach((point) => {
+    const lat = Number(point.latitude);
+    const lng = Number(point.longitude);
+    const weight = Number(point.weight);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(weight)) return;
+    const col = Math.floor((lng + 180) / cellSize);
+    const row = Math.floor((lat + 90) / cellSize);
+    const key = `${col}:${row}`;
+    const cell = cells.get(key);
+    if (cell) cell.count += Math.max(0.1, weight);
+    else {
+      cells.set(key, {
+        lng: col * cellSize + cellSize / 2 - 180,
+        lat: row * cellSize + cellSize / 2 - 90,
+        count: Math.max(0.1, weight),
+      });
+    }
+  });
+
+  return {
+    type: "FeatureCollection",
+    features: [...cells.entries()].map(([key, cell]) => ({
+      type: "Feature" as const,
+      id: `grid-${key}`,
+      geometry: { type: "Point" as const, coordinates: [cell.lng, cell.lat] },
+      properties: { count: cell.count },
+    })),
+  };
+}
+
+function refreshHeatmapSources(
+  map: maplibregl.Map,
+  generalHeatmap: HeatmapPoint[],
+  campaignHeatmap: HeatmapPoint[],
+) {
+  const zoom = map.getZoom();
+  (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)
+    ?.setData(buildHeatmapGeoJSON(generalHeatmap));
+  (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)
+    ?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+  (map.getSource(GENERAL_GRID_SOURCE) as maplibregl.GeoJSONSource | undefined)
+    ?.setData(buildAggregatedGridGeoJSON(generalHeatmap, zoom));
+  (map.getSource(CAMPAIGN_GRID_SOURCE) as maplibregl.GeoJSONSource | undefined)
+    ?.setData(buildAggregatedGridGeoJSON(campaignHeatmap, zoom));
+}
+
+function addAggregatedGridLayer(
+  map: maplibregl.Map,
+  source: string,
+  layer: string,
+  beforeId?: string,
+) {
+  if (map.getLayer(layer)) return;
+  map.addLayer({
+    id: layer,
+    type: "circle",
+    source,
+    minzoom: 2,
+    maxzoom: GRID_MAX_ZOOM,
+    paint: {
+      "circle-radius": [
+        "interpolate", ["linear"], ["zoom"],
+        2, ["interpolate", ["linear"], ["get", "count"], 1, 3, 3, 4.5, 8, 6.5, 16, 8],
+        4, ["interpolate", ["linear"], ["get", "count"], 1, 4, 3, 6, 8, 8, 16, 10],
+        5.5, ["interpolate", ["linear"], ["get", "count"], 1, 5, 3, 7, 8, 10, 16, 12],
+      ],
+      "circle-color": [
+        "step", ["get", "count"],
+        "#3288ff",
+        2, "#00bfff",
+        4, "#00d78f",
+        7, "#ffe037",
+        11, "#ff8f23",
+        16, "#f54537",
+      ],
+      "circle-opacity": 0.78,
+      "circle-stroke-width": 0.6,
+      "circle-stroke-color": "rgba(255,255,255,0.42)",
+    },
+  }, beforeId);
 }
 
 type ScanWithCoordinates = Scan & {
@@ -104,10 +203,25 @@ function addHeatmapLayers(
       data: buildHeatmapGeoJSON(campaignHeatmap),
     });
   }
+  if (!map.getSource(GENERAL_GRID_SOURCE)) {
+    map.addSource(GENERAL_GRID_SOURCE, {
+      type: "geojson",
+      data: buildAggregatedGridGeoJSON(generalHeatmap, map.getZoom()),
+    });
+  }
+  if (!map.getSource(CAMPAIGN_GRID_SOURCE)) {
+    map.addSource(CAMPAIGN_GRID_SOURCE, {
+      type: "geojson",
+      data: buildAggregatedGridGeoJSON(campaignHeatmap, map.getZoom()),
+    });
+  }
 
   const firstSymbolLayer = map
     .getStyle()
     .layers?.find((layer) => layer.type === "symbol")?.id;
+
+  addAggregatedGridLayer(map, GENERAL_GRID_SOURCE, GENERAL_GRID_LAYER, firstSymbolLayer);
+  addAggregatedGridLayer(map, CAMPAIGN_GRID_SOURCE, CAMPAIGN_GRID_LAYER, firstSymbolLayer);
 
   if (!map.getLayer(GENERAL_HEAT_LAYER)) {
     map.addLayer(
@@ -115,6 +229,7 @@ function addHeatmapLayers(
         id: GENERAL_HEAT_LAYER,
         type: "heatmap",
         source: GENERAL_HEAT_SOURCE,
+        minzoom: GRID_MAX_ZOOM,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
           "heatmap-weight": [
@@ -212,7 +327,7 @@ function addHeatmapLayers(
         id: CAMPAIGN_HEAT_LAYER,
         type: "heatmap",
         source: CAMPAIGN_HEAT_SOURCE,
-        minzoom: 2,
+        minzoom: GRID_MAX_ZOOM,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
           "heatmap-weight": [
@@ -230,33 +345,31 @@ function addHeatmapLayers(
             "interpolate",
             ["linear"],
             ["zoom"],
-            7,
-            0.95,
-            9,
-            1.15,
-            11,
-            1.45,
-            14,
-            1.8,
-            18,
-            2.1,
+            5.5, 0.48,
+            7, 0.62,
+            9, 0.82,
+            11, 1.0,
+            14, 1.18,
+            18, 1.35,
           ],
           "heatmap-radius": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            7,
-            38,
-            9,
-            50,
-            11,
-            62,
-            14,
-            80,
-            18,
-            98,
+            5.5, 14,
+            7, 24,
+            9, 38,
+            11, 52,
+            14, 68,
+            18, 82,
           ],
-          "heatmap-opacity": 0.68,
+          "heatmap-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            5.5, 0.42,
+            8, 0.50,
+            12, 0.58,
+            18, 0.64,
+          ],
           "heatmap-color": [
             "interpolate",
             ["linear"],
@@ -284,13 +397,7 @@ function addHeatmapLayers(
     );
   }
 
-  (
-    map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
-  )?.setData(buildHeatmapGeoJSON(generalHeatmap));
-
-  (
-    map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined
-  )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+  refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
 }
 
 function add3DBuildings(map: maplibregl.Map) {
@@ -357,6 +464,7 @@ export function MapLibreMap({
 
     map.touchZoomRotate.disableRotation();
     map.on("zoomend", () => {
+      refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
       const zoom = map.getZoom();
       const targetPitch = zoom >= 15 ? 48 : zoom >= 13 ? 34 : zoom < 10 ? 0 : 12;
       if (Math.abs(map.getPitch() - targetPitch) > 8) {
@@ -389,17 +497,7 @@ export function MapLibreMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const update = () => {
-      (
-        map.getSource(GENERAL_HEAT_SOURCE) as
-          maplibregl.GeoJSONSource | undefined
-      )?.setData(buildHeatmapGeoJSON(generalHeatmap));
-
-      (
-        map.getSource(CAMPAIGN_HEAT_SOURCE) as
-          maplibregl.GeoJSONSource | undefined
-      )?.setData(buildHeatmapGeoJSON(campaignHeatmap));
-    };
+    const update = () => refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
     if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) update();
     else map.once("load", update);
     return () => {
