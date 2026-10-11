@@ -116,7 +116,10 @@ function buildIntensityExpression(
   const effectiveFalloffSpeed = 0.4 + Math.max(0, Math.min(1, falloffSpeed)) * 2.4;
   for (const [zoom, baseIntensity] of stops) {
     const zoomProgress = Math.max(0, Math.min(1, zoom / DETAILED_MAX_ZOOM));
-    const lowZoomReduction = 0.48 * Math.pow(1 - zoomProgress, effectiveFalloffSpeed);
+    // Strongly attenuate low-zoom intensity so a few nearby points do not
+    // saturate the entire city view into red. Full intensity returns gradually
+    // as the user zooms into street-level detail.
+    const lowZoomReduction = 0.78 * Math.pow(1 - zoomProgress, effectiveFalloffSpeed);
     adjustedStops.push(zoom, Number((baseIntensity * normalizedScale * (1 - lowZoomReduction)).toFixed(3)));
   }
   return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
@@ -223,14 +226,29 @@ function addHeatmapLayers(
             0.60,
           ],
           "heatmap-color": [
-            "interpolate", ["linear"], ["heatmap-density"],
-            0, "rgba(45,125,255,0)",
-            0.20, "rgba(45,125,255,0.20)",
-            0.30, "rgba(0,190,255,0.42)",
-            0.50, "rgba(0,215,135,0.58)",
-            0.70, "rgba(255,224,55,0.70)",
-            0.80, "rgba(255,143,35,0.80)",
-            1, "rgba(245,65,55,0.92)"
+            "case",
+            ["<", ["zoom"], 8],
+            [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(45,125,255,0)",
+              0.22, "rgba(45,125,255,0.10)",
+              0.42, "rgba(0,190,255,0.22)",
+              0.60, "rgba(0,215,135,0.32)",
+              0.76, "rgba(255,224,55,0.40)",
+              0.90, "rgba(255,143,35,0.48)",
+              0.99, "rgba(245,65,55,0.60)",
+              1, "rgba(245,65,55,0.68)"
+            ],
+            [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(45,125,255,0)",
+              0.20, "rgba(45,125,255,0.20)",
+              0.30, "rgba(0,190,255,0.42)",
+              0.50, "rgba(0,215,135,0.58)",
+              0.70, "rgba(255,224,55,0.70)",
+              0.80, "rgba(255,143,35,0.80)",
+              1, "rgba(245,65,55,0.92)"
+            ]
           ],
         },
       },
@@ -268,14 +286,29 @@ function addHeatmapLayers(
             18, 0.64,
           ],
           "heatmap-color": [
-            "interpolate", ["linear"], ["heatmap-density"],
-            0, "rgba(35,125,255,0)",
-            0.20, "rgba(35,125,255,0.24)",
-            0.30, "rgba(0,190,255,0.48)",
-            0.50, "rgba(0,215,135,0.64)",
-            0.70, "rgba(255,224,55,0.76)",
-            0.80, "rgba(255,143,35,0.86)",
-            1, "rgba(190,20,45,0.96)"
+            "case",
+            ["<", ["zoom"], 8],
+            [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(35,125,255,0)",
+              0.24, "rgba(35,125,255,0.12)",
+              0.44, "rgba(0,190,255,0.26)",
+              0.62, "rgba(0,215,135,0.36)",
+              0.78, "rgba(255,224,55,0.44)",
+              0.91, "rgba(255,143,35,0.52)",
+              0.99, "rgba(190,20,45,0.66)",
+              1, "rgba(190,20,45,0.72)"
+            ],
+            [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(35,125,255,0)",
+              0.20, "rgba(35,125,255,0.24)",
+              0.30, "rgba(0,190,255,0.48)",
+              0.50, "rgba(0,215,135,0.64)",
+              0.70, "rgba(255,224,55,0.76)",
+              0.80, "rgba(255,143,35,0.86)",
+              1, "rgba(190,20,45,0.96)"
+            ]
           ],
         },
       },
