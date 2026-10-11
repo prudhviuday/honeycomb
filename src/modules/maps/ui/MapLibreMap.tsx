@@ -342,6 +342,7 @@ export function MapLibreMap({
   const onMapClickRef = useRef(onMapClick);
   const campaignIdRef = useRef(campaignId);
   const lastCampaignIdRef = useRef(campaignId);
+  const lastHeatmapRefreshVersionRef = useRef(heatmapRefreshVersion);
   const heatIntensityScaleRef = useRef(heatIntensityScale);
   const zoomFalloffSpeedRef = useRef(zoomFalloffSpeed);
   const heatRadiusScaleRef = useRef(heatRadiusScale);
@@ -437,8 +438,10 @@ export function MapLibreMap({
 
   useEffect(() => {
     const previousCampaignId = lastCampaignIdRef.current;
+    const previousRefreshVersion = lastHeatmapRefreshVersionRef.current;
     lastCampaignIdRef.current = campaignId;
-    if (previousCampaignId === campaignId && heatmapRefreshVersion === 0) return;
+    lastHeatmapRefreshVersionRef.current = heatmapRefreshVersion;
+    if (previousCampaignId === campaignId && previousRefreshVersion === heatmapRefreshVersion) return;
     const map = mapRef.current;
     if (!map) return;
     const replaceCampaignSource = () => {
