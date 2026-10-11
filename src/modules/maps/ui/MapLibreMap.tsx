@@ -11,21 +11,21 @@ import {
   honeycombBuildingLayer,
 } from "@/modules/maps/logic/mapStyle";
 import type { MapFeature } from "@/modules/maps/logic/mapData";
-import type { Scan, HeatmapPoint } from "@/modules/maps/types";
+import type { Scan } from "@/modules/maps/types";
 import { createCampaignMarker, createUserMarker } from "@/lib/mapMarkers";
+import { supabase } from "@/infrastructure/supabase/client";
 
 interface Props {
   features: MapFeature[];
   activityScans: Scan[];
-  generalHeatmap: HeatmapPoint[];
-  campaignHeatmap: HeatmapPoint[];
+  campaignId: string | null;
+  heatmapRefreshVersion?: number;
   userLocation: { lng: number; lat: number } | null;
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
   recenterVersion?: number;
   fitActivity?: boolean;
   fitFeatures?: boolean;
-  fitHeatmapVersion?: number;
   heatIntensityScale?: number;
   zoomFalloffSpeed?: number;
   heatRadiusScale?: number;
@@ -38,36 +38,77 @@ const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
 const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
+const HEATMAP_TILE_CACHE_TTL_MS = 60_000;
+const MAX_CACHED_HEATMAP_TILES = 256;
+const heatmapTileCache = new Map<string, { data: ArrayBuffer; expiresAt: number }>();
+const heatmapTileRequests = new Map<string, Promise<ArrayBuffer>>();
 
-function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
-  return {
-    type: "FeatureCollection",
-    features: points
-      .filter(
-        (point) =>
-          Number.isFinite(Number(point.latitude)) &&
-          Number.isFinite(Number(point.longitude)) &&
-          Number.isFinite(Number(point.weight)),
-      )
-      .map((point, index) => ({
-        type: "Feature" as const,
-        id: `heat-${index}-${point.latitude}-${point.longitude}`,
-        geometry: {
-          type: "Point" as const,
-          coordinates: [Number(point.longitude), Number(point.latitude)],
-        },
-        properties: { weight: Number(point.weight) },
-      })),
-  };
+function heatmapTileUrl(scope: "general" | "campaign", campaignId?: string | null) {
+  return `honeycomb://heatmap/${scope}/${scope === "general" ? "all" : campaignId ?? "none"}/{z}/{x}/{y}.mvt`;
 }
 
-function refreshHeatmapSources(
-  map: maplibregl.Map,
-  generalHeatmap: HeatmapPoint[],
-  campaignHeatmap: HeatmapPoint[],
-) {
-  (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
-  (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
+function decodeBase64Tile(value: string): ArrayBuffer {
+  if (!value) return new ArrayBuffer(0);
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes.buffer;
+}
+
+async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
+  const now = Date.now();
+  const cached = heatmapTileCache.get(url);
+  if (cached && cached.expiresAt > now) {
+    heatmapTileCache.delete(url);
+    heatmapTileCache.set(url, cached);
+    console.info("[MapPerf] heatmap-tile", url, "cache=hit", "bytes=", cached.data.byteLength);
+    return cached.data;
+  }
+  if (cached) heatmapTileCache.delete(url);
+  const inFlight = heatmapTileRequests.get(url);
+  if (inFlight) return inFlight;
+
+  const startedAt = performance.now();
+  const request = (async () => {
+    const parsed = new URL(url);
+    const [scope, campaignToken, zValue, xValue, yFile] = parsed.pathname.split("/").filter(Boolean);
+    const z = Number(zValue);
+    const x = Number(xValue);
+    const y = Number((yFile ?? "").replace(/\.mvt$/, ""));
+    if ((scope !== "general" && scope !== "campaign") || !Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y)) {
+      throw new Error(`Invalid heatmap tile URL: ${url}`);
+    }
+    const campaignId = scope === "general" || campaignToken === "none" ? null : campaignToken;
+    const { data, error } = await supabase.rpc("get_location_heatmap_tile", {
+      p_z: z, p_x: x, p_y: y, p_campaign_id: campaignId,
+    });
+    if (error) throw error;
+    const tile = decodeBase64Tile(typeof data === "string" ? data : "");
+    heatmapTileCache.set(url, { data: tile, expiresAt: Date.now() + HEATMAP_TILE_CACHE_TTL_MS });
+    while (heatmapTileCache.size > MAX_CACHED_HEATMAP_TILES) {
+      const oldest = heatmapTileCache.keys().next().value;
+      if (!oldest) break;
+      heatmapTileCache.delete(oldest);
+    }
+    console.info("[MapPerf] heatmap-tile", `z=${z}`, `x=${x}`, `y=${y}`, `scope=${scope}`, `ms=${(performance.now() - startedAt).toFixed(1)}`, `bytes=${tile.byteLength}`, "cache=miss");
+    return tile;
+  })();
+  heatmapTileRequests.set(url, request);
+  try { return await request; }
+  finally { if (heatmapTileRequests.get(url) === request) heatmapTileRequests.delete(url); }
+}
+
+maplibregl.addProtocol("honeycomb", async (params, abortController) => {
+  const data = await requestHeatmapTile(params.url);
+  if (abortController.signal.aborted) throw new Error("Heatmap tile request aborted");
+  return { data, cacheControl: "max-age=60" };
+});
+
+export function invalidateHeatmapTileCache(campaignId?: string | null) {
+  const matchingPath = campaignId ? `/campaign/${campaignId}/` : null;
+  for (const key of heatmapTileCache.keys()) {
+    if (!matchingPath || key.includes(matchingPath)) heatmapTileCache.delete(key);
+  }
 }
 
 type ScanWithCoordinates = Scan & {
@@ -166,22 +207,25 @@ function applyHeatmapControls(
 
 function addHeatmapLayers(
   map: maplibregl.Map,
-  generalHeatmap: HeatmapPoint[],
-  campaignHeatmap: HeatmapPoint[],
+  campaignId: string | null,
   heatIntensityScale: number,
   zoomFalloffSpeed: number,
 ) {
   if (!map.getSource(GENERAL_HEAT_SOURCE)) {
     map.addSource(GENERAL_HEAT_SOURCE, {
-      type: "geojson",
-      data: buildHeatmapGeoJSON(generalHeatmap),
+      type: "vector",
+      tiles: [heatmapTileUrl("general")],
+      minzoom: 2,
+      maxzoom: DETAILED_MAX_ZOOM,
     });
   }
 
   if (!map.getSource(CAMPAIGN_HEAT_SOURCE)) {
     map.addSource(CAMPAIGN_HEAT_SOURCE, {
-      type: "geojson",
-      data: buildHeatmapGeoJSON(campaignHeatmap),
+      type: "vector",
+      tiles: [heatmapTileUrl("campaign", campaignId)],
+      minzoom: 2,
+      maxzoom: DETAILED_MAX_ZOOM,
     });
   }
   const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
@@ -192,6 +236,7 @@ function addHeatmapLayers(
         id: GENERAL_HEAT_LAYER,
         type: "heatmap",
         source: GENERAL_HEAT_SOURCE,
+        "source-layer": "heatmap",
         minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
@@ -248,6 +293,7 @@ function addHeatmapLayers(
         id: CAMPAIGN_HEAT_LAYER,
         type: "heatmap",
         source: CAMPAIGN_HEAT_SOURCE,
+        "source-layer": "heatmap",
         minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
@@ -288,7 +334,6 @@ function addHeatmapLayers(
     );
   }
 
-  refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
 }
 
 function add3DBuildings(map: maplibregl.Map) {
@@ -311,15 +356,14 @@ function add3DBuildings(map: maplibregl.Map) {
 export function MapLibreMap({
   features,
   activityScans,
-  generalHeatmap,
-  campaignHeatmap,
+  campaignId,
+  heatmapRefreshVersion = 0,
   userLocation,
   onMarkerClick,
   onMapClick,
   recenterVersion = 0,
   fitActivity = false,
   fitFeatures = false,
-  fitHeatmapVersion = 0,
   heatIntensityScale = 1,
   zoomFalloffSpeed = 1 / 3,
   heatRadiusScale = 2 / 7,
@@ -331,20 +375,30 @@ export function MapLibreMap({
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const activityScansRef = useRef(activityScans);
-  const generalHeatmapRef = useRef(generalHeatmap);
-  const campaignHeatmapRef = useRef(campaignHeatmap);
+  const campaignIdRef = useRef(campaignId);
+  const lastCampaignIdRef = useRef(campaignId);
+  const heatIntensityScaleRef = useRef(heatIntensityScale);
+  const zoomFalloffSpeedRef = useRef(zoomFalloffSpeed);
+  const heatRadiusScaleRef = useRef(heatRadiusScale);
+  const heatZoomRadiusGrowthRef = useRef(heatZoomRadiusGrowth);
   const hasInitializedLocationRef = useRef(false);
   const lastFitHeatmapVersionRef = useRef(0);
 
   activityScansRef.current = activityScans;
-  generalHeatmapRef.current = generalHeatmap;
-  campaignHeatmapRef.current = campaignHeatmap;
+  campaignIdRef.current = campaignId;
+  heatIntensityScaleRef.current = heatIntensityScale;
+  zoomFalloffSpeedRef.current = zoomFalloffSpeed;
+  heatRadiusScaleRef.current = heatRadiusScale;
+  heatZoomRadiusGrowthRef.current = heatZoomRadiusGrowth;
   onMarkerClickRef.current = onMarkerClick;
   onMapClickRef.current = onMapClick;
 
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const mapStartedAt = performance.now();
+    let firstHeatmapSettled = false;
+    let zoomStartedAt: number | null = null;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: honeybadgerMapStyle,
@@ -362,8 +416,21 @@ export function MapLibreMap({
     });
 
     map.touchZoomRotate.disableRotation();
+    map.on("zoomstart", () => { zoomStartedAt = performance.now(); });
+    map.on("idle", () => {
+      if (!firstHeatmapSettled && map.getSource(GENERAL_HEAT_SOURCE)) {
+        firstHeatmapSettled = true;
+        console.info("[MapPerf] initial-heatmap-render-ms=", (performance.now() - mapStartedAt).toFixed(1));
+      }
+      if (zoomStartedAt !== null) {
+        console.info("[MapPerf] zoom-settled-ms=", (performance.now() - zoomStartedAt).toFixed(1));
+        zoomStartedAt = null;
+      }
+    });
+    map.on("load", () => {
+      console.info("[MapPerf] map-style-ready-ms=", (performance.now() - mapStartedAt).toFixed(1));
+    });
     map.on("zoomend", () => {
-      refreshHeatmapSources(map, generalHeatmapRef.current, campaignHeatmapRef.current);
       const zoom = map.getZoom();
       const targetPitch = zoom >= 15 ? 48 : zoom >= 13 ? 34 : zoom < 10 ? 0 : 12;
       if (Math.abs(map.getPitch() - targetPitch) > 8) {
@@ -381,7 +448,7 @@ export function MapLibreMap({
       // Keep the normal map intact; the neon effect is produced by luminous
       // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
-      addHeatmapLayers(map, generalHeatmap, campaignHeatmap, heatIntensityScale, zoomFalloffSpeed);
+      addHeatmapLayers(map, campaignIdRef.current, heatIntensityScaleRef.current, zoomFalloffSpeedRef.current);
       applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth);
     };
 
@@ -406,15 +473,22 @@ export function MapLibreMap({
   }, [heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth]);
 
   useEffect(() => {
+    const previousCampaignId = lastCampaignIdRef.current;
+    lastCampaignIdRef.current = campaignId;
+    if (previousCampaignId === campaignId && heatmapRefreshVersion === 0) return;
     const map = mapRef.current;
     if (!map) return;
-    const update = () => refreshHeatmapSources(map, generalHeatmap, campaignHeatmap);
-    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) update();
-    else map.once("load", update);
-    return () => {
-      map.off("load", update);
+    const replaceCampaignSource = () => {
+      invalidateHeatmapTileCache(campaignId);
+      if (map.getLayer(CAMPAIGN_HEAT_LAYER)) map.removeLayer(CAMPAIGN_HEAT_LAYER);
+      if (map.getSource(CAMPAIGN_HEAT_SOURCE)) map.removeSource(CAMPAIGN_HEAT_SOURCE);
+      addHeatmapLayers(map, campaignIdRef.current, heatIntensityScaleRef.current, zoomFalloffSpeedRef.current);
+      applyHeatmapControls(map, heatIntensityScaleRef.current, zoomFalloffSpeedRef.current, heatRadiusScaleRef.current, heatZoomRadiusGrowthRef.current);
     };
-  }, [activityScans, generalHeatmap, campaignHeatmap]);
+    if (map.isStyleLoaded() && map.getSource(GENERAL_HEAT_SOURCE)) replaceCampaignSource();
+    else map.once("load", replaceCampaignSource);
+    return () => { map.off("load", replaceCampaignSource); };
+  }, [campaignId, heatmapRefreshVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -500,50 +574,6 @@ export function MapLibreMap({
       duration: 650,
     });
   }, [recenterVersion]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (
-      !map ||
-      fitHeatmapVersion <= lastFitHeatmapVersionRef.current ||
-      !campaignHeatmap.length
-    ) return;
-    lastFitHeatmapVersionRef.current = fitHeatmapVersion;
-
-    const fit = () => {
-      const bounds = new maplibregl.LngLatBounds();
-      campaignHeatmap.forEach((point) => bounds.extend([point.longitude, point.latitude]));
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
-          padding: 48,
-          maxZoom: 5.2,
-          duration: 900,
-        });
-      }
-    };
-
-    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
-    else map.once("load", fit);
-
-    return () => {
-      map.off("load", fit);
-    };
-  }, [campaignHeatmap, fitHeatmapVersion]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !fitActivity || !campaignHeatmap.length) return;
-    const fit = () => {
-      const bounds = new maplibregl.LngLatBounds();
-      campaignHeatmap.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-      map.fitBounds(bounds, { padding: 40, maxZoom: 14, duration: 400 });
-    };
-    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
-    else map.once("load", fit);
-    return () => {
-      map.off("load", fit);
-    };
-  }, [campaignHeatmap, fitActivity]);
 
   useEffect(() => {
     const map = mapRef.current;
