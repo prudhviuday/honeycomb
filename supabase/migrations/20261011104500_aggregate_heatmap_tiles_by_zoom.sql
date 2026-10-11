@@ -60,3 +60,6 @@ BEGIN
   RETURN COALESCE(v_tile,'');
 END;
 $function$;
+REVOKE ALL ON FUNCTION public.get_location_heatmap_tile(integer, integer, integer, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_location_heatmap_tile(integer, integer, integer, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_location_heatmap_tile(integer, integer, integer, uuid) TO authenticated;
