@@ -93,7 +93,7 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
   }
   if (cached) heatmapTileCache.delete(url);
   const inFlight = heatmapTileRequests.get(url);
-  if (inFlight) return inFlight;
+  if (inFlight) return inFlight.then((data) => data.slice(0));
 
   const startedAt = performance.now();
   const request = (async () => {
