@@ -29,8 +29,8 @@ export function MapScreen({ onNavigate }: Props) {
   const [query, setQuery] = useState('');
   const [locationVersion, setLocationVersion] = useState(0);
   const [recenterVersion, setRecenterVersion] = useState(0);
-  const [heatIntensityScale, setHeatIntensityScale] = useState(1.05);
-  const [zoomFalloffSpeed, setZoomFalloffSpeed] = useState(1.2);
+  const [heatIntensityScale, setHeatIntensityScale] = useState(1);
+  const [zoomFalloffSpeed, setZoomFalloffSpeed] = useState(1 / 3);
   const [heatControlsOpen, setHeatControlsOpen] = useState(false);
 
   useEffect(() => {
@@ -250,44 +250,44 @@ export function MapScreen({ onNavigate }: Props) {
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <label htmlFor="heat-intensity-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Overall intensity</label>
-                  <span className="text-xs text-text-primary font-semibold tabular-nums">{heatIntensityScale.toFixed(2)}×</span>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{heatIntensityScale.toFixed(2)}</span>
                 </div>
                 <input
                   id="heat-intensity-scale"
                   type="range"
-                  min="0.65"
-                  max="1.65"
-                  step="0.05"
+                  min="0"
+                  max="1"
+                  step="0.01"
                   value={heatIntensityScale}
                   onChange={(event) => setHeatIntensityScale(Number(event.target.value))}
                   className="w-full accent-fuchsia-400"
                 />
-                <div className="flex justify-between text-[9px] text-text-subtle"><span>Subtle</span><span>Stronger everywhere</span></div>
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Off (0)</span><span>Full intensity (1)</span></div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <label htmlFor="heat-zoom-falloff" className="text-[10px] text-text-muted uppercase tracking-wide">Zoom-out falloff speed</label>
-                  <span className="text-xs text-text-primary font-semibold tabular-nums">{zoomFalloffSpeed.toFixed(1)}</span>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{zoomFalloffSpeed.toFixed(2)}</span>
                 </div>
                 <input
                   id="heat-zoom-falloff"
                   type="range"
-                  min="0.4"
-                  max="2.8"
-                  step="0.1"
+                  min="0"
+                  max="1"
+                  step="0.01"
                   value={zoomFalloffSpeed}
                   onChange={(event) => setZoomFalloffSpeed(Number(event.target.value))}
                   className="w-full accent-cyan-400"
                 />
-                <div className="flex justify-between text-[9px] text-text-subtle"><span>Gentle reduction</span><span>Faster country-level fade</span></div>
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Gentle (0)</span><span>Fast fade (1)</span></div>
               </div>
 
               <div className="flex items-center justify-between border-t border-white/10 pt-2">
                 <p className="text-[9px] text-text-subtle">Live preview · street-level neon colors unchanged</p>
                 <button
                   type="button"
-                  onClick={() => { setHeatIntensityScale(1.05); setZoomFalloffSpeed(1.2); }}
+                  onClick={() => { setHeatIntensityScale(1); setZoomFalloffSpeed(1 / 3); }}
                   className="text-[10px] text-cyan-300 hover:text-cyan-200"
                 >Reset</button>
               </div>
