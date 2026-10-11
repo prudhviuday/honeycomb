@@ -481,9 +481,31 @@ export function MapLibreMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const applyWhenReady = () => applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth);
-    if (map.isStyleLoaded()) applyWhenReady();
-    else map.once("load", applyWhenReady);
+
+    // The style can report as loaded before our custom heat layers are added.
+    // Checking only isStyleLoaded() can therefore drop slider changes during
+    // startup; wait for the custom layers themselves to exist.
+    const applyWhenReady = () => {
+      const hasHeatLayer =
+        Boolean(map.getLayer(GENERAL_HEAT_LAYER)) ||
+        Boolean(map.getLayer(CAMPAIGN_HEAT_LAYER));
+
+      if (!hasHeatLayer) {
+        map.once("load", applyWhenReady);
+        return;
+      }
+
+      applyHeatmapControls(
+        map,
+        heatIntensityScale,
+        zoomFalloffSpeed,
+        heatRadiusScale,
+        heatZoomRadiusGrowth,
+      );
+      map.triggerRepaint();
+    };
+
+    applyWhenReady();
     return () => {
       map.off("load", applyWhenReady);
     };
