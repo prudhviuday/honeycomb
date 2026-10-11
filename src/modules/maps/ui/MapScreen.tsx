@@ -10,7 +10,7 @@ import {
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { invalidateHeatmapTileCache, MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/modules/shared/types';
-import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
+import type { Location, InteractionSource } from '@/modules/maps/types';
 
 interface Props {
   onNavigate?: (tab: 'scanner') => void;
