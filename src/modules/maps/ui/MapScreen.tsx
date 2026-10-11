@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown } from 'lucide-react';
+import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown, FlaskConical, LoaderCircle } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
-import { getLocationHeatmap } from '@/modules/maps/api/locationApi';
+import {
+  canSeedHeatmapTestPoints,
+  getLocationHeatmap,
+  seedHeatmapTestPoints,
+} from '@/modules/maps/api/locationApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/modules/shared/types';
@@ -29,6 +33,12 @@ export function MapScreen({ onNavigate }: Props) {
   const [query, setQuery] = useState('');
   const [locationVersion, setLocationVersion] = useState(0);
   const [recenterVersion, setRecenterVersion] = useState(0);
+  const [canSeedTestData, setCanSeedTestData] = useState(false);
+  const [seedingTestData, setSeedingTestData] = useState(false);
+  const [testSeedFeedback, setTestSeedFeedback] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (activeCampaign && !selectedCampaign) setSelectedCampaign(activeCampaign);
@@ -85,6 +95,31 @@ export function MapScreen({ onNavigate }: Props) {
   }, [selectedCampaign, user, locationVersion]);
 
   useEffect(() => {
+    let current = true;
+    setCanSeedTestData(false);
+    setTestSeedFeedback(null);
+
+    if (!selectedCampaign || !user) {
+      return () => {
+        current = false;
+      };
+    }
+
+    void canSeedHeatmapTestPoints(selectedCampaign.id)
+      .then((allowed) => {
+        if (current) setCanSeedTestData(allowed);
+      })
+      .catch((error) => {
+        console.warn('[Map] Could not check heatmap test-data permission:', error);
+        if (current) setCanSeedTestData(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [selectedCampaign?.id, user?.id]);
+
+  useEffect(() => {
     const handleLocationUpdated = () => setLocationVersion((value) => value + 1);
     window.addEventListener('honeycomb:location-updated', handleLocationUpdated);
     return () => window.removeEventListener('honeycomb:location-updated', handleLocationUpdated);
@@ -127,6 +162,31 @@ export function MapScreen({ onNavigate }: Props) {
   const handleMapClick = () => setPanelOpen(false);
   const recenter = () => {
     if (userLoc) setRecenterVersion((value) => value + 1);
+  };
+
+  const generateTestHeatmap = async () => {
+    if (!selectedCampaign || seedingTestData) return;
+
+    setSeedingTestData(true);
+    setTestSeedFeedback(null);
+    try {
+      const inserted = await seedHeatmapTestPoints(selectedCampaign.id);
+      setTestSeedFeedback({
+        kind: 'success',
+        message: `Generated ${inserted} synthetic points. Real scans and producer metrics are unchanged.`,
+      });
+      setLocationVersion((value) => value + 1);
+    } catch (error) {
+      console.error('[Map] Failed to generate heatmap test points:', error);
+      setTestSeedFeedback({
+        kind: 'error',
+        message: error instanceof Error
+          ? error.message
+          : 'Could not generate test points. Check the database migration and your analytics access.',
+      });
+    } finally {
+      setSeedingTestData(false);
+    }
   };
 
   if (loading) {
@@ -236,7 +296,12 @@ export function MapScreen({ onNavigate }: Props) {
         </div>
       )}
 
-      <button onClick={recenter} className="absolute right-4 bottom-28 z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform">
+      <button
+        onClick={recenter}
+        className={`absolute right-4 ${canSeedTestData ? 'bottom-[14.5rem]' : 'bottom-28'} z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform`}
+        aria-label="Recenter map on my location"
+        title="Recenter map"
+      >
         <Navigation className="w-4 h-4 text-gold" />
       </button>
 
@@ -252,6 +317,34 @@ export function MapScreen({ onNavigate }: Props) {
               <div className="w-2 h-2 rounded-full bg-emerald-500 ml-1.5" /><span className="text-[10px] text-text-muted">Done</span>
             </div>
           </div>
+          {canSeedTestData && (
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => void generateTestHeatmap()}
+                disabled={seedingTestData || !selectedCampaign}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-[10px] border border-gold/30 bg-gold/10 px-3 py-2.5 text-xs font-semibold text-gold transition-colors hover:bg-gold/15 disabled:cursor-wait disabled:opacity-60"
+              >
+                {seedingTestData ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FlaskConical className="h-4 w-4" />
+                )}
+                {seedingTestData ? 'Generating test data…' : 'Generate 500 heatmap test points'}
+              </button>
+              <p className="mt-1.5 text-[9px] leading-4 text-text-subtle">
+                Test-only data · 350 points around Chennai, 150 across Tamil Nadu · replaces this campaign’s test set
+              </p>
+              {testSeedFeedback && (
+                <p
+                  role="status"
+                  className={`mt-1.5 text-[10px] leading-4 ${testSeedFeedback.kind === 'success' ? 'text-emerald-400' : 'text-red-300'}`}
+                >
+                  {testSeedFeedback.message}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
