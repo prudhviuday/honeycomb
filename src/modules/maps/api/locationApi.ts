@@ -8,14 +8,9 @@ export type { HeatmapPoint } from '@/modules/shared/api';
 import { supabase } from "@/infrastructure/supabase/client";
 
 export async function canSeedHeatmapTestPoints(campaignId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("analytics_members")
-    .select("campaign_id")
-    .eq("campaign_id", campaignId)
-    .maybeSingle();
-
+  const { data, error } = await supabase.auth.getUser();
   if (error) throw error;
-  return Boolean(data);
+  return Boolean(data.user && campaignId);
 }
 
 export async function seedHeatmapTestPoints(campaignId: string): Promise<number> {
