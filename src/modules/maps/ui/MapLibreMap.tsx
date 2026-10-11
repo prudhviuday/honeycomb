@@ -246,7 +246,7 @@ function addHeatmapLayers(
         id: GENERAL_HEAT_LAYER,
         type: "heatmap",
         source: GENERAL_HEAT_SOURCE,
-        ...(tiled ? { "source-layer": "heatmap" } : {}),
+        ...(tiled ? { "source-layer": "heatmap" as const } : {}),
         minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
