@@ -25,6 +25,8 @@ interface Props {
   recenterVersion?: number;
   fitActivity?: boolean;
   fitFeatures?: boolean;
+  heatIntensityScale?: number;
+  zoomFalloffSpeed?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -85,10 +87,54 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
   };
 }
 
+const GENERAL_INTENSITY_STOPS: Array<[number, number]> = [
+  [0, 0.75], [2, 0.75], [5, 0.95], [8, 1.2], [11, 1.45], [14, 1.7], [18, 2.0],
+];
+const CAMPAIGN_INTENSITY_STOPS: Array<[number, number]> = [
+  [7, 0.95], [9, 1.15], [11, 1.45], [14, 1.8], [18, 2.1],
+];
+
+function buildIntensityExpression(
+  stops: Array<[number, number]>,
+  scale: number,
+  falloffSpeed: number,
+): maplibregl.ExpressionSpecification {
+  const adjustedStops: (number | string)[] = [];
+  for (const [zoom, baseIntensity] of stops) {
+    const zoomProgress = Math.max(0, Math.min(1, zoom / DETAILED_MAX_ZOOM));
+    const lowZoomReduction = 0.48 * Math.pow(1 - zoomProgress, falloffSpeed);
+    adjustedStops.push(zoom, Number((baseIntensity * scale * (1 - lowZoomReduction)).toFixed(3)));
+  }
+  return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
+}
+
+function applyHeatmapIntensity(
+  map: maplibregl.Map,
+  scale: number,
+  falloffSpeed: number,
+) {
+  if (map.getLayer(GENERAL_HEAT_LAYER)) {
+    map.setPaintProperty(
+      GENERAL_HEAT_LAYER,
+      "heatmap-intensity",
+      buildIntensityExpression(GENERAL_INTENSITY_STOPS, scale, falloffSpeed),
+    );
+  }
+  if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+    map.setPaintProperty(
+      CAMPAIGN_HEAT_LAYER,
+      "heatmap-intensity",
+      buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, scale, falloffSpeed),
+    );
+  }
+}
+
 function addHeatmapLayers(
   map: maplibregl.Map,
   generalHeatmap: HeatmapPoint[],
   campaignHeatmap: HeatmapPoint[],
+  heatIntensityScale: number,
+  zoomFalloffSpeed: number,
 ) {
   if (!map.getSource(GENERAL_HEAT_SOURCE)) {
     map.addSource(GENERAL_HEAT_SOURCE, {
@@ -129,62 +175,42 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0,
-            0.10,
-            2,
-            0.18,
-            5,
-            0.30,
-            8,
-            0.55,
-            11,
-            0.85,
-            14,
-            1.20,
-            18,
-            1.60,
-          ],
+          "heatmap-intensity": buildIntensityExpression(
+            GENERAL_INTENSITY_STOPS,
+            heatIntensityScale,
+            zoomFalloffSpeed,
+          ),
           "heatmap-radius": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            0,
-            8,
             2,
-            14,
+            28,
             5,
-            22,
+            50,
             8,
-            36,
+            72,
             11,
-            54,
+            88,
             14,
-            76,
+            104,
             18,
-            98,
+            120,
           ],
           "heatmap-opacity": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            0,
-            0.28,
             2,
-            0.34,
-            5,
-            0.42,
-            8,
-            0.50,
-            11,
-            0.58,
+            0.55,
+            6,
+            0.62,
+            10,
+            0.68,
             14,
-            0.66,
-            18,
             0.72,
+            18,
+            0.76,
           ],
           "heatmap-color": [
             "interpolate",
@@ -233,51 +259,27 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            7,
-            0.32,
-            9,
-            0.52,
-            11,
-            0.82,
-            14,
-            1.18,
-            18,
-            1.55,
-          ],
+          "heatmap-intensity": buildIntensityExpression(
+            CAMPAIGN_INTENSITY_STOPS,
+            heatIntensityScale,
+            zoomFalloffSpeed,
+          ),
           "heatmap-radius": [
             "interpolate",
             ["linear"],
             ["zoom"],
             7,
-            18,
-            9,
-            26,
-            11,
             38,
-            14,
-            56,
-            18,
-            76,
-          ],
-          "heatmap-opacity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            7,
-            0.38,
             9,
-            0.44,
+            50,
             11,
-            0.52,
+            62,
             14,
-            0.62,
+            80,
             18,
-            0.70,
+            98,
           ],
+          "heatmap-opacity": 0.78,
           "heatmap-color": [
             "interpolate",
             ["linear"],
@@ -342,6 +344,8 @@ export function MapLibreMap({
   recenterVersion = 0,
   fitActivity = false,
   fitFeatures = false,
+  heatIntensityScale = 1.05,
+  zoomFalloffSpeed = 1.2,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -385,7 +389,13 @@ export function MapLibreMap({
       // Keep the normal map intact; the neon effect is produced by luminous
       // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
-      addHeatmapLayers(map, generalHeatmap, campaignHeatmap);
+      addHeatmapLayers(
+        map,
+        generalHeatmap,
+        campaignHeatmap,
+        heatIntensityScale,
+        zoomFalloffSpeed,
+      );
     };
 
     map.once("load", addActivityLayers);
@@ -396,6 +406,17 @@ export function MapLibreMap({
       userMarkerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyWhenReady = () => applyHeatmapIntensity(map, heatIntensityScale, zoomFalloffSpeed);
+    if (map.isStyleLoaded()) applyWhenReady();
+    else map.once("load", applyWhenReady);
+    return () => {
+      map.off("load", applyWhenReady);
+    };
+  }, [heatIntensityScale, zoomFalloffSpeed]);
 
   useEffect(() => {
     const map = mapRef.current;
