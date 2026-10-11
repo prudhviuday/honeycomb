@@ -41,6 +41,7 @@ const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
 const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
+const EMPTY_HEATMAP_POINTS: HeatmapPoint[] = [];
 const HEATMAP_TILE_CACHE_TTL_MS = 60_000;
 const MAX_CACHED_HEATMAP_TILES = 256;
 const heatmapTileCache = new Map<string, { data: ArrayBuffer; expiresAt: number }>();
@@ -364,8 +365,8 @@ function add3DBuildings(map: maplibregl.Map) {
 
 export function MapLibreMap({
   features,
-  generalHeatmap = [],
-  campaignHeatmap = [],
+  generalHeatmap = EMPTY_HEATMAP_POINTS,
+  campaignHeatmap = EMPTY_HEATMAP_POINTS,
   campaignId,
   heatmapRefreshVersion = 0,
   userLocation,
