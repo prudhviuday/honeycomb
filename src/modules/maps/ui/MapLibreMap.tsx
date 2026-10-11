@@ -330,6 +330,7 @@ export function MapLibreMap({
   const onMapClickRef = useRef(onMapClick);
   const activityScansRef = useRef(activityScans);
   const hasInitializedLocationRef = useRef(false);
+  const lastFitHeatmapVersionRef = useRef(0);
 
   activityScansRef.current = activityScans;
   onMarkerClickRef.current = onMarkerClick;
@@ -485,7 +486,12 @@ export function MapLibreMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || fitHeatmapVersion < 1 || !campaignHeatmap.length) return;
+    if (
+      !map ||
+      fitHeatmapVersion <= lastFitHeatmapVersionRef.current ||
+      !campaignHeatmap.length
+    ) return;
+    lastFitHeatmapVersionRef.current = fitHeatmapVersion;
 
     const fit = () => {
       const bounds = new maplibregl.LngLatBounds();
@@ -505,7 +511,7 @@ export function MapLibreMap({
     return () => {
       map.off("load", fit);
     };
-  }, [fitHeatmapVersion]);
+  }, [campaignHeatmap, fitHeatmapVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
