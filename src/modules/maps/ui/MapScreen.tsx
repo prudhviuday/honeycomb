@@ -5,13 +5,13 @@ import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
 import {
   canSeedHeatmapTestPoints,
-  getLocationHeatmap,
   seedHeatmapTestPoints,
 } from '@/modules/maps/api/locationApi';
+import { invalidateHeatmapTileCache } from '@/modules/maps/ui/MapLibreMap';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/modules/shared/types';
-import type { Location, InteractionSource, Scan, HeatmapPoint } from '@/modules/maps/types';
+import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
 
 interface Props {
   onNavigate?: (tab: 'scanner') => void;
@@ -23,8 +23,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(activeCampaign);
   const [features, setFeatures] = useState<MapFeature[]>([]);
   const [activityScans, setActivityScans] = useState<Scan[]>([]);
-  const [generalHeatmap, setGeneralHeatmap] = useState<HeatmapPoint[]>([]);
-  const [campaignHeatmap, setCampaignHeatmap] = useState<HeatmapPoint[]>([]);
+  const [heatmapRefreshVersion, setHeatmapRefreshVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -33,7 +32,6 @@ export function MapScreen({ onNavigate }: Props) {
   const [query, setQuery] = useState('');
   const [locationVersion, setLocationVersion] = useState(0);
   const [recenterVersion, setRecenterVersion] = useState(0);
-  const [fitHeatmapVersion, setFitHeatmapVersion] = useState(0);
   const [canSeedTestData, setCanSeedTestData] = useState(false);
   const [seedingTestData, setSeedingTestData] = useState(false);
   const [testSeedFeedback, setTestSeedFeedback] = useState<{
@@ -64,48 +62,20 @@ export function MapScreen({ onNavigate }: Props) {
             locationsResult,
             sourcesResult,
             scansResult,
-            generalPointsResult,
-            campaignPointsResult,
           ] = await Promise.allSettled([
             getLocations(selectedCampaign.id),
             getInteractionSources(selectedCampaign.id),
             getUserScans(selectedCampaign.id, user.id),
-            getLocationHeatmap(null),
-            getLocationHeatmap(selectedCampaign.id),
           ]);
 
           const locs = locationsResult.status === 'fulfilled' ? locationsResult.value : [];
           const srcs = sourcesResult.status === 'fulfilled' ? sourcesResult.value : [];
           const userScans = scansResult.status === 'fulfilled' ? scansResult.value : [];
-          const generalPoints = generalPointsResult.status === 'fulfilled' ? generalPointsResult.value : [];
-          const campaignPoints = campaignPointsResult.status === 'fulfilled' ? campaignPointsResult.value : [];
-
-          console.info(
-            '[Map] Heatmap RPC result:',
-            'campaignId=', selectedCampaign.id,
-            '| general status=', generalPointsResult.status,
-            '| general count=', generalPoints.length,
-            '| campaign status=', campaignPointsResult.status,
-            '| campaign count=', campaignPoints.length,
-            '| general sample=', generalPoints.slice(0, 3),
-            '| campaign sample=', campaignPoints.slice(0, 3),
-          );
-          if (generalPointsResult.status === 'rejected') {
-            console.error('[Map] General heatmap RPC failed:', generalPointsResult.reason);
-          }
-          if (campaignPointsResult.status === 'rejected') {
-            console.error('[Map] Campaign heatmap RPC failed:', campaignPointsResult.reason);
-          }
-
           if (locationsResult.status === 'rejected') console.warn('[Map] Locations failed to load:', locationsResult.reason);
           if (sourcesResult.status === 'rejected') console.warn('[Map] Interaction sources failed to load:', sourcesResult.reason);
           if (scansResult.status === 'rejected') console.warn('[Map] User scans failed to load:', scansResult.reason);
-          if (generalPointsResult.status === 'rejected') console.warn('[Map] General heatmap failed to load:', generalPointsResult.reason);
-          if (campaignPointsResult.status === 'rejected') console.warn('[Map] Campaign heatmap failed to load:', campaignPointsResult.reason);
 
           setActivityScans(userScans);
-          setGeneralHeatmap(generalPoints);
-          setCampaignHeatmap(campaignPoints);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
         } catch (error) {
           console.error('[Map] Failed to prepare map data:', error);
@@ -194,9 +164,8 @@ export function MapScreen({ onNavigate }: Props) {
     setTestSeedFeedback(null);
     try {
       const inserted = await seedHeatmapTestPoints(selectedCampaign.id);
-      const refreshedHeatmap = await getLocationHeatmap(selectedCampaign.id);
-      setCampaignHeatmap(refreshedHeatmap);
-      setFitHeatmapVersion((value) => value + 1);
+      invalidateHeatmapTileCache(selectedCampaign.id);
+      setHeatmapRefreshVersion((value) => value + 1);
       setTestSeedFeedback({
         kind: 'success',
         message: `Generated ${inserted} synthetic points. Real scans and producer metrics are unchanged.`,
@@ -231,12 +200,11 @@ export function MapScreen({ onNavigate }: Props) {
     <div className="relative h-screen pb-20 overflow-hidden">
       <MapLibreMap
         features={visibleFeatures}
+        campaignId={selectedCampaign?.id ?? null}
+        heatmapRefreshVersion={heatmapRefreshVersion}
         activityScans={activityScans}
-        generalHeatmap={generalHeatmap}
-        campaignHeatmap={campaignHeatmap}
         userLocation={userLoc}
         recenterVersion={recenterVersion}
-        fitHeatmapVersion={fitHeatmapVersion}
         heatIntensityScale={heatIntensityScale}
         zoomFalloffSpeed={zoomFalloffSpeed}
         heatRadiusScale={heatRadiusScale}
