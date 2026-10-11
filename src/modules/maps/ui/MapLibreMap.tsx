@@ -111,7 +111,7 @@ function buildIntensityExpression(
   falloffSpeed: number,
 ): maplibregl.ExpressionSpecification {
   const adjustedStops: (number | string)[] = [];
-  const normalizedScale = Math.max(0, Math.min(1, scale));
+  const normalizedScale = Math.max(0, Math.min(5, scale));
   const effectiveFalloffSpeed = 0.4 + Math.max(0, Math.min(1, falloffSpeed)) * 2.4;
   for (const [zoom, baseIntensity] of stops) {
     const zoomProgress = Math.max(0, Math.min(1, zoom / DETAILED_MAX_ZOOM));
