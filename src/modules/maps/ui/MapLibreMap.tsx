@@ -25,6 +25,7 @@ interface Props {
   recenterVersion?: number;
   fitActivity?: boolean;
   fitFeatures?: boolean;
+  fitHeatmapVersion?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -211,7 +212,7 @@ function addHeatmapLayers(
         id: CAMPAIGN_HEAT_LAYER,
         type: "heatmap",
         source: CAMPAIGN_HEAT_SOURCE,
-        minzoom: 7,
+        minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
           "heatmap-weight": [
@@ -320,6 +321,7 @@ export function MapLibreMap({
   recenterVersion = 0,
   fitActivity = false,
   fitFeatures = false,
+  fitHeatmapVersion = 0,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -480,6 +482,30 @@ export function MapLibreMap({
       duration: 650,
     });
   }, [recenterVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || fitHeatmapVersion < 1 || !campaignHeatmap.length) return;
+
+    const fit = () => {
+      const bounds = new maplibregl.LngLatBounds();
+      campaignHeatmap.forEach((point) => bounds.extend([point.longitude, point.latitude]));
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: 48,
+          maxZoom: 5.2,
+          duration: 900,
+        });
+      }
+    };
+
+    if (Boolean(map.getSource(GENERAL_HEAT_SOURCE))) fit();
+    else map.once("load", fit);
+
+    return () => {
+      map.off("load", fit);
+    };
+  }, [fitHeatmapVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
