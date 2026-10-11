@@ -66,42 +66,6 @@ function refreshHeatmapSources(
   (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
 }
 
-function addAggregatedGridLayer(
-  map: maplibregl.Map,
-  source: string,
-  layer: string,
-  beforeId?: string,
-) {
-  if (map.getLayer(layer)) return;
-  map.addLayer({
-    id: layer,
-    type: "circle",
-    source,
-    minzoom: 2,
-    maxzoom: GRID_MAX_ZOOM,
-    paint: {
-      "circle-radius": [
-        "interpolate", ["linear"], ["zoom"],
-        2, ["interpolate", ["linear"], ["get", "count"], 1, 3, 3, 4.5, 8, 6.5, 16, 8],
-        4, ["interpolate", ["linear"], ["get", "count"], 1, 4, 3, 6, 8, 8, 16, 10],
-        5.5, ["interpolate", ["linear"], ["get", "count"], 1, 5, 3, 7, 8, 10, 16, 12],
-      ],
-      "circle-color": [
-        "step", ["get", "count"],
-        "#3288ff",
-        2, "#00bfff",
-        4, "#00d78f",
-        7, "#ffe037",
-        11, "#ff8f23",
-        16, "#f54537",
-      ],
-      "circle-opacity": 0.78,
-      "circle-stroke-width": 0.6,
-      "circle-stroke-color": "rgba(255,255,255,0.42)",
-    },
-  }, beforeId);
-}
-
 type ScanWithCoordinates = Scan & {
   latitude?: number | null;
   longitude?: number | null;
@@ -173,8 +137,8 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.30, 5, 0.42, 6, 0.52, 8, 0.78, 11, 1.10, 14, 1.45, 18, 1.80],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 14, 5, 24, 6, 32, 8, 48, 11, 66, 14, 88, 18, 108],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.18, 5, 0.28, 6, 0.36, 8, 0.55, 11, 0.82, 14, 1.12, 18, 1.45],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 12, 5, 20, 6, 28, 8, 40, 11, 58, 14, 78, 18, 96],
           "heatmap-opacity": [
             "interpolate",
             ["linear"],
@@ -191,12 +155,14 @@ function addHeatmapLayers(
             0.60,
           ],
           "heatmap-color": [
-            "case",
-            ["<", ["zoom"], 6],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.40, "rgba(45,125,255,0.30)", 0.50, "rgba(0,190,255,0.48)", 0.70, "rgba(0,215,135,0.62)", 0.80, "rgba(255,224,55,0.72)", 0.97, "rgba(255,143,35,0.82)", 1, "rgba(245,65,55,0.92)"],
-            ["<", ["zoom"], 10],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.30, "rgba(45,125,255,0.24)", 0.40, "rgba(0,190,255,0.45)", 0.60, "rgba(0,215,135,0.60)", 0.75, "rgba(255,224,55,0.70)", 0.88, "rgba(255,143,35,0.80)", 1, "rgba(245,65,55,0.92)"],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.20, "rgba(45,125,255,0.20)", 0.30, "rgba(0,190,255,0.42)", 0.50, "rgba(0,215,135,0.58)", 0.70, "rgba(255,224,55,0.70)", 0.80, "rgba(255,143,35,0.80)", 1, "rgba(245,65,55,0.92)"]
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(45,125,255,0)",
+            0.20, "rgba(45,125,255,0.20)",
+            0.30, "rgba(0,190,255,0.42)",
+            0.50, "rgba(0,215,135,0.58)",
+            0.70, "rgba(255,224,55,0.70)",
+            0.80, "rgba(255,143,35,0.80)",
+            1, "rgba(245,65,55,0.92)"
           ],
         },
       },
@@ -210,7 +176,7 @@ function addHeatmapLayers(
         id: CAMPAIGN_HEAT_LAYER,
         type: "heatmap",
         source: CAMPAIGN_HEAT_SOURCE,
-        minzoom: GRID_MAX_ZOOM,
+        minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
           "heatmap-weight": [
@@ -224,8 +190,8 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.24, 5, 0.34, 6, 0.42, 8, 0.62, 11, 0.90, 14, 1.16, 18, 1.42],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 12, 5, 20, 6, 28, 8, 40, 11, 54, 14, 70, 18, 86],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.16, 5, 0.26, 6, 0.34, 8, 0.52, 11, 0.78, 14, 1.05, 18, 1.34],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 18, 6, 24, 8, 36, 11, 50, 14, 66, 18, 82],
           "heatmap-opacity": [
             "interpolate", ["linear"], ["zoom"],
             5.5, 0.42,
@@ -234,12 +200,14 @@ function addHeatmapLayers(
             18, 0.64,
           ],
           "heatmap-color": [
-            "case",
-            ["<", ["zoom"], 6],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.40, "rgba(35,125,255,0.34)", 0.50, "rgba(0,190,255,0.52)", 0.70, "rgba(0,215,135,0.68)", 0.80, "rgba(255,224,55,0.78)", 0.97, "rgba(255,143,35,0.86)", 1, "rgba(190,20,45,0.96)"],
-            ["<", ["zoom"], 10],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.30, "rgba(35,125,255,0.28)", 0.40, "rgba(0,190,255,0.50)", 0.60, "rgba(0,215,135,0.65)", 0.75, "rgba(255,224,55,0.76)", 0.88, "rgba(255,143,35,0.85)", 1, "rgba(190,20,45,0.96)"],
-            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.20, "rgba(35,125,255,0.24)", 0.30, "rgba(0,190,255,0.48)", 0.50, "rgba(0,215,135,0.64)", 0.70, "rgba(255,224,55,0.76)", 0.80, "rgba(255,143,35,0.86)", 1, "rgba(190,20,45,0.96)"]
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(35,125,255,0)",
+            0.20, "rgba(35,125,255,0.24)",
+            0.30, "rgba(0,190,255,0.48)",
+            0.50, "rgba(0,215,135,0.64)",
+            0.70, "rgba(255,224,55,0.76)",
+            0.80, "rgba(255,143,35,0.86)",
+            1, "rgba(190,20,45,0.96)"
           ],
         },
       },
