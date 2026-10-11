@@ -298,7 +298,7 @@ export function MapScreen({ onNavigate }: Props) {
 
       <button
         onClick={recenter}
-        className={`absolute right-4 ${canSeedTestData ? 'bottom-[14.5rem]' : 'bottom-28'} z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform`}
+        className={`absolute right-4 ${canSeedTestData ? 'bottom-[17rem]' : 'bottom-28'} z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform`}
         aria-label="Recenter map on my location"
         title="Recenter map"
       >
@@ -316,7 +316,6 @@ export function MapScreen({ onNavigate }: Props) {
               <div className="w-2 h-2 rounded-full bg-gold" /><span className="text-[10px] text-text-muted">Available</span>
               <div className="w-2 h-2 rounded-full bg-emerald-500 ml-1.5" /><span className="text-[10px] text-text-muted">Done</span>
             </div>
-          </div>
           {canSeedTestData && (
             <div className="mt-3 pt-3 border-t border-white/10">
               <button
@@ -345,6 +344,7 @@ export function MapScreen({ onNavigate }: Props) {
               )}
             </div>
           )}
+          </div>
         </div>
       )}
 
