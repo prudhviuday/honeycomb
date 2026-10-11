@@ -11,20 +11,17 @@ import {
   honeycombBuildingLayer,
 } from "@/modules/maps/logic/mapStyle";
 import type { MapFeature } from "@/modules/maps/logic/mapData";
-import type { Scan } from "@/modules/maps/types";
 import { createCampaignMarker, createUserMarker } from "@/lib/mapMarkers";
 import { supabase } from "@/infrastructure/supabase/client";
 
 interface Props {
   features: MapFeature[];
-  activityScans: Scan[];
   campaignId: string | null;
   heatmapRefreshVersion?: number;
   userLocation: { lng: number; lat: number } | null;
   onMarkerClick: (feature: MapFeature) => void;
   onMapClick: () => void;
   recenterVersion?: number;
-  fitActivity?: boolean;
   fitFeatures?: boolean;
   heatIntensityScale?: number;
   zoomFalloffSpeed?: number;
@@ -109,35 +106,6 @@ export function invalidateHeatmapTileCache(campaignId?: string | null) {
   for (const key of heatmapTileCache.keys()) {
     if (!matchingPath || key.includes(matchingPath)) heatmapTileCache.delete(key);
   }
-}
-
-type ScanWithCoordinates = Scan & {
-  latitude?: number | null;
-  longitude?: number | null;
-};
-
-function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
-  const scansWithCoordinates = scans as ScanWithCoordinates[];
-  return {
-    type: "FeatureCollection",
-    features: scansWithCoordinates
-      .filter(
-        (scan) =>
-          scan.latitude != null &&
-          scan.longitude != null &&
-          Number.isFinite(Number(scan.latitude)) &&
-          Number.isFinite(Number(scan.longitude)),
-      )
-      .map((scan, index) => ({
-        type: "Feature" as const,
-        id: scan.id || `scan-${index}`,
-        geometry: {
-          type: "Point" as const,
-          coordinates: [Number(scan.longitude), Number(scan.latitude)],
-        },
-        properties: { points: 1, scanId: scan.id },
-      })),
-  };
 }
 
 const GENERAL_INTENSITY_STOPS: Array<[number, number]> = [
@@ -355,14 +323,12 @@ function add3DBuildings(map: maplibregl.Map) {
 
 export function MapLibreMap({
   features,
-  activityScans,
   campaignId,
   heatmapRefreshVersion = 0,
   userLocation,
   onMarkerClick,
   onMapClick,
   recenterVersion = 0,
-  fitActivity = false,
   fitFeatures = false,
   heatIntensityScale = 1,
   zoomFalloffSpeed = 1 / 3,
@@ -374,7 +340,6 @@ export function MapLibreMap({
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
-  const activityScansRef = useRef(activityScans);
   const campaignIdRef = useRef(campaignId);
   const lastCampaignIdRef = useRef(campaignId);
   const heatIntensityScaleRef = useRef(heatIntensityScale);
@@ -383,7 +348,6 @@ export function MapLibreMap({
   const heatZoomRadiusGrowthRef = useRef(heatZoomRadiusGrowth);
   const hasInitializedLocationRef = useRef(false);
 
-  activityScansRef.current = activityScans;
   campaignIdRef.current = campaignId;
   heatIntensityScaleRef.current = heatIntensityScale;
   zoomFalloffSpeedRef.current = zoomFalloffSpeed;
