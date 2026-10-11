@@ -382,7 +382,6 @@ export function MapLibreMap({
   const heatRadiusScaleRef = useRef(heatRadiusScale);
   const heatZoomRadiusGrowthRef = useRef(heatZoomRadiusGrowth);
   const hasInitializedLocationRef = useRef(false);
-  const lastFitHeatmapVersionRef = useRef(0);
 
   activityScansRef.current = activityScans;
   campaignIdRef.current = campaignId;
