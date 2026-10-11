@@ -111,7 +111,10 @@ export function MapScreen({ onNavigate }: Props) {
   }, [selectedCampaign?.id, user?.id]);
 
   useEffect(() => {
-    const handleLocationUpdated = () => setLocationVersion((value) => value + 1);
+    const handleLocationUpdated = () => {
+      invalidateHeatmapTileCache();
+      setLocationVersion((value) => value + 1);
+    };
     window.addEventListener('honeycomb:location-updated', handleLocationUpdated);
     return () => window.removeEventListener('honeycomb:location-updated', handleLocationUpdated);
   }, []);
