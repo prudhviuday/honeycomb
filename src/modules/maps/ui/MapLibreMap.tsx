@@ -59,7 +59,7 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
     heatmapTileCache.delete(url);
     heatmapTileCache.set(url, cached);
     console.info("[MapPerf] heatmap-tile", url, "cache=hit", "bytes=", cached.data.byteLength);
-    return cached.data;
+    return cached.data.slice(0);
   }
   if (cached) heatmapTileCache.delete(url);
   const inFlight = heatmapTileRequests.get(url);
@@ -81,7 +81,8 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
     });
     if (error) throw error;
     const tile = decodeBase64Tile(typeof data === "string" ? data : "");
-    heatmapTileCache.set(url, { data: tile, expiresAt: Date.now() + HEATMAP_TILE_CACHE_TTL_MS });
+    // Keep a separate copy because MapLibre may transfer the returned buffer to a worker.
+    heatmapTileCache.set(url, { data: tile.slice(0), expiresAt: Date.now() + HEATMAP_TILE_CACHE_TTL_MS });
     while (heatmapTileCache.size > MAX_CACHED_HEATMAP_TILES) {
       const oldest = heatmapTileCache.keys().next().value;
       if (!oldest) break;
@@ -91,7 +92,7 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
     return tile;
   })();
   heatmapTileRequests.set(url, request);
-  try { return await request; }
+  try { return (await request).slice(0); }
   finally { if (heatmapTileRequests.get(url) === request) heatmapTileRequests.delete(url); }
 }
 
