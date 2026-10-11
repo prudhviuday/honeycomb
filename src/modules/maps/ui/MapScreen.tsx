@@ -43,6 +43,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [heatIntensityScale, setHeatIntensityScale] = useState(0.2);
   const [zoomFalloffSpeed, setZoomFalloffSpeed] = useState(1 / 3);
   const [heatRadiusScale, setHeatRadiusScale] = useState(2 / 7);
+  const [heatZoomRadiusGrowth, setHeatZoomRadiusGrowth] = useState(0.5);
   const [heatControlsOpen, setHeatControlsOpen] = useState(true);
 
   useEffect(() => {
@@ -222,6 +223,7 @@ export function MapScreen({ onNavigate }: Props) {
         heatIntensityScale={heatIntensityScale}
         zoomFalloffSpeed={zoomFalloffSpeed}
         heatRadiusScale={heatRadiusScale}
+        heatZoomRadiusGrowth={heatZoomRadiusGrowth}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
@@ -336,9 +338,17 @@ export function MapScreen({ onNavigate }: Props) {
                 <input id="heat-radius-scale" type="range" min="0" max="1" step="0.01" value={heatRadiusScale} onChange={(event) => setHeatRadiusScale(Number(event.target.value))} className="w-full accent-orange-400" />
                 <div className="flex justify-between text-[9px] text-text-subtle"><span>Compact (0.2×)</span><span>Wide (3×)</span></div>
               </div>
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label htmlFor="heat-zoom-radius-growth" className="text-[10px] text-text-muted uppercase tracking-wide">Radius growth when zooming out</label>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{heatZoomRadiusGrowth.toFixed(2)}×</span>
+                </div>
+                <input id="heat-zoom-radius-growth" type="range" min="0" max="1" step="0.01" value={heatZoomRadiusGrowth} onChange={(event) => setHeatZoomRadiusGrowth(Number(event.target.value))} className="w-full accent-fuchsia-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Same radius at all zooms</span><span>Much larger at country zoom</span></div>
+              </div>
               <div className="flex items-center justify-between border-t border-white/10 pt-2">
                 <p className="text-[9px] text-text-subtle">Live preview · test data stays unchanged</p>
-                <button type="button" onClick={() => { setHeatIntensityScale(0.2); setZoomFalloffSpeed(1 / 3); setHeatRadiusScale(2 / 7); }} className="text-[10px] text-cyan-300 hover:text-cyan-200">Reset</button>
+                <button type="button" onClick={() => { setHeatIntensityScale(0.2); setZoomFalloffSpeed(1 / 3); setHeatRadiusScale(2 / 7); setHeatZoomRadiusGrowth(0.5); }} className="text-[10px] text-cyan-300 hover:text-cyan-200">Reset</button>
               </div>
             </div>
           )}
