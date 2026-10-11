@@ -100,10 +100,15 @@ function buildIntensityExpression(
   falloffSpeed: number,
 ): maplibregl.ExpressionSpecification {
   const adjustedStops: (number | string)[] = [];
+  // UI controls use a normalized 0–1 range. Map it to the previous tuning
+  // range so the slider endpoints provide full control without changing the
+  // look at the default setting.
+  const effectiveFalloffSpeed = 0.4 + Math.max(0, Math.min(1, falloffSpeed)) * 2.4;
+  const effectiveIntensityScale = Math.max(0, Math.min(1, scale)) * 1.05;
   for (const [zoom, baseIntensity] of stops) {
     const zoomProgress = Math.max(0, Math.min(1, zoom / DETAILED_MAX_ZOOM));
-    const lowZoomReduction = 0.48 * Math.pow(1 - zoomProgress, falloffSpeed);
-    adjustedStops.push(zoom, Number((baseIntensity * scale * (1 - lowZoomReduction)).toFixed(3)));
+    const lowZoomReduction = 0.48 * Math.pow(1 - zoomProgress, effectiveFalloffSpeed);
+    adjustedStops.push(zoom, Number((baseIntensity * effectiveIntensityScale * (1 - lowZoomReduction)).toFixed(3)));
   }
   return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
 }
@@ -344,8 +349,8 @@ export function MapLibreMap({
   recenterVersion = 0,
   fitActivity = false,
   fitFeatures = false,
-  heatIntensityScale = 1.05,
-  zoomFalloffSpeed = 1.2,
+  heatIntensityScale = 1,
+  zoomFalloffSpeed = 1 / 3,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
