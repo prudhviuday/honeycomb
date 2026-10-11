@@ -166,11 +166,23 @@ function applyHeatmapControls(
   radiusScale: number,
   zoomRadiusGrowth: number,
 ) {
+  // Use a deliberately wide pixel range so moving the slider is visibly
+  // different even when many nearby points blend into one heat area.
   if (map.getLayer(GENERAL_HEAT_LAYER)) {
-    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-radius", buildRadiusExpression(radiusScale, zoomRadiusGrowth, 6));
+    map.setPaintProperty(
+      GENERAL_HEAT_LAYER,
+      "heatmap-radius",
+      buildRadiusExpression(radiusScale, zoomRadiusGrowth, 20),
+      { duration: 0 },
+    );
   }
   if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
-    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-radius", buildRadiusExpression(radiusScale, zoomRadiusGrowth, 5));
+    map.setPaintProperty(
+      CAMPAIGN_HEAT_LAYER,
+      "heatmap-radius",
+      buildRadiusExpression(radiusScale, zoomRadiusGrowth, 18),
+      { duration: 0 },
+    );
   }
 }
 
