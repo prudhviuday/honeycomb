@@ -40,8 +40,9 @@ export function MapScreen({ onNavigate }: Props) {
     kind: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [heatIntensityScale, setHeatIntensityScale] = useState(1);
+  const [heatIntensityScale, setHeatIntensityScale] = useState(0.2);
   const [zoomFalloffSpeed, setZoomFalloffSpeed] = useState(1 / 3);
+  const [heatRadiusScale, setHeatRadiusScale] = useState(2 / 7);
   const [heatControlsOpen, setHeatControlsOpen] = useState(true);
 
   useEffect(() => {
@@ -220,6 +221,7 @@ export function MapScreen({ onNavigate }: Props) {
         fitHeatmapVersion={fitHeatmapVersion}
         heatIntensityScale={heatIntensityScale}
         zoomFalloffSpeed={zoomFalloffSpeed}
+        heatRadiusScale={heatRadiusScale}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
@@ -312,11 +314,11 @@ export function MapScreen({ onNavigate }: Props) {
             <div className="mt-2 glass-strong hairline rounded-[14px] p-3 shadow-xl shadow-black/40 space-y-3">
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
-                  <label htmlFor="heat-intensity-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Overall intensity</label>
+                  <label htmlFor="heat-intensity-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Overall intensity (0–5×)</label>
                   <span className="text-xs text-text-primary font-semibold tabular-nums">{heatIntensityScale.toFixed(2)}</span>
                 </div>
                 <input id="heat-intensity-scale" type="range" min="0" max="1" step="0.01" value={heatIntensityScale} onChange={(event) => setHeatIntensityScale(Number(event.target.value))} className="w-full accent-fuchsia-400" />
-                <div className="flex justify-between text-[9px] text-text-subtle"><span>Off (0)</span><span>Full intensity (1)</span></div>
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Off</span><span>Maximum (5×)</span></div>
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
@@ -326,9 +328,17 @@ export function MapScreen({ onNavigate }: Props) {
                 <input id="heat-zoom-falloff" type="range" min="0" max="1" step="0.01" value={zoomFalloffSpeed} onChange={(event) => setZoomFalloffSpeed(Number(event.target.value))} className="w-full accent-cyan-400" />
                 <div className="flex justify-between text-[9px] text-text-subtle"><span>Gentle (0)</span><span>Fast fade (1)</span></div>
               </div>
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label htmlFor="heat-radius-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Heat point radius</label>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{(0.2 + heatRadiusScale * 2.8).toFixed(2)}×</span>
+                </div>
+                <input id="heat-radius-scale" type="range" min="0" max="1" step="0.01" value={heatRadiusScale} onChange={(event) => setHeatRadiusScale(Number(event.target.value))} className="w-full accent-orange-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Compact (0.2×)</span><span>Wide (3×)</span></div>
+              </div>
               <div className="flex items-center justify-between border-t border-white/10 pt-2">
                 <p className="text-[9px] text-text-subtle">Live preview · test data stays unchanged</p>
-                <button type="button" onClick={() => { setHeatIntensityScale(1); setZoomFalloffSpeed(1 / 3); }} className="text-[10px] text-cyan-300 hover:text-cyan-200">Reset</button>
+                <button type="button" onClick={() => { setHeatIntensityScale(0.2); setZoomFalloffSpeed(1 / 3); setHeatRadiusScale(2 / 7); }} className="text-[10px] text-cyan-300 hover:text-cyan-200">Reset</button>
               </div>
             </div>
           )}
