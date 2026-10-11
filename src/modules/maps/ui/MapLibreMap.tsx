@@ -29,6 +29,7 @@ interface Props {
   heatIntensityScale?: number;
   zoomFalloffSpeed?: number;
   heatRadiusScale?: number;
+  heatZoomRadiusGrowth?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -121,21 +122,42 @@ function buildIntensityExpression(
   return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
 }
 
-function buildRadiusExpression(stops: Array<[number, number]>, radiusScale: number): maplibregl.ExpressionSpecification {
-  const multiplier = 0.2 + Math.max(0, Math.min(1, radiusScale)) * 2.8;
+function buildRadiusExpression(
+  radiusScale: number,
+  zoomRadiusGrowth: number,
+  baseRadius: number,
+): maplibregl.ExpressionSpecification {
+  const overallMultiplier = 0.2 + Math.max(0, Math.min(1, radiusScale)) * 2.8;
+  const growth = Math.max(0, Math.min(1, zoomRadiusGrowth));
+  // Keep individual points compact at street zoom; let them spread progressively
+  // as the camera zooms out to city, state, and country views.
+  const stops: Array<[number, number]> = [
+    [2, baseRadius * (1 + growth * 4)],
+    [5, baseRadius * (1 + growth * 3.2)],
+    [8, baseRadius * (1 + growth * 2.2)],
+    [11, baseRadius * (1 + growth * 1.2)],
+    [14, baseRadius * (1 + growth * 0.4)],
+    [18, baseRadius],
+  ];
   const adjustedStops: (number | string)[] = [];
-  for (const [zoom, radius] of stops) adjustedStops.push(zoom, Number((radius * multiplier).toFixed(2)));
+  for (const [zoom, radius] of stops) adjustedStops.push(zoom, Number((radius * overallMultiplier).toFixed(2)));
   return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
 }
 
-function applyHeatmapControls(map: maplibregl.Map, scale: number, falloffSpeed: number, radiusScale: number) {
+function applyHeatmapControls(
+  map: maplibregl.Map,
+  scale: number,
+  falloffSpeed: number,
+  radiusScale: number,
+  zoomRadiusGrowth: number,
+) {
   if (map.getLayer(GENERAL_HEAT_LAYER)) {
     map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(GENERAL_INTENSITY_STOPS, scale * 5, falloffSpeed));
-    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-radius", buildRadiusExpression([[2, 12], [5, 20], [6, 28], [8, 40], [11, 58], [14, 78], [18, 96]], radiusScale));
+    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-radius", buildRadiusExpression(radiusScale, zoomRadiusGrowth, 6));
   }
   if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
     map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, scale * 5, falloffSpeed));
-    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-radius", buildRadiusExpression([[2, 10], [5, 18], [6, 24], [8, 36], [11, 50], [14, 66], [18, 82]], radiusScale));
+    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-radius", buildRadiusExpression(radiusScale, zoomRadiusGrowth, 5));
   }
 }
 
@@ -296,6 +318,7 @@ export function MapLibreMap({
   heatIntensityScale = 1,
   zoomFalloffSpeed = 1 / 3,
   heatRadiusScale = 2 / 7,
+  heatZoomRadiusGrowth = 0.5,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -368,13 +391,13 @@ export function MapLibreMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const applyWhenReady = () => applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale);
+    const applyWhenReady = () => applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth);
     if (map.isStyleLoaded()) applyWhenReady();
     else map.once("load", applyWhenReady);
     return () => {
       map.off("load", applyWhenReady);
     };
-  }, [heatIntensityScale, zoomFalloffSpeed, heatRadiusScale]);
+  }, [heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth]);
 
   useEffect(() => {
     const map = mapRef.current;
