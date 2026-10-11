@@ -33,6 +33,7 @@ export function MapScreen({ onNavigate }: Props) {
   const [query, setQuery] = useState('');
   const [locationVersion, setLocationVersion] = useState(0);
   const [recenterVersion, setRecenterVersion] = useState(0);
+  const [fitHeatmapVersion, setFitHeatmapVersion] = useState(0);
   const [canSeedTestData, setCanSeedTestData] = useState(false);
   const [seedingTestData, setSeedingTestData] = useState(false);
   const [testSeedFeedback, setTestSeedFeedback] = useState<{
@@ -171,6 +172,9 @@ export function MapScreen({ onNavigate }: Props) {
     setTestSeedFeedback(null);
     try {
       const inserted = await seedHeatmapTestPoints(selectedCampaign.id);
+      const refreshedHeatmap = await getLocationHeatmap(selectedCampaign.id);
+      setCampaignHeatmap(refreshedHeatmap);
+      setFitHeatmapVersion((value) => value + 1);
       setTestSeedFeedback({
         kind: 'success',
         message: `Generated ${inserted} synthetic points. Real scans and producer metrics are unchanged.`,
@@ -210,6 +214,7 @@ export function MapScreen({ onNavigate }: Props) {
         campaignHeatmap={campaignHeatmap}
         userLocation={userLoc}
         recenterVersion={recenterVersion}
+        fitHeatmapVersion={fitHeatmapVersion}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
@@ -329,10 +334,10 @@ export function MapScreen({ onNavigate }: Props) {
                 ) : (
                   <FlaskConical className="h-4 w-4" />
                 )}
-                {seedingTestData ? 'Generating test data…' : 'Generate 500 heatmap test points'}
+                {seedingTestData ? 'Generating test data…' : 'Generate 500 points across India'}
               </button>
               <p className="mt-1.5 text-[9px] leading-4 text-text-subtle">
-                Test-only data · 350 points around Chennai, 150 across Tamil Nadu · replaces this campaign’s test set
+                Test-only data · spread across 30 cities in India · replaces this campaign’s test set
               </p>
               {testSeedFeedback && (
                 <p
