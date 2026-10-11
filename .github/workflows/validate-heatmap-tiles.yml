@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - restore-rakesh-intelligence-orange
-  push:
-    branches:
-      - feature/vector-heatmap-tiles
 
 jobs:
   validate:
@@ -18,7 +15,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
