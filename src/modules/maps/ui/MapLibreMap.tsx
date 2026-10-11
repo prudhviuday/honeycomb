@@ -46,6 +46,7 @@ const HEATMAP_TILE_CACHE_TTL_MS = 60_000;
 const MAX_CACHED_HEATMAP_TILES = 256;
 const heatmapTileCache = new Map<string, { data: ArrayBuffer; expiresAt: number }>();
 const heatmapTileRequests = new Map<string, Promise<ArrayBuffer>>();
+let heatmapCacheGeneration = 0;
 
 function heatmapTileUrl(scope: "general" | "campaign", campaignId?: string | null) {
   return `honeycomb://heatmap/${scope}/${scope === "general" ? "all" : campaignId ?? "none"}/{z}/{x}/{y}.mvt`;
@@ -96,6 +97,7 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
   if (inFlight) return inFlight.then((data) => data.slice(0));
 
   const startedAt = performance.now();
+  const requestGeneration = heatmapCacheGeneration;
   const request = (async () => {
     const parsed = new URL(url);
     const [scope, campaignToken, zValue, xValue, yFile] = parsed.pathname.split("/").filter(Boolean);
@@ -112,7 +114,9 @@ async function requestHeatmapTile(url: string): Promise<ArrayBuffer> {
     if (error) throw error;
     const tile = decodeBase64Tile(typeof data === "string" ? data : "");
     // Keep a separate copy because MapLibre may transfer the returned buffer to a worker.
-    heatmapTileCache.set(url, { data: tile.slice(0), expiresAt: Date.now() + HEATMAP_TILE_CACHE_TTL_MS });
+    if (requestGeneration === heatmapCacheGeneration) {
+      heatmapTileCache.set(url, { data: tile.slice(0), expiresAt: Date.now() + HEATMAP_TILE_CACHE_TTL_MS });
+    }
     while (heatmapTileCache.size > MAX_CACHED_HEATMAP_TILES) {
       const oldest = heatmapTileCache.keys().next().value;
       if (!oldest) break;
@@ -133,6 +137,7 @@ maplibregl.addProtocol("honeycomb", async (params, abortController) => {
 });
 
 export function invalidateHeatmapTileCache(campaignId?: string | null) {
+  heatmapCacheGeneration += 1;
   const matchingPath = campaignId ? `/campaign/${campaignId}/` : null;
   for (const key of heatmapTileCache.keys()) {
     if (!matchingPath || key.includes(matchingPath)) heatmapTileCache.delete(key);
