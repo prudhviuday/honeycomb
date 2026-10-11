@@ -25,6 +25,10 @@ interface Props {
   recenterVersion?: number;
   fitActivity?: boolean;
   fitFeatures?: boolean;
+  heatIntensityScale?: number;
+  zoomFalloffSpeed?: number;
+  heatRadiusScale?: number;
+  heatZoomRadiusGrowth?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -85,10 +89,109 @@ function buildActivityGeoJSON(scans: Scan[]): GeoJSON.FeatureCollection {
   };
 }
 
+const GENERAL_INTENSITY_STOPS: Array<[number, number]> = [
+  [0, 0.75], [2, 0.75], [5, 0.95], [8, 1.2], [11, 1.45], [14, 1.7], [18, 2.0],
+];
+const CAMPAIGN_INTENSITY_STOPS: Array<[number, number]> = [
+  [7, 0.95], [9, 1.15], [11, 1.45], [14, 1.8], [18, 2.1],
+];
+
+function buildIntensityExpression(
+  stops: Array<[number, number]>,
+  scale: number,
+  falloffSpeed: number,
+): maplibregl.ExpressionSpecification {
+  const adjustedStops: (number | string)[] = [];
+  // UI controls use a normalized 0–1 range. Map it to the previous tuning
+  // range so the slider endpoints provide full control without changing the
+  // look at the default setting.
+  const effectiveFalloffSpeed = 0.4 + Math.max(0, Math.min(1, falloffSpeed)) * 2.4;
+  const effectiveIntensityScale = Math.max(0, Math.min(1, scale)) * 1.05;
+  for (const [zoom, baseIntensity] of stops) {
+    const zoomProgress = Math.max(0, Math.min(1, zoom / DETAILED_MAX_ZOOM));
+    const lowZoomReduction = 0.48 * Math.pow(1 - zoomProgress, effectiveFalloffSpeed);
+    adjustedStops.push(zoom, Number((baseIntensity * effectiveIntensityScale * (1 - lowZoomReduction)).toFixed(3)));
+  }
+  return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
+}
+
+function applyHeatmapIntensity(
+  map: maplibregl.Map,
+  scale: number,
+  falloffSpeed: number,
+) {
+  if (map.getLayer(GENERAL_HEAT_LAYER)) {
+    map.setPaintProperty(
+      GENERAL_HEAT_LAYER,
+      "heatmap-intensity",
+      buildIntensityExpression(GENERAL_INTENSITY_STOPS, scale, falloffSpeed),
+    );
+  }
+  if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+    map.setPaintProperty(
+      CAMPAIGN_HEAT_LAYER,
+      "heatmap-intensity",
+      buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, scale, falloffSpeed),
+    );
+  }
+}
+
+function buildRadiusExpression(
+  radiusScale: number,
+  zoomRadiusGrowth: number,
+  baseRadius: number,
+): maplibregl.ExpressionSpecification {
+  const overallMultiplier = 0.2 + Math.max(0, Math.min(1, radiusScale)) * 2.8;
+  const growth = Math.max(0, Math.min(1, zoomRadiusGrowth));
+  // Keep points compact at street zoom; expand their influence at city/state/country zoom.
+  const stops: Array<[number, number]> = [
+    [2, baseRadius * (1 + growth * 4)],
+    [5, baseRadius * (1 + growth * 3.2)],
+    [8, baseRadius * (1 + growth * 2.2)],
+    [11, baseRadius * (1 + growth * 1.2)],
+    [14, baseRadius * (1 + growth * 0.4)],
+    [18, baseRadius],
+  ];
+  const adjustedStops: (number | string)[] = [];
+  for (const [zoom, radius] of stops) {
+    adjustedStops.push(zoom, Number((radius * overallMultiplier).toFixed(2)));
+  }
+  return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
+}
+
+function applyHeatmapControls(
+  map: maplibregl.Map,
+  intensityScale: number,
+  falloffSpeed: number,
+  radiusScale: number,
+  zoomRadiusGrowth: number,
+) {
+  // Use a deliberately wide pixel range so moving the slider is visibly
+  // different even when many nearby points blend into one heat area.
+  if (map.getLayer(GENERAL_HEAT_LAYER)) {
+    map.setPaintProperty(
+      GENERAL_HEAT_LAYER,
+      "heatmap-radius",
+      buildRadiusExpression(radiusScale, zoomRadiusGrowth, 20),
+      { duration: 0 },
+    );
+  }
+  if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
+    map.setPaintProperty(
+      CAMPAIGN_HEAT_LAYER,
+      "heatmap-radius",
+      buildRadiusExpression(radiusScale, zoomRadiusGrowth, 18),
+      { duration: 0 },
+    );
+  }
+}
+
 function addHeatmapLayers(
   map: maplibregl.Map,
   generalHeatmap: HeatmapPoint[],
   campaignHeatmap: HeatmapPoint[],
+  heatIntensityScale: number,
+  zoomFalloffSpeed: number,
 ) {
   if (!map.getSource(GENERAL_HEAT_SOURCE)) {
     map.addSource(GENERAL_HEAT_SOURCE, {
@@ -129,23 +232,11 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            2,
-            0.75,
-            5,
-            0.95,
-            8,
-            1.2,
-            11,
-            1.45,
-            14,
-            1.7,
-            18,
-            2.0,
-          ],
+          "heatmap-intensity": buildIntensityExpression(
+            GENERAL_INTENSITY_STOPS,
+            heatIntensityScale,
+            zoomFalloffSpeed,
+          ),
           "heatmap-radius": [
             "interpolate",
             ["linear"],
@@ -225,21 +316,11 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            7,
-            0.95,
-            9,
-            1.15,
-            11,
-            1.45,
-            14,
-            1.8,
-            18,
-            2.1,
-          ],
+          "heatmap-intensity": buildIntensityExpression(
+            CAMPAIGN_INTENSITY_STOPS,
+            heatIntensityScale,
+            zoomFalloffSpeed,
+          ),
           "heatmap-radius": [
             "interpolate",
             ["linear"],
@@ -320,6 +401,10 @@ export function MapLibreMap({
   recenterVersion = 0,
   fitActivity = false,
   fitFeatures = false,
+  heatIntensityScale = 1,
+  zoomFalloffSpeed = 1 / 3,
+  heatRadiusScale = 2 / 7,
+  heatZoomRadiusGrowth = 0.5,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -363,7 +448,14 @@ export function MapLibreMap({
       // Keep the normal map intact; the neon effect is produced by luminous
       // point halos drawn over the map, not by recoloring the road network.
       add3DBuildings(map);
-      addHeatmapLayers(map, generalHeatmap, campaignHeatmap);
+      addHeatmapLayers(
+        map,
+        generalHeatmap,
+        campaignHeatmap,
+        heatIntensityScale,
+        zoomFalloffSpeed,
+      );
+      applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth);
     };
 
     map.once("load", addActivityLayers);
@@ -374,6 +466,50 @@ export function MapLibreMap({
       userMarkerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyWhenReady = () => applyHeatmapIntensity(map, heatIntensityScale, zoomFalloffSpeed);
+    if (map.isStyleLoaded()) applyWhenReady();
+    else map.once("load", applyWhenReady);
+    return () => {
+      map.off("load", applyWhenReady);
+    };
+  }, [heatIntensityScale, zoomFalloffSpeed]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // The style can report as loaded before our custom heat layers are added.
+    // Checking only isStyleLoaded() can therefore drop slider changes during
+    // startup; wait for the custom layers themselves to exist.
+    const applyWhenReady = () => {
+      const hasHeatLayer =
+        Boolean(map.getLayer(GENERAL_HEAT_LAYER)) ||
+        Boolean(map.getLayer(CAMPAIGN_HEAT_LAYER));
+
+      if (!hasHeatLayer) {
+        map.once("load", applyWhenReady);
+        return;
+      }
+
+      applyHeatmapControls(
+        map,
+        heatIntensityScale,
+        zoomFalloffSpeed,
+        heatRadiusScale,
+        heatZoomRadiusGrowth,
+      );
+      map.triggerRepaint();
+    };
+
+    applyWhenReady();
+    return () => {
+      map.off("load", applyWhenReady);
+    };
+  }, [heatIntensityScale, zoomFalloffSpeed, heatRadiusScale, heatZoomRadiusGrowth]);
 
   useEffect(() => {
     const map = mapRef.current;
