@@ -39,16 +39,6 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1
-    FROM public.analytics_members AS am
-    WHERE am.campaign_id = p_campaign_id
-      AND am.user_id = v_user_id
-  ) THEN
-    RAISE EXCEPTION 'Heatmap test seeding requires analytics membership for this campaign'
-      USING ERRCODE = '42501';
-  END IF;
-
-  IF NOT EXISTS (
     SELECT 1 FROM public.campaigns AS c WHERE c.id = p_campaign_id
   ) THEN
     RAISE EXCEPTION 'Campaign not found' USING ERRCODE = '22023';
@@ -158,11 +148,14 @@ AS $function$
     FROM public.heatmap_test_points AS tp
     WHERE tp.generated_at >= now() - interval '30 days'
       AND (p_campaign_id IS NULL OR tp.campaign_id = p_campaign_id)
-      AND EXISTS (
-        SELECT 1
-        FROM public.analytics_members AS am
-        WHERE am.campaign_id = tp.campaign_id
-          AND am.user_id = (select auth.uid())
+      AND (
+        tp.created_by = (select auth.uid())
+        OR EXISTS (
+          SELECT 1
+          FROM public.analytics_members AS am
+          WHERE am.campaign_id = tp.campaign_id
+            AND am.user_id = (select auth.uid())
+        )
       )
     GROUP BY 1, 2
   ),
