@@ -356,7 +356,7 @@ function add3DBuildings(map: maplibregl.Map) {
     const firstSymbolLayer = style.layers?.find(
       (layer) => layer.type === "symbol",
     )?.id;
-    map.addLayer(honeycombBuildingLayer, firstSymbolLayer);
+    map.addLayer(honeycombBuildingLayer as unknown as maplibregl.FillExtrusionLayerSpecification, firstSymbolLayer);
   } catch {
     // 3D is an enhancement; never let it break the underlying map.
   }
