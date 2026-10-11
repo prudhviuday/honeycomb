@@ -32,13 +32,8 @@ const CHENNAI: [number, number] = [80.2707, 13.0827];
 const DETAILED_MAX_ZOOM = 18;
 const GENERAL_HEAT_SOURCE = "honeycomb-general-location-heat";
 const CAMPAIGN_HEAT_SOURCE = "honeycomb-campaign-location-heat";
-const GENERAL_GRID_SOURCE = "honeycomb-general-activity-grid";
-const CAMPAIGN_GRID_SOURCE = "honeycomb-campaign-activity-grid";
 const GENERAL_HEAT_LAYER = "honeycomb-general-location-heat-layer";
 const CAMPAIGN_HEAT_LAYER = "honeycomb-campaign-location-heat-layer";
-const GENERAL_GRID_LAYER = "honeycomb-general-activity-grid-layer";
-const CAMPAIGN_GRID_LAYER = "honeycomb-campaign-activity-grid-layer";
-const GRID_MAX_ZOOM = 5.5;
 
 function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection {
   return {
@@ -62,62 +57,13 @@ function buildHeatmapGeoJSON(points: HeatmapPoint[]): GeoJSON.FeatureCollection 
   };
 }
 
-/**
- * At country/region zooms, aggregate points into geographic cells rather than
- * blurring hundreds of point kernels together. Cell size follows zoom so the
- * overview stays legible without turning whole countries red.
- */
-function buildAggregatedGridGeoJSON(
-  points: HeatmapPoint[],
-  zoom: number,
-): GeoJSON.FeatureCollection {
-  const cellSize = zoom < 3.5 ? 2.4 : zoom < 4.5 ? 1.25 : 0.62;
-  const cells = new Map<string, { lng: number; lat: number; count: number }>();
-
-  points.forEach((point) => {
-    const lat = Number(point.latitude);
-    const lng = Number(point.longitude);
-    const weight = Number(point.weight);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(weight)) return;
-    const col = Math.floor((lng + 180) / cellSize);
-    const row = Math.floor((lat + 90) / cellSize);
-    const key = `${col}:${row}`;
-    const cell = cells.get(key);
-    if (cell) cell.count += Math.max(0.1, weight);
-    else {
-      cells.set(key, {
-        lng: col * cellSize + cellSize / 2 - 180,
-        lat: row * cellSize + cellSize / 2 - 90,
-        count: Math.max(0.1, weight),
-      });
-    }
-  });
-
-  return {
-    type: "FeatureCollection",
-    features: [...cells.entries()].map(([key, cell]) => ({
-      type: "Feature" as const,
-      id: `grid-${key}`,
-      geometry: { type: "Point" as const, coordinates: [cell.lng, cell.lat] },
-      properties: { count: cell.count },
-    })),
-  };
-}
-
 function refreshHeatmapSources(
   map: maplibregl.Map,
   generalHeatmap: HeatmapPoint[],
   campaignHeatmap: HeatmapPoint[],
 ) {
-  const zoom = map.getZoom();
-  (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)
-    ?.setData(buildHeatmapGeoJSON(generalHeatmap));
-  (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)
-    ?.setData(buildHeatmapGeoJSON(campaignHeatmap));
-  (map.getSource(GENERAL_GRID_SOURCE) as maplibregl.GeoJSONSource | undefined)
-    ?.setData(buildAggregatedGridGeoJSON(generalHeatmap, zoom));
-  (map.getSource(CAMPAIGN_GRID_SOURCE) as maplibregl.GeoJSONSource | undefined)
-    ?.setData(buildAggregatedGridGeoJSON(campaignHeatmap, zoom));
+  (map.getSource(GENERAL_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(generalHeatmap));
+  (map.getSource(CAMPAIGN_HEAT_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(buildHeatmapGeoJSON(campaignHeatmap));
 }
 
 function addAggregatedGridLayer(
@@ -203,25 +149,7 @@ function addHeatmapLayers(
       data: buildHeatmapGeoJSON(campaignHeatmap),
     });
   }
-  if (!map.getSource(GENERAL_GRID_SOURCE)) {
-    map.addSource(GENERAL_GRID_SOURCE, {
-      type: "geojson",
-      data: buildAggregatedGridGeoJSON(generalHeatmap, map.getZoom()),
-    });
-  }
-  if (!map.getSource(CAMPAIGN_GRID_SOURCE)) {
-    map.addSource(CAMPAIGN_GRID_SOURCE, {
-      type: "geojson",
-      data: buildAggregatedGridGeoJSON(campaignHeatmap, map.getZoom()),
-    });
-  }
-
-  const firstSymbolLayer = map
-    .getStyle()
-    .layers?.find((layer) => layer.type === "symbol")?.id;
-
-  addAggregatedGridLayer(map, GENERAL_GRID_SOURCE, GENERAL_GRID_LAYER, firstSymbolLayer);
-  addAggregatedGridLayer(map, CAMPAIGN_GRID_SOURCE, CAMPAIGN_GRID_LAYER, firstSymbolLayer);
+  const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
 
   if (!map.getLayer(GENERAL_HEAT_LAYER)) {
     map.addLayer(
@@ -229,7 +157,7 @@ function addHeatmapLayers(
         id: GENERAL_HEAT_LAYER,
         type: "heatmap",
         source: GENERAL_HEAT_SOURCE,
-        minzoom: GRID_MAX_ZOOM,
+        minzoom: 2,
         maxzoom: DETAILED_MAX_ZOOM,
         paint: {
           "heatmap-weight": [
@@ -245,40 +173,8 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            2,
-            0.75,
-            5,
-            0.95,
-            8,
-            1.2,
-            11,
-            1.45,
-            14,
-            1.7,
-            18,
-            2.0,
-          ],
-          "heatmap-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            2,
-            28,
-            5,
-            50,
-            8,
-            72,
-            11,
-            88,
-            14,
-            104,
-            18,
-            120,
-          ],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.30, 5, 0.42, 6, 0.52, 8, 0.78, 11, 1.10, 14, 1.45, 18, 1.80],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 14, 5, 24, 6, 32, 8, 48, 11, 66, 14, 88, 18, 108],
           "heatmap-opacity": [
             "interpolate",
             ["linear"],
@@ -295,25 +191,12 @@ function addHeatmapLayers(
             0.60,
           ],
           "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0,
-            "rgba(45,125,255,0)",
-            0.08,
-            "rgba(45,125,255,0.10)",
-            0.20,
-            "rgba(0,190,255,0.42)",
-            0.36,
-            "rgba(0,215,135,0.58)",
-            0.52,
-            "rgba(255,224,55,0.70)",
-            0.68,
-            "rgba(255,143,35,0.80)",
-            0.84,
-            "rgba(245,65,55,0.88)",
-            1,
-            "rgba(190,20,45,0.94)",
+            "case",
+            ["<", ["zoom"], 6],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.40, "rgba(45,125,255,0.30)", 0.50, "rgba(0,190,255,0.48)", 0.70, "rgba(0,215,135,0.62)", 0.80, "rgba(255,224,55,0.72)", 0.97, "rgba(255,143,35,0.82)", 1, "rgba(245,65,55,0.92)"],
+            ["<", ["zoom"], 10],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.30, "rgba(45,125,255,0.24)", 0.40, "rgba(0,190,255,0.45)", 0.60, "rgba(0,215,135,0.60)", 0.75, "rgba(255,224,55,0.70)", 0.88, "rgba(255,143,35,0.80)", 1, "rgba(245,65,55,0.92)"],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.20, "rgba(45,125,255,0.20)", 0.30, "rgba(0,190,255,0.42)", 0.50, "rgba(0,215,135,0.58)", 0.70, "rgba(255,224,55,0.70)", 0.80, "rgba(255,143,35,0.80)", 1, "rgba(245,65,55,0.92)"]
           ],
         },
       },
@@ -341,28 +224,8 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            5.5, 0.48,
-            7, 0.62,
-            9, 0.82,
-            11, 1.0,
-            14, 1.18,
-            18, 1.35,
-          ],
-          "heatmap-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            5.5, 14,
-            7, 24,
-            9, 38,
-            11, 52,
-            14, 68,
-            18, 82,
-          ],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.24, 5, 0.34, 6, 0.42, 8, 0.62, 11, 0.90, 14, 1.16, 18, 1.42],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 12, 5, 20, 6, 28, 8, 40, 11, 54, 14, 70, 18, 86],
           "heatmap-opacity": [
             "interpolate", ["linear"], ["zoom"],
             5.5, 0.42,
@@ -371,25 +234,12 @@ function addHeatmapLayers(
             18, 0.64,
           ],
           "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0,
-            "rgba(35,125,255,0)",
-            0.08,
-            "rgba(35,125,255,0.14)",
-            0.20,
-            "rgba(0,190,255,0.48)",
-            0.36,
-            "rgba(0,215,135,0.66)",
-            0.52,
-            "rgba(255,224,55,0.78)",
-            0.68,
-            "rgba(255,143,35,0.86)",
-            0.84,
-            "rgba(245,65,55,0.92)",
-            1,
-            "rgba(190,20,45,0.97)",
+            "case",
+            ["<", ["zoom"], 6],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.40, "rgba(35,125,255,0.34)", 0.50, "rgba(0,190,255,0.52)", 0.70, "rgba(0,215,135,0.68)", 0.80, "rgba(255,224,55,0.78)", 0.97, "rgba(255,143,35,0.86)", 1, "rgba(190,20,45,0.96)"],
+            ["<", ["zoom"], 10],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.30, "rgba(35,125,255,0.28)", 0.40, "rgba(0,190,255,0.50)", 0.60, "rgba(0,215,135,0.65)", 0.75, "rgba(255,224,55,0.76)", 0.88, "rgba(255,143,35,0.85)", 1, "rgba(190,20,45,0.96)"],
+            ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(45,125,255,0)", 0.20, "rgba(35,125,255,0.24)", 0.30, "rgba(0,190,255,0.48)", 0.50, "rgba(0,215,135,0.64)", 0.70, "rgba(255,224,55,0.76)", 0.80, "rgba(255,143,35,0.86)", 1, "rgba(190,20,45,0.96)"]
           ],
         },
       },
