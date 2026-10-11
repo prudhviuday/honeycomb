@@ -7,9 +7,8 @@ import {
   canSeedHeatmapTestPoints,
   seedHeatmapTestPoints,
 } from '@/modules/maps/api/locationApi';
-import { invalidateHeatmapTileCache } from '@/modules/maps/ui/MapLibreMap';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
-import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
+import { invalidateHeatmapTileCache, MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/modules/shared/types';
 import type { Location, InteractionSource, Scan } from '@/modules/maps/types';
 
@@ -22,7 +21,6 @@ export function MapScreen({ onNavigate }: Props) {
   const { campaigns, activeCampaign } = useCampaign();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(activeCampaign);
   const [features, setFeatures] = useState<MapFeature[]>([]);
-  const [activityScans, setActivityScans] = useState<Scan[]>([]);
   const [heatmapRefreshVersion, setHeatmapRefreshVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
@@ -51,13 +49,13 @@ export function MapScreen({ onNavigate }: Props) {
   useEffect(() => {
     if (selectedCampaign && user) {
       (async () => {
+        const dataLoadStartedAt = performance.now();
         setLoading(true);
         setSelected(null);
         setPanelOpen(false);
         try {
-          // Keep the map usable when one optional request (especially the
-          // heatmap RPC) fails. A single rejected request must not erase all
-          // venue markers and otherwise-successful map data.
+          // Keep venue markers available even if one of the regular map-data
+          // requests fails. Heatmap tiles load independently as the map needs them.
           const [
             locationsResult,
             sourcesResult,
@@ -75,8 +73,8 @@ export function MapScreen({ onNavigate }: Props) {
           if (sourcesResult.status === 'rejected') console.warn('[Map] Interaction sources failed to load:', sourcesResult.reason);
           if (scansResult.status === 'rejected') console.warn('[Map] User scans failed to load:', scansResult.reason);
 
-          setActivityScans(userScans);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
+          console.info('[MapPerf] non-heatmap-data-ready-ms=', (performance.now() - dataLoadStartedAt).toFixed(1));
         } catch (error) {
           console.error('[Map] Failed to prepare map data:', error);
           setFeatures([]);
@@ -202,7 +200,6 @@ export function MapScreen({ onNavigate }: Props) {
         features={visibleFeatures}
         campaignId={selectedCampaign?.id ?? null}
         heatmapRefreshVersion={heatmapRefreshVersion}
-        activityScans={activityScans}
         userLocation={userLoc}
         recenterVersion={recenterVersion}
         heatIntensityScale={heatIntensityScale}
