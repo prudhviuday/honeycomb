@@ -28,6 +28,7 @@ interface Props {
   fitHeatmapVersion?: number;
   heatIntensityScale?: number;
   zoomFalloffSpeed?: number;
+  heatRadiusScale?: number;
 }
 
 const CHENNAI: [number, number] = [80.2707, 13.0827];
@@ -120,12 +121,21 @@ function buildIntensityExpression(
   return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
 }
 
-function applyHeatmapIntensity(map: maplibregl.Map, scale: number, falloffSpeed: number) {
+function buildRadiusExpression(stops: Array<[number, number]>, radiusScale: number): maplibregl.ExpressionSpecification {
+  const multiplier = 0.2 + Math.max(0, Math.min(1, radiusScale)) * 2.8;
+  const adjustedStops: (number | string)[] = [];
+  for (const [zoom, radius] of stops) adjustedStops.push(zoom, Number((radius * multiplier).toFixed(2)));
+  return ["interpolate", ["linear"], ["zoom"], ...adjustedStops] as maplibregl.ExpressionSpecification;
+}
+
+function applyHeatmapControls(map: maplibregl.Map, scale: number, falloffSpeed: number, radiusScale: number) {
   if (map.getLayer(GENERAL_HEAT_LAYER)) {
-    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(GENERAL_INTENSITY_STOPS, scale, falloffSpeed));
+    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(GENERAL_INTENSITY_STOPS, scale * 5, falloffSpeed));
+    map.setPaintProperty(GENERAL_HEAT_LAYER, "heatmap-radius", buildRadiusExpression([[2, 12], [5, 20], [6, 28], [8, 40], [11, 58], [14, 78], [18, 96]], radiusScale));
   }
   if (map.getLayer(CAMPAIGN_HEAT_LAYER)) {
-    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, scale, falloffSpeed));
+    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-intensity", buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, scale * 5, falloffSpeed));
+    map.setPaintProperty(CAMPAIGN_HEAT_LAYER, "heatmap-radius", buildRadiusExpression([[2, 10], [5, 18], [6, 24], [8, 36], [11, 50], [14, 66], [18, 82]], radiusScale));
   }
 }
 
@@ -173,7 +183,7 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": buildIntensityExpression(GENERAL_INTENSITY_STOPS, heatIntensityScale, zoomFalloffSpeed),
+          "heatmap-intensity": buildIntensityExpression(GENERAL_INTENSITY_STOPS, heatIntensityScale * 5, zoomFalloffSpeed),
           "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 12, 5, 20, 6, 28, 8, 40, 11, 58, 14, 78, 18, 96],
           "heatmap-opacity": [
             "interpolate",
@@ -226,7 +236,7 @@ function addHeatmapLayers(
             20,
             1,
           ],
-          "heatmap-intensity": buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, heatIntensityScale, zoomFalloffSpeed),
+          "heatmap-intensity": buildIntensityExpression(CAMPAIGN_INTENSITY_STOPS, heatIntensityScale * 5, zoomFalloffSpeed),
           "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 18, 6, 24, 8, 36, 11, 50, 14, 66, 18, 82],
           "heatmap-opacity": [
             "interpolate", ["linear"], ["zoom"],
@@ -285,6 +295,7 @@ export function MapLibreMap({
   fitHeatmapVersion = 0,
   heatIntensityScale = 1,
   zoomFalloffSpeed = 1 / 3,
+  heatRadiusScale = 2 / 7,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -357,13 +368,13 @@ export function MapLibreMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const applyWhenReady = () => applyHeatmapIntensity(map, heatIntensityScale, zoomFalloffSpeed);
+    const applyWhenReady = () => applyHeatmapControls(map, heatIntensityScale, zoomFalloffSpeed, heatRadiusScale);
     if (map.isStyleLoaded()) applyWhenReady();
     else map.once("load", applyWhenReady);
     return () => {
       map.off("load", applyWhenReady);
     };
-  }, [heatIntensityScale, zoomFalloffSpeed]);
+  }, [heatIntensityScale, zoomFalloffSpeed, heatRadiusScale]);
 
   useEffect(() => {
     const map = mapRef.current;
