@@ -65,6 +65,12 @@ test("PostgreSQL migration, event idempotency, attribution, access boundaries an
         ),
       );
     }
+    // Production scan columns used by the shared branch's scan-backed report.
+    // These are absent from the old repository bootstrap migration.
+    await db.exec(`ALTER TABLE scans
+      ADD COLUMN scanned_at timestamptz NOT NULL DEFAULT now(),
+      ADD COLUMN status text NOT NULL DEFAULT 'accepted',
+      ADD COLUMN location_id uuid REFERENCES locations(id);`);
     const user = "10000000-0000-0000-0000-000000000001";
     const other = "10000000-0000-0000-0000-000000000002";
     const campaign = "20000000-0000-0000-0000-000000000001";
