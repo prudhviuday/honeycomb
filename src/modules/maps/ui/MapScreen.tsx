@@ -80,6 +80,20 @@ export function MapScreen({ onNavigate }: Props) {
           const generalPoints = generalPointsResult.status === 'fulfilled' ? generalPointsResult.value : [];
           const campaignPoints = campaignPointsResult.status === 'fulfilled' ? campaignPointsResult.value : [];
 
+          console.info('[Map] Heatmap points received from get_location_heatmap', {
+            campaignId: selectedCampaign.id,
+            general: {
+              status: generalPointsResult.status,
+              count: generalPoints.length,
+              error: generalPointsResult.status === 'rejected' ? generalPointsResult.reason : undefined,
+            },
+            campaign: {
+              status: campaignPointsResult.status,
+              count: campaignPoints.length,
+              error: campaignPointsResult.status === 'rejected' ? campaignPointsResult.reason : undefined,
+            },
+          });
+
           if (locationsResult.status === 'rejected') console.warn('[Map] Locations failed to load:', locationsResult.reason);
           if (sourcesResult.status === 'rejected') console.warn('[Map] Interaction sources failed to load:', sourcesResult.reason);
           if (scansResult.status === 'rejected') console.warn('[Map] User scans failed to load:', scansResult.reason);
