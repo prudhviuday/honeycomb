@@ -334,10 +334,10 @@ export function MapScreen({ onNavigate }: Props) {
                 ) : (
                   <FlaskConical className="h-4 w-4" />
                 )}
-                {seedingTestData ? 'Generating test data…' : 'Generate 500 points across India'}
+                {seedingTestData ? 'Generating test data…' : 'Generate 500 mixed points across India'}
               </button>
               <p className="mt-1.5 text-[9px] leading-4 text-text-subtle">
-                Test-only data · spread across 30 cities in India · replaces this campaign’s test set
+                Test-only data · 250 city points + 250 random India locations · replaces this campaign’s test set
               </p>
               {testSeedFeedback && (
                 <p
