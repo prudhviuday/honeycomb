@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown } from 'lucide-react';
+import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown, FlaskConical, LoaderCircle } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
-import { getLocationHeatmap } from '@/modules/maps/api/locationApi';
+import {
+  canSeedHeatmapTestPoints,
+  seedHeatmapTestPoints,
+} from '@/modules/maps/api/locationApi';
 import { buildMapFeatures, calculateDistance, formatDistance, type MapFeature } from '@/modules/maps/logic/mapData';
-import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
+import { invalidateHeatmapTileCache, MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { Campaign } from '@/modules/shared/types';
-import type { Location, InteractionSource, Scan, HeatmapPoint } from '@/modules/maps/types';
+import type { Location, InteractionSource } from '@/modules/maps/types';
 
 interface Props {
   onNavigate?: (tab: 'scanner') => void;
@@ -18,9 +21,7 @@ export function MapScreen({ onNavigate }: Props) {
   const { campaigns, activeCampaign } = useCampaign();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(activeCampaign);
   const [features, setFeatures] = useState<MapFeature[]>([]);
-  const [activityScans, setActivityScans] = useState<Scan[]>([]);
-  const [generalHeatmap, setGeneralHeatmap] = useState<HeatmapPoint[]>([]);
-  const [campaignHeatmap, setCampaignHeatmap] = useState<HeatmapPoint[]>([]);
+  const [heatmapRefreshVersion, setHeatmapRefreshVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -34,6 +35,17 @@ export function MapScreen({ onNavigate }: Props) {
   const [heatRadiusScale, setHeatRadiusScale] = useState(2 / 7);
   const [heatZoomRadiusGrowth, setHeatZoomRadiusGrowth] = useState(0.5);
   const [heatControlsOpen, setHeatControlsOpen] = useState(false);
+  const [canSeedTestData, setCanSeedTestData] = useState(false);
+  const [seedingTestData, setSeedingTestData] = useState(false);
+  const [testSeedFeedback, setTestSeedFeedback] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [heatIntensityScale, setHeatIntensityScale] = useState(0.2);
+  const [zoomFalloffSpeed, setZoomFalloffSpeed] = useState(1 / 3);
+  const [heatRadiusScale, setHeatRadiusScale] = useState(2 / 7);
+  const [heatZoomRadiusGrowth, setHeatZoomRadiusGrowth] = useState(0.5);
+  const [heatControlsOpen, setHeatControlsOpen] = useState(true);
 
   useEffect(() => {
     if (activeCampaign && !selectedCampaign) setSelectedCampaign(activeCampaign);
@@ -42,43 +54,32 @@ export function MapScreen({ onNavigate }: Props) {
   useEffect(() => {
     if (selectedCampaign && user) {
       (async () => {
+        const dataLoadStartedAt = performance.now();
         setLoading(true);
         setSelected(null);
         setPanelOpen(false);
         try {
-          // Keep the map usable when one optional request (especially the
-          // heatmap RPC) fails. A single rejected request must not erase all
-          // venue markers and otherwise-successful map data.
+          // Keep venue markers available even if one of the regular map-data
+          // requests fails. Heatmap tiles load independently as the map needs them.
           const [
             locationsResult,
             sourcesResult,
             scansResult,
-            generalPointsResult,
-            campaignPointsResult,
           ] = await Promise.allSettled([
             getLocations(selectedCampaign.id),
             getInteractionSources(selectedCampaign.id),
             getUserScans(selectedCampaign.id, user.id),
-            getLocationHeatmap(null),
-            getLocationHeatmap(selectedCampaign.id),
           ]);
 
           const locs = locationsResult.status === 'fulfilled' ? locationsResult.value : [];
           const srcs = sourcesResult.status === 'fulfilled' ? sourcesResult.value : [];
           const userScans = scansResult.status === 'fulfilled' ? scansResult.value : [];
-          const generalPoints = generalPointsResult.status === 'fulfilled' ? generalPointsResult.value : [];
-          const campaignPoints = campaignPointsResult.status === 'fulfilled' ? campaignPointsResult.value : [];
-
           if (locationsResult.status === 'rejected') console.warn('[Map] Locations failed to load:', locationsResult.reason);
           if (sourcesResult.status === 'rejected') console.warn('[Map] Interaction sources failed to load:', sourcesResult.reason);
           if (scansResult.status === 'rejected') console.warn('[Map] User scans failed to load:', scansResult.reason);
-          if (generalPointsResult.status === 'rejected') console.warn('[Map] General heatmap failed to load:', generalPointsResult.reason);
-          if (campaignPointsResult.status === 'rejected') console.warn('[Map] Campaign heatmap failed to load:', campaignPointsResult.reason);
 
-          setActivityScans(userScans);
-          setGeneralHeatmap(generalPoints);
-          setCampaignHeatmap(campaignPoints);
           setFeatures(buildMapFeatures(locs, srcs, userScans));
+          console.info('[MapPerf] non-heatmap-data-ready-ms=', (performance.now() - dataLoadStartedAt).toFixed(1));
         } catch (error) {
           console.error('[Map] Failed to prepare map data:', error);
           setFeatures([]);
@@ -92,7 +93,35 @@ export function MapScreen({ onNavigate }: Props) {
   }, [selectedCampaign, user, locationVersion]);
 
   useEffect(() => {
-    const handleLocationUpdated = () => setLocationVersion((value) => value + 1);
+    let current = true;
+    setCanSeedTestData(false);
+    setTestSeedFeedback(null);
+
+    if (!selectedCampaign || !user) {
+      return () => {
+        current = false;
+      };
+    }
+
+    void canSeedHeatmapTestPoints(selectedCampaign.id)
+      .then((allowed) => {
+        if (current) setCanSeedTestData(allowed);
+      })
+      .catch((error) => {
+        console.warn('[Map] Could not check heatmap test-data permission:', error);
+        if (current) setCanSeedTestData(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [selectedCampaign?.id, user?.id]);
+
+  useEffect(() => {
+    const handleLocationUpdated = () => {
+      invalidateHeatmapTileCache();
+      setLocationVersion((value) => value + 1);
+    };
     window.addEventListener('honeycomb:location-updated', handleLocationUpdated);
     return () => window.removeEventListener('honeycomb:location-updated', handleLocationUpdated);
   }, []);
@@ -136,6 +165,33 @@ export function MapScreen({ onNavigate }: Props) {
     if (userLoc) setRecenterVersion((value) => value + 1);
   };
 
+  const generateTestHeatmap = async () => {
+    if (!selectedCampaign || seedingTestData) return;
+
+    setSeedingTestData(true);
+    setTestSeedFeedback(null);
+    try {
+      const inserted = await seedHeatmapTestPoints(selectedCampaign.id);
+      invalidateHeatmapTileCache(selectedCampaign.id);
+      setHeatmapRefreshVersion((value) => value + 1);
+      setTestSeedFeedback({
+        kind: 'success',
+        message: `Generated ${inserted} synthetic points. Real scans and producer metrics are unchanged.`,
+      });
+      setLocationVersion((value) => value + 1);
+    } catch (error) {
+      console.error('[Map] Failed to generate heatmap test points:', error);
+      setTestSeedFeedback({
+        kind: 'error',
+        message: error instanceof Error
+          ? error.message
+          : 'Could not generate test points. Check the database migration and your analytics access.',
+      });
+    } finally {
+      setSeedingTestData(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -152,11 +208,14 @@ export function MapScreen({ onNavigate }: Props) {
     <div className="relative h-screen pb-20 overflow-hidden">
       <MapLibreMap
         features={visibleFeatures}
-        activityScans={activityScans}
-        generalHeatmap={generalHeatmap}
-        campaignHeatmap={campaignHeatmap}
+        campaignId={selectedCampaign?.id ?? null}
+        heatmapRefreshVersion={heatmapRefreshVersion}
         userLocation={userLoc}
         recenterVersion={recenterVersion}
+        heatIntensityScale={heatIntensityScale}
+        zoomFalloffSpeed={zoomFalloffSpeed}
+        heatRadiusScale={heatRadiusScale}
+        heatZoomRadiusGrowth={heatZoomRadiusGrowth}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
         heatIntensityScale={heatIntensityScale}
@@ -269,6 +328,12 @@ export function MapScreen({ onNavigate }: Props) {
                 <div className="flex justify-between text-[9px] text-text-subtle"><span>Off (0)</span><span>Full intensity (1)</span></div>
               </div>
 
+                  <label htmlFor="heat-intensity-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Overall intensity (0–5×)</label>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{heatIntensityScale.toFixed(2)}</span>
+                </div>
+                <input id="heat-intensity-scale" type="range" min="0" max="1" step="0.01" value={heatIntensityScale} onChange={(event) => setHeatIntensityScale(Number(event.target.value))} className="w-full accent-fuchsia-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Off</span><span>Maximum (5×)</span></div>
+              </div>
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <label htmlFor="heat-zoom-falloff" className="text-[10px] text-text-muted uppercase tracking-wide">Zoom-out falloff speed</label>
@@ -287,6 +352,9 @@ export function MapScreen({ onNavigate }: Props) {
                 <div className="flex justify-between text-[9px] text-text-subtle"><span>Gentle (0)</span><span>Fast fade (1)</span></div>
               </div>
 
+                <input id="heat-zoom-falloff" type="range" min="0" max="1" step="0.01" value={zoomFalloffSpeed} onChange={(event) => setZoomFalloffSpeed(Number(event.target.value))} className="w-full accent-cyan-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Gentle (0)</span><span>Fast fade (1)</span></div>
+              </div>
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <label htmlFor="heat-radius-scale" className="text-[10px] text-text-muted uppercase tracking-wide">Heat point radius</label>
@@ -330,6 +398,20 @@ export function MapScreen({ onNavigate }: Props) {
                   onClick={() => { setHeatIntensityScale(1); setZoomFalloffSpeed(1 / 3); setHeatRadiusScale(2 / 7); setHeatZoomRadiusGrowth(0.5); }}
                   className="text-[10px] text-cyan-300 hover:text-cyan-200"
                 >Reset</button>
+                <input id="heat-radius-scale" type="range" min="0" max="1" step="0.01" value={heatRadiusScale} onChange={(event) => setHeatRadiusScale(Number(event.target.value))} className="w-full accent-orange-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Compact (0.2×)</span><span>Wide (3×)</span></div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label htmlFor="heat-zoom-radius-growth" className="text-[10px] text-text-muted uppercase tracking-wide">Radius growth when zooming out</label>
+                  <span className="text-xs text-text-primary font-semibold tabular-nums">{heatZoomRadiusGrowth.toFixed(2)}×</span>
+                </div>
+                <input id="heat-zoom-radius-growth" type="range" min="0" max="1" step="0.01" value={heatZoomRadiusGrowth} onChange={(event) => setHeatZoomRadiusGrowth(Number(event.target.value))} className="w-full accent-fuchsia-400" />
+                <div className="flex justify-between text-[9px] text-text-subtle"><span>Same radius at all zooms</span><span>Much larger at country zoom</span></div>
+              </div>
+              <div className="flex items-center justify-between border-t border-white/10 pt-2">
+                <p className="text-[9px] text-text-subtle">Live preview · test data stays unchanged</p>
+                <button type="button" onClick={() => { setHeatIntensityScale(0.2); setZoomFalloffSpeed(1 / 3); setHeatRadiusScale(2 / 7); setHeatZoomRadiusGrowth(0.5); }} className="text-[10px] text-cyan-300 hover:text-cyan-200">Reset</button>
               </div>
             </div>
           )}
@@ -345,7 +427,12 @@ export function MapScreen({ onNavigate }: Props) {
         </div>
       )}
 
-      <button onClick={recenter} className="absolute right-4 bottom-28 z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform">
+      <button
+        onClick={recenter}
+        className={`absolute right-4 ${canSeedTestData ? 'bottom-[17rem]' : 'bottom-28'} z-10 w-10 h-10 glass-strong hairline rounded-full flex items-center justify-center active:scale-90 transition-transform`}
+        aria-label="Recenter map on my location"
+        title="Recenter map"
+      >
         <Navigation className="w-4 h-4 text-gold" />
       </button>
 
@@ -360,6 +447,34 @@ export function MapScreen({ onNavigate }: Props) {
               <div className="w-2 h-2 rounded-full bg-gold" /><span className="text-[10px] text-text-muted">Available</span>
               <div className="w-2 h-2 rounded-full bg-emerald-500 ml-1.5" /><span className="text-[10px] text-text-muted">Done</span>
             </div>
+          {canSeedTestData && (
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => void generateTestHeatmap()}
+                disabled={seedingTestData || !selectedCampaign}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-[10px] border border-gold/30 bg-gold/10 px-3 py-2.5 text-xs font-semibold text-gold transition-colors hover:bg-gold/15 disabled:cursor-wait disabled:opacity-60"
+              >
+                {seedingTestData ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FlaskConical className="h-4 w-4" />
+                )}
+                {seedingTestData ? 'Generating test data…' : 'Generate 500 mixed points across India'}
+              </button>
+              <p className="mt-1.5 text-[9px] leading-4 text-text-subtle">
+                Test-only data · 250 city points + 250 random India locations · replaces this campaign’s test set
+              </p>
+              {testSeedFeedback && (
+                <p
+                  role="status"
+                  className={`mt-1.5 text-[10px] leading-4 ${testSeedFeedback.kind === 'success' ? 'text-emerald-400' : 'text-red-300'}`}
+                >
+                  {testSeedFeedback.message}
+                </p>
+              )}
+            </div>
+          )}
           </div>
         </div>
       )}

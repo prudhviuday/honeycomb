@@ -26,7 +26,6 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
-  const readerRef = useRef<BrowserQRCodeReader | null>(null);
   const scanHandledRef = useRef(false);
 
   const [showManual, setShowManual] = useState(false);
@@ -166,6 +165,8 @@ export function ScannerScreen({ onScanComplete }: Props) {
 
     return () => {
       cancelled = true;
+      controlsRef.current?.stop();
+      controlsRef.current = null;
 
       try {
         effectControls?.stop();

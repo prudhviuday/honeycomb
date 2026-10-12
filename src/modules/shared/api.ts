@@ -68,6 +68,8 @@ export interface HeatmapPoint {
   weight: number;
 }
 
+const HEATMAP_PAGE_SIZE = 1000;
+
 export async function recordUserLocation(
   latitude: number,
   longitude: number,
@@ -85,24 +87,33 @@ export async function recordUserLocation(
 export async function getLocationHeatmap(
   campaignId?: string | null
 ): Promise<HeatmapPoint[]> {
-  const { data, error } = await supabase.rpc(
-    'get_location_heatmap',
-    { p_campaign_id: campaignId ?? null }
-  );
+  // Supabase's Data API commonly caps each response at 1,000 rows. Fetch
+  // this set-returning RPC in explicit ranges so larger heatmaps are complete
+  // without raising the global API limit for every endpoint.
+  const rows: Array<{
+    latitude: number | string;
+    longitude: number | string;
+    weight: number | string;
+  }> = [];
 
-  if (error) throw error;
+  for (let offset = 0; ; offset += HEATMAP_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .rpc('get_location_heatmap', { p_campaign_id: campaignId ?? null })
+      .range(offset, offset + HEATMAP_PAGE_SIZE - 1);
 
-  return (data ?? []).map(
-    (row: {
-      latitude: number | string;
-      longitude: number | string;
-      weight: number | string;
-    }) => ({
-      latitude: Number(row.latitude),
-      longitude: Number(row.longitude),
-      weight: Number(row.weight),
-    })
-  );
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < HEATMAP_PAGE_SIZE) break;
+  }
+
+  return rows.map((row) => ({
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+    weight: Number(row.weight),
+  }));
 }
 
 /* ============================================================

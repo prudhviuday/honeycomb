@@ -7,6 +7,21 @@ export type { HeatmapPoint } from '@/modules/shared/api';
 
 import { supabase } from "@/infrastructure/supabase/client";
 
+export async function canSeedHeatmapTestPoints(campaignId: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return Boolean(data.user && campaignId);
+}
+
+export async function seedHeatmapTestPoints(campaignId: string): Promise<number> {
+  const { data, error } = await supabase.rpc("seed_heatmap_test_points", {
+    p_campaign_id: campaignId,
+  });
+
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
 export interface NearbyLocation {
   id: string;
   campaign_id: string;

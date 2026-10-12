@@ -18,10 +18,8 @@ export type Tab =
 
 const tabs: { id: Tab; label: string; icon: typeof House }[] = [
   { id: "home", label: "Home", icon: House },
-  { id: "hunts", label: "Hunts", icon: Ticket },
   { id: "scanner", label: "Scan", icon: ScanLine },
   { id: "map", label: "Map", icon: Map },
-  { id: "profile", label: "Profile", icon: UserRound },
 ];
 
 interface MovieRoute {
@@ -44,6 +42,7 @@ export function AppShell() {
   const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [visitedTabs, setVisitedTabs] = useState<Tab[]>(["home"]);
+  const [navCompact, setNavCompact] = useState(false);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
   const [navCompact, setNavCompact] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
@@ -88,6 +87,40 @@ export function AppShell() {
     const handlePopState = () => setMovieRoute(readMovieRoute());
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    // Capture scroll events from the actual scroll container, including nested containers.
+    const previousPositions = new WeakMap<EventTarget, number>();
+
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!target || (typeof target !== "object" && typeof target !== "function")) return;
+
+      const currentTop =
+        target === document
+          ? window.scrollY || document.documentElement.scrollTop
+          : (target as HTMLElement).scrollTop ?? 0;
+      const previousTop = previousPositions.get(target) ?? currentTop;
+      const delta = currentTop - previousTop;
+      previousPositions.set(target, currentTop);
+
+      // Ignore tiny touch/trackpad jitter so the capsule doesn't flicker.
+      if (Math.abs(delta) < 3) return;
+
+      if (currentTop <= 12 || delta < 0) {
+        setNavCompact(false);
+      } else if (delta > 0 && currentTop > 24) {
+        setNavCompact(true);
+      }
+    };
+
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   const navigate = (tab: Tab) => {
@@ -246,7 +279,7 @@ export function AppShell() {
                 title={tab.label}
                 className={"honey-nav-button" + (isActive ? " honey-nav-button-active" : "")}
               >
-                <Icon className="h-[19px] w-[19px] shrink-0" strokeWidth={1.9} />
+                <Icon className="h-[23px] w-[23px] shrink-0" strokeWidth={2} />
                 <span className="honey-nav-label">{tab.label}</span>
               </button>
             );

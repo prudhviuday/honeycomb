@@ -1,7 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
 export const honeybadgerMapStyle =
-  'https://tiles.openfreemap.org/styles/dark' as unknown as StyleSpecification;
+  'https://tiles.openfreemap.org/styles/positron' as unknown as StyleSpecification;
 
 /**
  * Warm orange/gold road network inspired by the glowing Starva-style look.
@@ -118,26 +118,26 @@ export const honeycombBuildingLayer = {
   type: 'fill-extrusion' as const,
   source: 'openmaptiles',
   'source-layer': 'building',
-  minzoom: 14,
+  minzoom: 12,
   paint: {
     'fill-extrusion-color': [
       'interpolate',
       ['linear'],
       ['zoom'],
-      14,
-      '#17151b',
-      16,
-      '#25212b',
+      12,
+      '#dce3eb',
+      15,
+      '#bcc8d7',
       18,
-      '#302a36',
+      '#94a5ba',
     ],
     'fill-extrusion-height': [
       'interpolate',
       ['linear'],
       ['zoom'],
-      14,
+      12,
       0,
-      15,
+      13,
       ['coalesce', ['get', 'render_height'], ['get', 'height'], 8],
     ],
     'fill-extrusion-base': [
@@ -146,7 +146,7 @@ export const honeycombBuildingLayer = {
       ['get', 'min_height'],
       0,
     ],
-    'fill-extrusion-opacity': 0.82,
+    'fill-extrusion-opacity': 0.76,
     'fill-extrusion-vertical-gradient': true,
   },
 };
