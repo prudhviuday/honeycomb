@@ -51,8 +51,11 @@ export function ProfileScreen() {
         ? 'Location sharing is on. Coordinates are recorded only when an activity is logged.'
         : 'Location sharing is off. New activity events will not include device coordinates.');
     } catch (error) {
-      const message = error instanceof GeolocationPositionError
-        ? (error.code === error.PERMISSION_DENIED ? 'Location permission was denied. Allow location in your browser settings and try again.' : 'Could not obtain your location. Please try again.')
+      const geoError = typeof error === 'object' && error !== null && 'code' in error
+        ? error as GeolocationPositionError
+        : null;
+      const message = geoError
+        ? (geoError.code === 1 ? 'Location permission was denied. Allow location in your browser settings and try again.' : 'Could not obtain your location. Please try again.')
         : error instanceof Error ? error.message : 'Could not update location settings.';
       setLocationMessage(message);
     } finally {
