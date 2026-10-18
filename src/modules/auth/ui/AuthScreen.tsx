@@ -25,7 +25,7 @@ export function AuthScreen() {
         const name = normalizeDisplayName(displayName);
         await signUp(normalizeEmail(email), password, name);
         void registerActivity({
-          eventType: 'account_signup_submitted',
+          eventType: 'account_created',
           sourceModule: 'auth',
           metadata: { method: 'email_password' },
         });
