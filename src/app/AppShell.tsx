@@ -13,6 +13,7 @@ import { MovieDetailScreen } from "@/modules/campaigns/ui/MovieDetailScreen";
 import { useCampaign } from "@/application/state/CampaignContext";
 import type { Campaign } from "@/types";
 import { supabase } from "@/lib/supabase";
+import { registerActivity } from "@/modules/analytics/api/analyticsApi";
 
 export type Tab =
   "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
