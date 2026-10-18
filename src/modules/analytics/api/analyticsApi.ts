@@ -12,6 +12,7 @@ export interface RegisterActivityInput {
   campaignId?: string | null;
   entityType?: string | null;
   entityId?: string | null;
+  sourceModule?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -45,7 +46,7 @@ export async function registerActivity(
     const metadata = {
       ...(input.metadata ?? {}),
       ...(input.description ? { description: input.description } : {}),
-      source_module: "honeycomb",
+      source_module: input.sourceModule?.trim() || "honeycomb",
     };
 
     const { error } = await supabase.from("activity_events").insert({
