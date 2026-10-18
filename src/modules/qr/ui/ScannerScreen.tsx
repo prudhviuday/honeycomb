@@ -5,6 +5,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
 import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 interface Props {
   onScanComplete: () => void;
@@ -197,8 +198,28 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
     try {
       const res = await processScan(activeCampaign.id, user.id, normalizeScanCode(scanCode));
       setResult(res);
+      void registerActivity({
+        eventType: res.success ? 'qr_scan_succeeded' : 'qr_scan_rejected',
+        description: res.message,
+        campaignId: activeCampaign.id,
+        sourceModule: 'qr',
+        metadata: {
+          outcome: res.success ? 'success' : 'rejected',
+          points_awarded: res.pointsAwarded ?? 0,
+          source_name: res.sourceName ?? null,
+          source_type: res.sourceType ?? null,
+          is_new_scan: res.isNew ?? false,
+        },
+      });
       if (res.success) await refreshCampaignUser();
     } catch (err) {
+      void registerActivity({
+        eventType: 'qr_scan_error',
+        description: err instanceof Error ? err.message : 'Scan failed',
+        campaignId: activeCampaign.id,
+        sourceModule: 'qr',
+        metadata: { outcome: 'error' },
+      });
       setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
       scanHandledRef.current = false;
     } finally {
