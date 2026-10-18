@@ -11,6 +11,16 @@ create index if not exists activity_events_task_progress_idx
   on public.activity_events (campaign_id, user_id, event_type_id, entity_id)
   where origin in ('app', 'server');
 
+-- Restrict mission scans to active configured event-driven tasks.
+create index if not exists missions_active_progress_event_idx
+  on public.missions (campaign_id, progress_event_type_id, starts_at, ends_at)
+  where is_active = true and progress_event_type_id is not null;
+
+-- Fast idempotency check before awarding mission completion points.
+create index if not exists point_transactions_mission_reward_idx
+  on public.point_transactions (campaign_id, user_id, source_id)
+  where source_type = 'mission' and amount >= 0;
+
 -- Existing mission_progress_mission_id_user_id_key already prevents duplicate progress rows.
 insert into public.activity_event_types (id, code, description, is_important)
 values
