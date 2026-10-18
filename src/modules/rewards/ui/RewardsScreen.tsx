@@ -4,6 +4,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';
 import { calculateEntryTotal, canClaimReward } from '@/modules/rewards/logic/rewardLogic';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 import type { Reward, RewardEntry, RewardClaim } from '@/modules/rewards/types';
 
 const rewardIcons: Record<string, typeof Gift> = {
@@ -48,6 +49,16 @@ export function RewardsScreen() {
 
   useEffect(() => { loadData(); }, [activeCampaign, user]);
 
+  useEffect(() => {
+    if (!activeCampaign || !user) return;
+    void registerActivity({
+      eventType: 'rewards_screen_viewed',
+      campaignId: activeCampaign.id,
+      sourceModule: 'rewards',
+      metadata: { screen: 'rewards' },
+    });
+  }, [activeCampaign?.id, user?.id]);
+
   const handleClaim = async (reward: Reward) => {
     if (!activeCampaign || !user || !campaignUser) return;
     if (!canClaimReward(campaignUser.points, reward)) return;
@@ -55,10 +66,32 @@ export function RewardsScreen() {
     try {
       const claim = await claimReward(activeCampaign.id, user.id, reward);
       setClaimResult(claim);
+      void registerActivity({
+        eventType: reward.reward_type === 'lucky_draw' ? 'lucky_draw_entered' : 'reward_claim_succeeded',
+        description: reward.title,
+        campaignId: activeCampaign.id,
+        entityType: 'reward',
+        entityId: reward.id,
+        sourceModule: 'rewards',
+        metadata: {
+          reward_title: reward.title,
+          reward_type: reward.reward_type,
+          points_required: reward.points_required,
+          claim_status: claim.status,
+        },
+      });
       await refreshCampaignUser();
       await loadData();
-    } catch {
-      // ignore
+    } catch (err) {
+      void registerActivity({
+        eventType: 'reward_claim_failed',
+        description: err instanceof Error ? err.message : 'Reward claim failed',
+        campaignId: activeCampaign.id,
+        entityType: 'reward',
+        entityId: reward.id,
+        sourceModule: 'rewards',
+        metadata: { reward_title: reward.title, reward_type: reward.reward_type },
+      });
     } finally {
       setClaiming(null);
     }
