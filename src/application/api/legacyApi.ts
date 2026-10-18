@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 import type {
   Campaign,
   CampaignUser,
@@ -1195,31 +1196,10 @@ export async function logActivity(
   userId: string,
   eventType: string,
   metadata?: Record<string, unknown>
-) {
-  try {
-    const { error } = await supabase
-      .from('activity_events')
-      .insert({
-        campaign_id: campaignId,
-        user_id: userId,
-        event_type: eventType,
-        metadata: metadata || {},
-      });
-
-    if (error) {
-      console.warn(
-        '[Supabase] Activity log failed:',
-        error.message
-      );
-    }
-  } catch (error) {
-    console.warn(
-      '[Supabase] Activity log failed:',
-      error
-    );
-  }
+): Promise<void> {
+  // Compatibility shim. All activity writes are owned by the Analytics module.
+  await registerActivity({ campaignId, eventType, metadata });
 }
-
 /* ============================================================
    SCAN PROCESSING
    ============================================================ */
