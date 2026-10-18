@@ -21,9 +21,24 @@ Deno.serve(async (req: Request) => {
   try { ctx = await requireUser(req); }
   catch { return respond({ error: "A valid signed-in session is required." }, 401); }
 
-  let body: Record<string, unknown>;
-  try { body = await req.json(); }
+  // This endpoint accepts only a tiny action/code payload. Bound request size
+  // before parsing so oversized bodies cannot waste Edge Function memory.
+  const contentLength = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > 8_192) {
+    return respond({ error: "Request body is too large." }, 413);
+  }
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return respond({ error: "Content-Type must be application/json." }, 415);
+  }
+
+  let parsed: unknown;
+  try { parsed = await req.json(); }
   catch { return respond({ error: "Request body must be valid JSON." }, 400); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return respond({ error: "Request body must be a JSON object." }, 400);
+  }
+  const body = parsed as Record<string, unknown>;
 
   if (body.action === "resolve_qr") {
     if (typeof body.code !== "string") return respond({ error: "code is required." }, 400);
