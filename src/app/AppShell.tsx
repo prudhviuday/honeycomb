@@ -143,15 +143,17 @@ export function AppShell() {
     setQrResolving(false);
   };
 
+  const currentUserId = user?.id;
+
   useEffect(() => {
-    if (!user) return;
+    if (!currentUserId) return;
     void registerActivity({
       eventType: "app_tab_viewed",
       campaignId: movieRoute.campaignId,
       sourceModule: "navigation",
       metadata: { tab: activeTab },
     });
-  }, [activeTab, user?.id, movieRoute.campaignId]);
+  }, [activeTab, currentUserId, movieRoute.campaignId]);
 
   const navigate = (tab: Tab) => {
     setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
