@@ -4,6 +4,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/hunts/api/huntsApi';
 import { summarizeHunt } from '@/modules/hunts/logic/huntLogic';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 import type { Tab } from '@/app/AppShell';
 
 interface Props {
@@ -140,7 +141,22 @@ export function HuntsScreen({ onNavigate }: Props) {
               className={`rounded-[20px] overflow-hidden cursor-pointer active:scale-[0.985] transition-all duration-300 shadow-[0_12px_35px_-24px_rgba(0,0,0,0.9)] ${
                 isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#0D0D10] border border-white/8'
               }`}
-              onClick={() => !isCompleted && onNavigate?.('scanner')}
+              onClick={() => {
+                void registerActivity({
+                  eventType: 'hunt_mission_selected',
+                  campaignId: activeCampaign.id,
+                  entityType: 'mission',
+                  entityId: mission.id,
+                  sourceModule: 'hunts',
+                  metadata: {
+                    mission_title: mission.title,
+                    completed: isCompleted,
+                    current_progress: currentProgress,
+                    target_count: mission.target_count,
+                  },
+                });
+                if (!isCompleted) onNavigate?.('scanner');
+              }}
             >
               <div className="p-4">
                 <div className="flex items-start gap-3 mb-3">
