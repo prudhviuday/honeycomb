@@ -1225,6 +1225,8 @@ export interface ScanResult {
   sourceType: string;
   isNew: boolean;
   campaignId: string;
+  /** One-time bonus awarded only on the user's first accepted scan for a movie campaign. */
+  movieEntryBonus?: number;
 }
 
 export async function processScan(
