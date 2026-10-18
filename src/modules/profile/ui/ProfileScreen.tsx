@@ -4,6 +4,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
 
 export function ProfileScreen() {
@@ -17,6 +18,11 @@ export function ProfileScreen() {
     if (!user) return;
     const normalized = normalizeProfileInput(data);
     await upsertProfile({ user_id: user.id, ...normalized });
+    void registerActivity({
+      eventType: 'profile_updated',
+      sourceModule: 'profile',
+      metadata: { fields_updated: Object.keys(normalized) },
+    });
   };
 
   const points = campaignUser?.points ?? 0;
