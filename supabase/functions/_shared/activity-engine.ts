@@ -14,14 +14,20 @@ export type ActivityEngineResult = {
   success: boolean;
   duplicate?: boolean;
   activityNumber?: number | null;
-  tasksCompleted?: Array<{ missionId: string; missionName: string; rewardPoints: number }>;
+  tasksCompleted?: Array<{
+    missionId: string;
+    missionName: string;
+    rewardPoints: number;
+  }>;
   [key: string]: unknown;
 };
 
 /**
- * Call only after a feature-specific verifier checks evidence from trusted
- * server-side records. Never map a client-supplied event type directly here.
- * The database RPC must remain unavailable to anon/authenticated roles.
+ * Only call after a feature-specific verifier has checked evidence using
+ * server-trusted data. Never map a client-supplied event type directly here.
+ *
+ * The database RPC is intentionally revoked from anon/authenticated. This
+ * function uses the server-only service-role client and must not return secrets.
  */
 export async function recordTrustedActivity(
   admin: SupabaseClient,
@@ -36,8 +42,12 @@ export async function recordTrustedActivity(
     p_entity_id: activity.entityId ?? null,
     p_metadata: activity.metadata ?? {},
   });
+
   if (error) {
-    console.error("Trusted activity RPC failed", { code: error.code, message: error.message });
+    console.error("Trusted activity RPC failed", {
+      code: error.code,
+      message: error.message,
+    });
     throw new Error("Activity could not be recorded. Confirm the activity-engine migration is applied.");
   }
   return data as ActivityEngineResult;

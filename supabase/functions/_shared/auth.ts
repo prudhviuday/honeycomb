@@ -1,11 +1,17 @@
 import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2.49.1";
 
-export type AuthContext = { admin: SupabaseClient; user: User };
+export type AuthContext = {
+  admin: SupabaseClient;
+  user: User;
+};
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
   });
 }
 
@@ -13,10 +19,13 @@ export async function requireUser(req: Request): Promise<AuthContext> {
   const url = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceRoleKey) throw new Error("Server auth configuration is missing.");
-  const match = (req.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
+
+  const authorization = req.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) throw new Error("A valid bearer token is required.");
 
-  // Server-only client. Never expose the service-role key to browser code.
+  // This client stays inside the Edge Function. Never expose the service-role key
+  // to the browser or return it from this function.
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

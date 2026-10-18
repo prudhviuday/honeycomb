@@ -1,24 +1,32 @@
 # Honeycomb Supabase Edge Functions
 
-TypeScript server functions are in this repository under `supabase/functions/`.
-They are separate from the React frontend and the HoneyBadgerAdmin repository,
-but belong to the Honeycomb codebase and connect to the same Supabase project.
+Server-side TypeScript functions live in this repository under `supabase/functions/`.
+They are separate from the React frontend and from the HoneyBadgerAdmin repository,
+but belong to the same Honeycomb codebase and Supabase project.
 
-- `_shared/auth.ts`: validates the caller's Supabase access token and creates a server-only service-role client.
-- `_shared/verification.ts`: shared evidence lookup helpers; a lookup alone does not award rewards.
-- `_shared/activity-engine.ts`: typed wrapper for the atomic `record_trusted_activity_and_progress` database entry point.
-- `verify-activity/index.ts`: authenticated verification endpoint; currently supports non-rewarding active-QR lookup only.
+## Activity verification architecture
 
-## Deployment gate
+- `_shared/auth.ts`: validates the caller's Supabase access token and creates a
+  server-only service-role client.
+- `_shared/verification.ts`: shared evidence lookup helpers (not a reward decision).
+- `_shared/activity-engine.ts`: typed wrapper around
+  `record_trusted_activity_and_progress`, the database's atomic task/progress/points entry point.
+- `verify-activity/index.ts`: authenticated verification API. Currently supports
+  non-rewarding active-QR resolution only.
 
-The live database has not yet applied `20261018190000_numbered_activity_task_engine.sql`.
-Do not deploy reward-bearing actions until that migration is reviewed and applied,
-and the existing `process_scan` flow is migrated to the shared engine without
-double-awarding mission progress/points.
+## Important deployment dependency
+
+The live database does not yet contain the migration
+`20261018190000_numbered_activity_task_engine.sql`. Therefore this function must
+not be deployed as the production reward-verification endpoint until that migration
+has been reviewed and applied, and the existing `process_scan` flow has been
+migrated to use the shared engine without awarding points twice.
 
 Trailer completion, quiz answers, VR attendance, mystery-QR prizes, and qualified
-referrals must each have trusted evidence sources before they can advance tasks.
-The endpoint deliberately rejects unsupported client claims.
+referrals must each have a trusted evidence source before they can advance tasks.
+The endpoint intentionally rejects unsupported client claims rather than trusting
+a browser-submitted "completed" flag.
 
-Required secret: `SUPABASE_SERVICE_ROLE_KEY` (server-side only). Supabase supplies
-`SUPABASE_URL`. Never put the service-role key in browser code or a `VITE_*` variable.
+Required Edge Function secret: `SUPABASE_SERVICE_ROLE_KEY` (server-side only).
+The platform supplies `SUPABASE_URL`. Never put the service-role key in the
+frontend, a `VITE_*` variable, or the HoneyBadgerAdmin browser bundle.
