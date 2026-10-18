@@ -26,14 +26,17 @@ export async function resolveActiveQr(
   const normalized = code.trim().toUpperCase();
   if (!normalized || normalized.length > 256) return null;
 
-  const columns = "id,campaign_id,purpose,qr_type,venue_id,hunt_id,display_name";
+  const columns = "id,campaign_id,purpose,qr_type,venue_id,hunt_id,display_name,starts_at,expires_at,max_uses,use_count,campaigns!inner(id)";
   let data: Record<string, unknown> | null = null;
 
+  // Exact equality queries avoid interpolating untrusted QR text into a
+  // PostgREST filter. Join the active campaign and QR limits in one request.
   for (const column of ["public_code", "short_code"] as const) {
     const result = await admin
       .from("qr_codes")
       .select(columns)
       .eq("is_active", true)
+      .eq("campaigns.active", true)
       .eq(column, normalized)
       .limit(1)
       .maybeSingle();
@@ -45,26 +48,14 @@ export async function resolveActiveQr(
   }
   if (!data) return null;
 
-  const { data: campaign, error: campaignError } = await admin
-    .from("campaigns")
-    .select("id")
-    .eq("id", data.campaign_id)
-    .eq("active", true)
-    .maybeSingle();
-  if (campaignError) throw new Error("Campaign verification failed.");
-  if (!campaign) return null;
-
-  const { data: fullQr, error: fullQrError } = await admin
-    .from("qr_codes")
-    .select("id,starts_at,expires_at,max_uses,use_count")
-    .eq("id", data.id)
-    .maybeSingle();
-  if (fullQrError || !fullQr) throw new Error("QR eligibility could not be verified.");
-
   const now = Date.now();
-  if (fullQr.starts_at && Date.parse(fullQr.starts_at) > now) return null;
-  if (fullQr.expires_at && Date.parse(fullQr.expires_at) < now) return null;
-  if (fullQr.max_uses !== null && fullQr.use_count >= fullQr.max_uses) return null;
+  const startsAt = data.starts_at as string | null;
+  const expiresAt = data.expires_at as string | null;
+  const maxUses = data.max_uses as number | null;
+  const useCount = data.use_count as number;
+  if (startsAt && Date.parse(startsAt) > now) return null;
+  if (expiresAt && Date.parse(expiresAt) < now) return null;
+  if (maxUses !== null && useCount >= maxUses) return null;
 
   return data as unknown as VerifiedQr;
 }
