@@ -10,6 +10,7 @@ import { RewardsScreen } from "@/modules/rewards/ui/RewardsScreen";
 import { ProfileScreen } from "@/modules/profile/ui/ProfileScreen";
 import { HuntsScreen } from "@/modules/hunts/ui/HuntsScreen";
 import { MovieDetailScreen } from "@/modules/campaigns/ui/MovieDetailScreen";
+import { getCampaign } from "@/modules/campaigns/api/campaignsApi";
 import { useCampaign } from "@/application/state/CampaignContext";
 import { resolvePublicQr, recordQrLandingEvent } from "@/modules/qr/api/publicQrApi";
 import type { Campaign } from "@/types";
@@ -253,7 +254,17 @@ export function AppShell() {
           </div>
         )}
         {activeTab === "scanner" && (
-          <ScannerScreen onScanComplete={() => navigate("home")} />
+          <ScannerScreen
+            onScanComplete={(campaignId) => {
+              if (!campaignId) {
+                navigate("home");
+                return;
+              }
+              void getCampaign(campaignId)
+                .then((campaign) => campaign ? openMovie(campaign) : navigate("home"))
+                .catch(() => navigate("home"));
+            }}
+          />
         )}
         {visitedTabs.includes("map") && (
           <div hidden={activeTab !== "map"}>
