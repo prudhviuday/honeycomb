@@ -112,8 +112,19 @@ export function AppShell() {
 
     let cancelled = false;
     setQrResolving(true);
-    void resolvePublicQr(code)
-      .then(async (resolved) => {
+    let resolutionTimeout: number | undefined;
+    const resolution = Promise.race([
+      resolvePublicQr(code),
+      new Promise<never>((_, reject) => {
+        resolutionTimeout = window.setTimeout(
+          () => reject(new Error("QR resolution timed out")),
+          12000,
+        );
+      }),
+    ]);
+
+    void resolution
+      .then((resolved) => {
         if (cancelled) return;
         if (!resolved.success || !resolved.campaignId) {
           setMovieRoute((current) => ({ ...current, qrResolved: true, qrInvalid: true }));
@@ -129,11 +140,11 @@ export function AppShell() {
           qrResolved: true,
           qrInvalid: false,
         }));
-        try {
-          await recordQrLandingEvent(code, "page_view");
-        } catch (eventError) {
+        // Analytics must never hold the visitor on the full-screen loading spinner.
+        // Record the page view in the background after routing to the campaign.
+        void recordQrLandingEvent(code, "page_view").catch((eventError) => {
           console.warn("[Honeycomb] QR landing event was not recorded:", eventError);
-        }
+        });
       })
       .catch((error) => {
         if (cancelled) return;
@@ -141,6 +152,7 @@ export function AppShell() {
         setMovieRoute((current) => ({ ...current, qrResolved: true, qrInvalid: true }));
       })
       .finally(() => {
+        if (resolutionTimeout !== undefined) window.clearTimeout(resolutionTimeout);
         if (!cancelled) setQrResolving(false);
       });
 
