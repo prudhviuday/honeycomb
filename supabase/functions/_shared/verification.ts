@@ -11,9 +11,13 @@ export type VerifiedQr = {
 };
 
 /**
- * Resolves only active, in-window QR codes belonging to active campaigns.
+ * Resolves active, in-window QR codes belonging to active campaigns.
  * This lookup is not itself proof that a scan is eligible for a reward:
- * use a transactional scan verifier (currently process_scan) for that.
+ * use the transactional scan verifier (currently process_scan) for that.
+ *
+ * Separate equality queries avoid interpolating untrusted QR text into a
+ * PostgREST filter expression. Legacy code_hash resolution stays in the
+ * existing database scan function until a compatible hash verifier is added.
  */
 export async function resolveActiveQr(
   admin: SupabaseClient,
@@ -22,15 +26,23 @@ export async function resolveActiveQr(
   const normalized = code.trim().toUpperCase();
   if (!normalized || normalized.length > 256) return null;
 
-  const { data, error } = await admin
-    .from("qr_codes")
-    .select("id,campaign_id,purpose,qr_type,venue_id,hunt_id,display_name")
-    .eq("is_active", true)
-    .or(`public_code.eq.${normalized},short_code.eq.${normalized},code_hash.eq.${await md5(normalized)}`)
-    .limit(1)
-    .maybeSingle();
+  const columns = "id,campaign_id,purpose,qr_type,venue_id,hunt_id,display_name";
+  let data: Record<string, unknown> | null = null;
 
-  if (error) throw new Error("QR verification lookup failed.");
+  for (const column of ["public_code", "short_code"] as const) {
+    const result = await admin
+      .from("qr_codes")
+      .select(columns)
+      .eq("is_active", true)
+      .eq(column, normalized)
+      .limit(1)
+      .maybeSingle();
+    if (result.error) throw new Error("QR verification lookup failed.");
+    if (result.data) {
+      data = result.data as unknown as Record<string, unknown>;
+      break;
+    }
+  }
   if (!data) return null;
 
   const { data: campaign, error: campaignError } = await admin
@@ -54,13 +66,5 @@ export async function resolveActiveQr(
   if (fullQr.expires_at && Date.parse(fullQr.expires_at) < now) return null;
   if (fullQr.max_uses !== null && fullQr.use_count >= fullQr.max_uses) return null;
 
-  return data as VerifiedQr;
-}
-
-async function md5(value: string): Promise<string> {
-  // Web Crypto does not support MD5. The database's code_hash fallback is
-  // intentionally omitted here; clients should use public_code/short_code.
-  // Return an impossible sentinel so it cannot accidentally match a real hash.
-  void value;
-  return "__unsupported_md5_lookup__";
+  return data as unknown as VerifiedQr;
 }
