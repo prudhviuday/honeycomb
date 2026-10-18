@@ -63,6 +63,10 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     try {
       const result = await getMoviePageData(campaignId);
       setData(result);
+      // Render the movie page as soon as its core data arrives. Activity, membership,
+      // referral and invite-QR requests below are optional enhancements and must not
+      // keep the entire public landing page on a spinner.
+      setLoading(false);
 
       if (user && result.campaign) {
         const [events, transactions] = await Promise.all([
