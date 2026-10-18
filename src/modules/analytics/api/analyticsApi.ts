@@ -8,7 +8,6 @@ import type { CampaignAnalytics } from "../types";
  */
 export interface RegisterActivityInput {
   eventType: string;
-  description?: string;
   campaignId?: string | null;
   entityType?: string | null;
   entityId?: string | null;
@@ -91,7 +90,6 @@ export async function registerActivity(
 
     const metadata = {
       ...(input.metadata ?? {}),
-      ...(input.description ? { description: input.description } : {}),
       source_module: input.sourceModule?.trim() || "honeycomb",
     };
 
