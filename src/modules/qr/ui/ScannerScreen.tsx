@@ -205,17 +205,16 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
           eventType: 'qr_scan_rejected',
           campaignId: activeCampaign.id,
           sourceModule: 'qr',
-          metadata: { outcome: 'rejected' },
+          metadata: {},
         });
       }
       if (res.success) await refreshCampaignUser();
     } catch (err) {
       void registerActivity({
         eventType: 'qr_scan_error',
-        description: err instanceof Error ? err.message : 'Scan failed',
         campaignId: activeCampaign.id,
         sourceModule: 'qr',
-        metadata: { outcome: 'error' },
+        metadata: {},
       });
       setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
       scanHandledRef.current = false;
