@@ -198,19 +198,16 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
     try {
       const res = await processScan(activeCampaign.id, user.id, normalizeScanCode(scanCode));
       setResult(res);
-      void registerActivity({
-        eventType: res.success ? 'qr_scan_succeeded' : 'qr_scan_rejected',
-        description: res.message,
-        campaignId: activeCampaign.id,
-        sourceModule: 'qr',
-        metadata: {
-          outcome: res.success ? 'success' : 'rejected',
-          points_awarded: res.pointsAwarded ?? 0,
-          source_name: res.sourceName ?? null,
-          source_type: res.sourceType ?? null,
-          is_new_scan: res.isNew ?? false,
-        },
-      });
+      // Successful scans are already recorded transactionally by process_scan.
+      // Only rejected scans need a separate lightweight analytics event.
+      if (!res.success) {
+        void registerActivity({
+          eventType: 'qr_scan_rejected',
+          campaignId: activeCampaign.id,
+          sourceModule: 'qr',
+          metadata: { outcome: 'rejected' },
+        });
+      }
       if (res.success) await refreshCampaignUser();
     } catch (err) {
       void registerActivity({
