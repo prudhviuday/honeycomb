@@ -8,6 +8,7 @@ import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
 
 interface Props {
   onScanComplete: () => void;
+  initialCode?: string | null;
 }
 
 function stopVideoStream(video: HTMLVideoElement | null) {
@@ -20,7 +21,7 @@ function stopVideoStream(video: HTMLVideoElement | null) {
   }
 }
 
-export function ScannerScreen({ onScanComplete }: Props) {
+export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   const { user } = useAuth();
   const { activeCampaign, refreshCampaignUser } = useCampaign();
 
@@ -204,6 +205,14 @@ export function ScannerScreen({ onScanComplete }: Props) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialCode || !activeCampaign || !user || scanHandledRef.current) return;
+    scanHandledRef.current = true;
+    void handleScan(initialCode);
+    // The code is intentionally handled once on deep-link entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCode, activeCampaign?.id, user?.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
