@@ -4,11 +4,13 @@ import { ScanLine, Keyboard, X, Zap, AlertCircle, Camera, RefreshCw } from 'luci
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
-import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
+import { extractQrCodeFromScan, normalizeScanCode } from '@/modules/qr/logic/qrLogic';
+import { resolvePublicQr } from '@/modules/qr/api/publicQrApi';
+import { getCampaign, ensureCampaignUser } from '@/modules/campaigns/api/campaignsApi';
 import { captureEventLocation, registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 interface Props {
-  onScanComplete: () => void;
+  onScanComplete: (campaignId?: string) => void;
   initialCode?: string | null;
 }
 
@@ -24,7 +26,7 @@ function stopVideoStream(video: HTMLVideoElement | null) {
 
 export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   const { user } = useAuth();
-  const { activeCampaign, refreshCampaignUser } = useCampaign();
+  const { activeCampaign, refreshCampaignUser, selectCampaign } = useCampaign();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
@@ -35,6 +37,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [scannedCampaignId, setScannedCampaignId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [cameraError, setCameraError] = useState('');
   const [cameraReady, setCameraReady] = useState(false);
@@ -190,39 +193,93 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   }, [cameraAttempt]);
 
   const handleScan = async (scanCode: string) => {
-    if (!activeCampaign || !user) return;
+    if (!user) {
+      setError('Please sign in before scanning a movie promotion QR.');
+      scanHandledRef.current = false;
+      return;
+    }
+
     setLoading(true);
     setError('');
     setResult(null);
 
-    // QR scans are location-critical: ask for a position for this scan even
-    // when the user has not previously enabled location. Denial never blocks scanning.
+    // QR scans request a one-shot location fix. Denial does not block a scan.
     const locationMetadata = await captureEventLocation('required');
 
+    let targetCampaignId = activeCampaign?.id ?? null;
+    let targetCampaign = activeCampaign;
+    let code = normalizeScanCode(scanCode);
+
     try {
-      const res = await processScan(activeCampaign.id, user.id, normalizeScanCode(scanCode));
-      setResult(res);
+      const rawCode = code;
+      code = extractQrCodeFromScan(rawCode);
+      const isUrl = /^https?:\/\//i.test(rawCode);
+      const isPublicCode = /^[a-f0-9]{32}$/i.test(code);
+
+      // Universal movie QR URLs always resolve their own campaign. Never run
+      // a /q/:code scan against whichever movie happens to be selected in Home.
+      if (isUrl || isPublicCode) {
+        const resolved = await resolvePublicQr(code);
+        if (resolved.success && resolved.campaignId) {
+          targetCampaignId = resolved.campaignId;
+          targetCampaign = await getCampaign(targetCampaignId);
+          if (!targetCampaign) {
+            throw new Error('The movie for this QR is unavailable.');
+          }
+          await ensureCampaignUser(targetCampaignId, user.id);
+          await selectCampaign(targetCampaign);
+        } else if (isUrl) {
+          throw new Error(resolved.message || 'This movie promotion QR is invalid, inactive or expired.');
+        }
+      }
+
+      if (!targetCampaignId) {
+        throw new Error('Scan a movie QR or select a movie campaign first.');
+      }
+
+      // Raw legacy short codes still use the currently selected campaign.
+      await ensureCampaignUser(targetCampaignId, user.id);
+      const res = await processScan(targetCampaignId, user.id, code);
+
       void registerActivity({
         eventType: res.success ? 'qr_scan_succeeded' : 'qr_scan_rejected',
-        campaignId: activeCampaign.id,
+        campaignId: targetCampaignId,
         sourceModule: 'qr',
         entityType: 'qr_scan',
         metadata: {
           ...locationMetadata,
           scan_result: res.success ? 'success' : 'rejected',
+          scan_message: res.message,
         },
         locationMode: 'none',
       });
-      if (res.success) await refreshCampaignUser();
+
+      // Re-scanning the same physical QR is not a reward error. It is a route
+      // back to the movie page, where the user's prior activity is visible.
+      if (!res.success && /already scanned this QR code/i.test(res.message)) {
+        const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
+        if (campaign) await selectCampaign(campaign);
+        onScanComplete(targetCampaignId);
+        return;
+      }
+
+      setScannedCampaignId(targetCampaignId);
+      setResult(res);
+      if (res.success) {
+        const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
+        if (campaign) await selectCampaign(campaign);
+        else await refreshCampaignUser();
+      }
     } catch (err) {
       void registerActivity({
         eventType: 'qr_scan_failed',
-        campaignId: activeCampaign.id,
+        campaignId: targetCampaignId,
         sourceModule: 'qr',
         entityType: 'qr_scan',
         metadata: {
           ...locationMetadata,
           scan_result: 'failed',
+          error: err instanceof Error ? err.message : 'Scan failed',
         },
         locationMode: 'none',
       });
@@ -232,14 +289,6 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!initialCode || !activeCampaign || !user || scanHandledRef.current) return;
-    scanHandledRef.current = true;
-    void handleScan(initialCode);
-    // The code is intentionally handled once on deep-link entry.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialCode, activeCampaign?.id, user?.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,7 +303,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
     setResult(null);
     if (result?.success) {
       stopCamera();
-      onScanComplete();
+      onScanComplete(scannedCampaignId ?? result.campaignId ?? activeCampaign?.id ?? undefined);
     } else {
       scanHandledRef.current = false;
       setCameraAttempt((value) => value + 1);
