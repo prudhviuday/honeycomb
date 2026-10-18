@@ -6,8 +6,11 @@ export function isValidScanCode(code: string): boolean {
   return normalizeScanCode(code).length > 0;
 }
 
+/** Canonical host used by printed QR codes and shared movie links. */
+export const PUBLIC_SITE_URL = 'https://honeycomb2.prudhvi123143.workers.dev';
+
 export function buildMovieReferralUrl(campaignId: string, referralCode: string): string {
-  const url = new URL(window.location.origin + '/');
+  const url = new URL('/', PUBLIC_SITE_URL);
   url.searchParams.set('campaign', campaignId);
   url.searchParams.set('ref', referralCode);
   return url.toString();
@@ -32,5 +35,5 @@ export function extractQrCodeFromScan(value: string): string {
 
 /** Build the public landing URL for a movie promotion QR. */
 export function buildPublicQrUrl(code: string): string {
-  return new URL('/q/' + encodeURIComponent(code.trim()), window.location.origin).toString();
+  return new URL('/q/' + encodeURIComponent(code.trim()), PUBLIC_SITE_URL).toString();
 }
