@@ -261,33 +261,36 @@ begin
         set points_balance = coalesce(points_balance, 0) + v_reward,
             last_activity_at = now()
         where id = v_campaign_user_id;
-
-        insert into public.activity_events (
-          campaign_id, user_id, event_type, event_type_id, entity_type,
-          entity_id, metadata, event_key, origin
-        )
-        values (
-          p_campaign_id, p_user_id, 'task_completed', 17, 'mission',
-          v_mission.id,
-          jsonb_build_object(
-            'mission_id', v_mission.id,
-            'mission_name', v_mission.name,
-            'reward_points', v_reward,
-            'trigger_activity_number', v_activity_number
-          ),
-          'task-completed:' || v_mission.id::text || ':' || p_user_id::text,
-          'server'
-        )
-        on conflict (event_key) where event_key is not null do nothing;
-
-        v_tasks_completed := v_tasks_completed || jsonb_build_array(
-          jsonb_build_object(
-            'missionId', v_mission.id,
-            'missionName', v_mission.name,
-            'rewardPoints', v_reward
-          )
-        );
       end if;
+
+      -- Completion is a durable activity even if an older ledger row already
+      -- proves the reward was paid. The unique event key prevents duplicates.
+      insert into public.activity_events (
+        campaign_id, user_id, event_type, event_type_id, entity_type,
+        entity_id, metadata, event_key, origin
+      )
+      values (
+        p_campaign_id, p_user_id, 'task_completed', 17, 'mission',
+        v_mission.id,
+        jsonb_build_object(
+          'mission_id', v_mission.id,
+          'mission_name', v_mission.name,
+          'reward_points', v_reward,
+          'trigger_activity_number', v_activity_number,
+          'reward_previously_recorded', v_transaction_id is not null
+        ),
+        'task-completed:' || v_mission.id::text || ':' || p_user_id::text,
+        'server'
+      )
+      on conflict (event_key) where event_key is not null do nothing;
+
+      v_tasks_completed := v_tasks_completed || jsonb_build_array(
+        jsonb_build_object(
+          'missionId', v_mission.id,
+          'missionName', v_mission.name,
+          'rewardPoints', v_reward
+        )
+      );
     end if;
   end loop;
 
