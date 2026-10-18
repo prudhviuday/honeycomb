@@ -63,7 +63,7 @@ as $function$
 declare
   v_type_code text;
   v_activity_id uuid;
-  v_activity_number bigint;
+  v_activity_number integer;
   v_campaign_user_id uuid;
   v_balance integer;
   v_mission record;
@@ -102,7 +102,7 @@ begin
   )
   values (
     p_campaign_id, p_user_id, v_type_code, p_event_type_id, p_entity_type,
-    p_entity_id, coalesce(p_metadata, '{}'::jsonb), p_event_key, 'server'
+    p_entity_id, coalesce(p_metadata, '{}'::jsonb), p_event_key, 'app'
   )
   on conflict (event_key) where event_key is not null do nothing
   returning id, activity_number into v_activity_id, v_activity_number;
@@ -171,7 +171,7 @@ begin
       where e.campaign_id = p_campaign_id
         and e.user_id = p_user_id
         and e.event_type_id = p_event_type_id
-        and e.origin = 'server';
+        and e.origin in ('app', 'server');
     end if;
 
     v_target := greatest(1, coalesce(v_mission.target_value, 1));
@@ -210,7 +210,7 @@ begin
       where e.campaign_id = p_campaign_id
         and e.user_id = p_user_id
         and e.event_type_id = p_event_type_id
-        and e.origin = 'server'
+        and e.origin in ('app', 'server')
         and e.entity_id is not null;
     else
       select least(count(*)::integer, v_target)
@@ -219,7 +219,7 @@ begin
       where e.campaign_id = p_campaign_id
         and e.user_id = p_user_id
         and e.event_type_id = p_event_type_id
-        and e.origin = 'server';
+        and e.origin in ('app', 'server');
     end if;
 
     if coalesce(v_completed, false) then
