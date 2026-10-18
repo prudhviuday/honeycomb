@@ -8,11 +8,33 @@ but belong to the same Honeycomb codebase and Supabase project.
 
 - `_shared/auth.ts`: validates the caller's Supabase access token and creates a
   server-only service-role client.
-- `_shared/verification.ts`: shared evidence lookup helpers (not a reward decision).
+- `_shared/verification.ts`: backward-compatible home for shared QR evidence lookup.
+- `_shared/verification/index.ts`: central action-to-verifier registry.
+- `_shared/verification/types.ts`: shared request, outcome and verifier contracts.
+- `_shared/verification/verifiers/`: one focused module per verification method.
 - `_shared/activity-engine.ts`: typed wrapper around
   `record_trusted_activity_and_progress`, the database's atomic task/progress/points entry point.
-- `verify-activity/index.ts`: authenticated verification API. Currently supports
+- `verify-activity/index.ts`: authenticated API dispatcher. Currently supports
   non-rewarding active-QR resolution only.
+
+## Adding a new task verification method
+
+1. Decide whether an existing verifier already validates the evidence needed by the task.
+   If so, configure a mission in HoneyBadgerAdmin; do not duplicate the verifier.
+2. If the evidence type is new, add a focused module under
+   `_shared/verification/verifiers/` implementing `ActivityVerifier`.
+3. Register the action in `_shared/verification/index.ts`. The registry is the
+   only action-routing file; the API entry point does not need another action branch.
+4. Verify evidence from trusted database/server state. Do not trust client-submitted
+   completion booleans, points, event type IDs, or user IDs.
+5. For reward-bearing actions, connect the verified result to a trusted database
+   transaction/activity-engine RPC and add idempotency, authorization and tests.
+   Add a migration only when schema or database transaction logic must change.
+6. Deploy the migration and function in the required order before enabling the task.
+
+A registered verifier is not automatically reward-bearing. The current `resolve_qr`
+verifier is deliberately informational and does not award points or advance tasks.
+Reward-bearing QR scans still use the existing transactional `process_scan` flow.
 
 ## Important deployment dependency
 
