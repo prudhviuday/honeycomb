@@ -1,35 +1,15 @@
 import { useState, useEffect } from 'react';
-import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Activity, Share2, ScanLine, Pencil } from 'lucide-react';
+import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Share2, Pencil } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
-import { getActivityEvents } from '@/modules/analytics/api/analyticsApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
-import type { ActivityEvent } from '@/modules/analytics/types';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
-import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 export function ProfileScreen() {
   const { user, profile } = useAuth();
   const { activeCampaign, campaignUser } = useCampaign();
   const [editing, setEditing] = useState(false);
-  const [activities, setActivities] = useState<ActivityEvent[]>([]);
-  const [loadingActivities, setLoadingActivities] = useState(true);
-
-  useEffect(() => {
-    if (activeCampaign && user) {
-      (async () => {
-        try {
-          const events = await getActivityEvents(activeCampaign.id, user.id);
-          setActivities(events);
-        } catch {
-          // ignore
-        } finally {
-          setLoadingActivities(false);
-        }
-      })();
-    }
-  }, [activeCampaign, user]);
 
   const handleSignOut = async () => { await signOut(); };
 
@@ -37,16 +17,10 @@ export function ProfileScreen() {
     if (!user) return;
     const normalized = normalizeProfileInput(data);
     await upsertProfile({ user_id: user.id, ...normalized });
-    void registerActivity({
-      eventType: 'profile_updated',
-      sourceModule: 'profile',
-      metadata: { fields_updated: Object.keys(normalized) },
-    });
   };
 
   const points = campaignUser?.points ?? 0;
   const displayName = getDisplayName(profile?.display_name, user?.email);
-  const scanCount = activities.filter(a => a.event_type === 'scan').length;
 
   return (
     <div className="px-5 pt-14 pb-8 animate-fade-in">
@@ -77,14 +51,10 @@ export function ProfileScreen() {
       </div>
 
       {/* Stats — editorial divider style */}
-      <div className="grid grid-cols-2 gap-0 mb-8 hairline-t hairline-b py-5">
+      <div className="grid grid-cols-1 gap-0 mb-8 hairline-t hairline-b py-5">
         <div className="text-center">
           <p className="font-display text-3xl text-gold leading-none">{points}</p>
           <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Points</p>
-        </div>
-        <div className="text-center hairline-l px-3">
-          <p className="font-display text-3xl text-text-primary leading-none">{scanCount}</p>
-          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Scans</p>
         </div>
       </div>
 
@@ -92,37 +62,6 @@ export function ProfileScreen() {
       <div className="space-y-px mb-8">
         <MenuRow icon={Award} label="Badges" />
         <MenuRow icon={Share2} label="Refer Friends" />
-      </div>
-
-      {/* Activity */}
-      <div className="mb-8">
-        <h3 className="text-[11px] text-text-subtle uppercase tracking-[0.2em] font-medium mb-4">Activity</h3>
-        {loadingActivities ? (
-          <div className="text-center py-6">
-            <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        ) : activities.length === 0 ? (
-          <div className="bg-bg-surface hairline rounded-[10px] py-10 flex flex-col items-center">
-            <Activity className="w-7 h-7 text-text-subtle mb-3" />
-            <p className="text-xs text-text-muted">No activity yet</p>
-          </div>
-        ) : (
-          <div className="space-y-px">
-            {activities.slice(0, 15).map((event) => (
-              <div key={event.id} className="flex items-center gap-3 py-3 hairline-b last:border-b-0">
-                <div className="w-7 h-7 rounded-full bg-bg-surface flex items-center justify-center flex-shrink-0">
-                  {event.event_type === 'scan'
-                    ? <ScanLine className="w-3.5 h-3.5 text-gold" />
-                    : <Activity className="w-3.5 h-3.5 text-text-subtle" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary capitalize">{event.event_type.replace(/_/g, ' ')}</p>
-                  <p className="text-[11px] text-text-subtle">{new Date(event.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Sign out */}
