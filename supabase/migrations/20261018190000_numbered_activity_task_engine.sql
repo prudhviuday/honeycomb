@@ -263,26 +263,6 @@ begin
         where id = v_campaign_user_id;
       end if;
 
-      -- Completion is a durable activity even if an older ledger row already
-      -- proves the reward was paid. The unique event key prevents duplicates.
-      insert into public.activity_events (
-        campaign_id, user_id, event_type, event_type_id, entity_type,
-        entity_id, metadata, event_key, origin
-      )
-      values (
-        p_campaign_id, p_user_id, 'task_completed', 17, 'mission',
-        v_mission.id,
-        jsonb_build_object(
-          'mission_id', v_mission.id,
-          'mission_name', v_mission.name,
-          'reward_points', v_reward,
-          'trigger_activity_number', v_activity_number
-        ),
-        'task-completed:' || v_mission.id::text || ':' || p_user_id::text,
-        'server'
-      )
-      on conflict (event_key) where event_key is not null do nothing;
-
       v_tasks_completed := v_tasks_completed || jsonb_build_array(
         jsonb_build_object(
           'missionId', v_mission.id,
@@ -465,3 +445,60 @@ begin
   return true;
 end;
 $function$;
+
+
+-- Any trusted transition to completed creates a completion activity, including
+-- missions completed by the existing process_scan/hunt implementation.
+create or replace function public.log_mission_completion_activity()
+returns trigger
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  v_mission record;
+begin
+  if new.completed is true
+     and (tg_op = 'INSERT' or coalesce(old.completed, false) is false) then
+    select m.id, m.campaign_id, m.name, m.reward_points
+      into v_mission
+    from public.missions m
+    where m.id = new.mission_id;
+
+    if found then
+      insert into public.activity_events (
+        campaign_id, user_id, event_type, event_type_id, entity_type,
+        entity_id, metadata, event_key, origin
+      )
+      values (
+        v_mission.campaign_id,
+        new.user_id,
+        'task_completed',
+        17,
+        'mission',
+        v_mission.id,
+        jsonb_build_object(
+          'mission_id', v_mission.id,
+          'mission_name', v_mission.name,
+          'reward_points', v_mission.reward_points,
+          'completed_at', coalesce(new.completed_at, now())
+        ),
+        'task-completed:' || v_mission.id::text || ':' || new.user_id::text,
+        'server'
+      )
+      on conflict (event_key) where event_key is not null do nothing;
+    end if;
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists mission_progress_log_completion on public.mission_progress;
+create trigger mission_progress_log_completion
+after insert or update of completed on public.mission_progress
+for each row
+execute function public.log_mission_completion_activity();
+
+revoke all on function public.log_mission_completion_activity()
+from public, anon, authenticated;
