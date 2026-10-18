@@ -486,3 +486,7 @@ execute function public.log_mission_completion_activity();
 
 revoke all on function public.log_mission_completion_activity()
 from public, anon, authenticated;
+
+-- This is a trigger-only function, not a callable Data API endpoint.
+revoke all on function public.capture_campaign_activity()
+from public, anon, authenticated;
