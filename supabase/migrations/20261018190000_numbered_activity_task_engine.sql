@@ -359,7 +359,7 @@ begin
       p_visitor_id,
       jsonb_build_object(
         'qr_id', v_qr.id,
-        'referral_code', v_referral_code,
+        'referral_code', v_qr.referral_code,
         'referred_user_id', v_user_id
       )
     );
@@ -425,7 +425,7 @@ begin
           v_user_id,
           jsonb_build_object(
             'referral_id', v_referral_id,
-            'referral_code', v_qr.referral_code,
+            'referral_code', v_referral_code,
             'qualification_signal', 'signup_completed'
           )
         );
