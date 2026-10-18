@@ -25,8 +25,8 @@ Deno.serve(async (req: Request) => {
     return respond({ error: error instanceof Error ? error.message : "Authentication failed." }, 401);
   }
 
-  // This endpoint accepts only a tiny action/code payload. Bound request size
-  // before parsing so oversized bodies cannot waste Edge Function memory.
+  // Reject known oversized requests early, then enforce the same limit while
+  // streaming so a missing Content-Length cannot bypass the cap.
   const contentLength = Number(req.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > 8_192) {
     return respond({ error: "Request body is too large." }, 413);
@@ -36,9 +36,35 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Content-Type must be application/json." }, 415);
   }
 
+  if (!req.body) return respond({ error: "Request body is required." }, 400);
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > 8_192) {
+        await reader.cancel();
+        return respond({ error: "Request body is too large." }, 413);
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return respond({ error: "Request body could not be read." }, 400);
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
   let parsed: unknown;
   try {
-    parsed = await req.json();
+    parsed = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return respond({ error: "Request body must be valid JSON." }, 400);
   }
