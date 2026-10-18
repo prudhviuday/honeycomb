@@ -70,7 +70,6 @@ declare
   v_activity_id uuid;
   v_activity_number integer;
   v_campaign_user_id uuid;
-  v_balance integer;
   v_mission record;
   v_progress integer;
   v_event_count integer := 0;
@@ -134,8 +133,8 @@ begin
   end if;
 
   -- Serialize task awards and balance changes for this user/campaign.
-  select cu.id, coalesce(cu.points_balance, 0)
-    into v_campaign_user_id, v_balance
+  select cu.id
+    into v_campaign_user_id
   from public.campaign_users cu
   where cu.campaign_id = p_campaign_id
     and cu.user_id = p_user_id
