@@ -2,6 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { Profile } from './types';
 
 import { supabase } from '@/infrastructure/supabase/client';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 /*
  * Shared API
@@ -115,25 +116,7 @@ export async function logActivity(
   eventType: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('activity_events')
-      .insert({
-        campaign_id: campaignId,
-        user_id: userId,
-        event_type: eventType,
-        metadata: metadata ?? {},
-      });
-
-    if (error) {
-      console.warn(
-        '[Supabase] Activity log failed:',
-        error.message
-      );
-    }
-  } catch (error) {
-    console.warn('[Supabase] Activity log failed:', error);
-  }
+  // Compatibility shim. All activity writes are owned by the Analytics module.
+  await registerActivity({ campaignId, eventType, metadata });
 }
-
 export type { Session, User };
