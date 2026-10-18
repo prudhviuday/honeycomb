@@ -7,7 +7,7 @@
 
 For example, the first, second and third qualifying referrals to one campaign are three rows with different `activity_number` values, the same referral event category, the same campaign, and different `entity_id` values for the referred friends. A completed task is another row with event type 17 (`task_completed`) and the mission ID as its entity.
 
-The identity sequence is unique and ordered in normal use, but **not gapless**: database rollbacks and retries may leave gaps. Do not use activity numbers as counts or as a business rule.
+The integer identity sequence is unique and ordered in normal use, but **not gapless**: database rollbacks and retries may leave gaps. Do not use activity numbers as counts or as a business rule.
 
 ## Task configuration
 
@@ -56,7 +56,7 @@ Use event type 30 if signup alone qualifies. Use event type 38 for a campaign-jo
 The function:
 1. Inserts one numbered activity using an idempotency key.
 2. Finds active missions configured for that event type.
-3. Computes progress from server-origin activity rows.
+3. Computes progress from trusted app/server-origin activity rows.
 4. Locks the user's campaign membership and mission-progress row.
 5. Updates the points ledger and balance in the same transaction; a database trigger writes the completion activity on the first transition to completed.
 
