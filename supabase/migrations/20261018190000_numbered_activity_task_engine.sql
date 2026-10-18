@@ -73,6 +73,8 @@ declare
   v_balance integer;
   v_mission record;
   v_progress integer;
+  v_event_count integer := 0;
+  v_distinct_entity_count integer := 0;
   v_completed boolean;
   v_target integer;
   v_reward integer;
@@ -150,6 +152,16 @@ begin
     );
   end if;
 
+  -- One indexed aggregate serves every active mission listening for this event.
+  -- The campaign-user row lock serializes this user's event processing.
+  select count(*)::integer, count(distinct e.entity_id)::integer
+    into v_event_count, v_distinct_entity_count
+  from public.activity_events e
+  where e.campaign_id = p_campaign_id
+    and e.user_id = p_user_id
+    and e.event_type_id = p_event_type_id
+    and e.origin in ('app', 'server');
+
   for v_mission in
     select m.id, m.name, m.target_value, m.reward_points, m.progress_mode
     from public.missions m
@@ -160,11 +172,8 @@ begin
       and (m.ends_at is null or m.ends_at >= now())
     order by m.id
   loop
-    -- Progress is recomputed once below, after the mission_progress row lock.
-    -- Avoid an extra full aggregate for every matching mission.
     v_target := greatest(1, coalesce(v_mission.target_value, 1));
     v_reward := greatest(0, coalesce(v_mission.reward_points, 0));
-    v_progress := least(v_progress, v_target);
 
     select mp.progress, mp.completed
       into v_progress, v_completed
@@ -190,25 +199,15 @@ begin
       for update;
     end if;
 
-    -- Recompute the count after the row lock without losing the current count.
-    if v_mission.progress_mode = 'distinct_entities' then
-      select least(count(distinct e.entity_id)::integer, v_target)
-        into v_progress
-      from public.activity_events e
-      where e.campaign_id = p_campaign_id
-        and e.user_id = p_user_id
-        and e.event_type_id = p_event_type_id
-        and e.origin in ('app', 'server')
-        and e.entity_id is not null;
-    else
-      select least(count(*)::integer, v_target)
-        into v_progress
-      from public.activity_events e
-      where e.campaign_id = p_campaign_id
-        and e.user_id = p_user_id
-        and e.event_type_id = p_event_type_id
-        and e.origin in ('app', 'server');
-    end if;
+    -- Reuse the indexed aggregate for all missions of this event type.
+    v_progress := least(
+      case
+        when v_mission.progress_mode = 'distinct_entities'
+          then coalesce(v_distinct_entity_count, 0)
+        else coalesce(v_event_count, 0)
+      end,
+      v_target
+    );
 
     if coalesce(v_completed, false) then
       update public.mission_progress
