@@ -146,6 +146,14 @@ export function AppShell() {
   const navigate = (tab: Tab) => {
     setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
     setActiveTab(tab);
+    if (user) {
+      void registerActivity({
+        eventType: "app_tab_opened",
+        campaignId: movieRoute.campaignId,
+        sourceModule: "navigation",
+        metadata: { tab },
+      });
+    }
     setNavCompact(false);
     if (movieRoute.campaignId) {
       window.history.pushState({}, "", "/");
@@ -154,6 +162,16 @@ export function AppShell() {
   };
 
   const openMovie = (campaign: Campaign, referralCode?: string) => {
+    if (user) {
+      void registerActivity({
+        eventType: "movie_campaign_opened",
+        campaignId: campaign.id,
+        entityType: "campaign",
+        entityId: campaign.id,
+        sourceModule: "campaigns",
+        metadata: { referral_link_used: Boolean(referralCode) },
+      });
+    }
     void selectCampaign(campaign);
     const url = new URL(window.location.origin + "/");
     url.searchParams.set("campaign", campaign.id);
