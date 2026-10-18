@@ -244,7 +244,7 @@ begin
         and pt.user_id = p_user_id
         and pt.source_type = 'mission'
         and pt.source_id = v_mission.id
-        and pt.amount > 0
+        and pt.amount >= 0
       limit 1;
 
       if v_transaction_id is null then
@@ -276,8 +276,7 @@ begin
           'mission_id', v_mission.id,
           'mission_name', v_mission.name,
           'reward_points', v_reward,
-          'trigger_activity_number', v_activity_number,
-          'reward_previously_recorded', v_transaction_id is not null
+          'trigger_activity_number', v_activity_number
         ),
         'task-completed:' || v_mission.id::text || ':' || p_user_id::text,
         'server'
