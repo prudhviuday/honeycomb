@@ -49,15 +49,18 @@ export function RewardsScreen() {
 
   useEffect(() => { loadData(); }, [activeCampaign, user]);
 
+  const activeCampaignId = activeCampaign?.id;
+  const currentUserId = user?.id;
+
   useEffect(() => {
-    if (!activeCampaign || !user) return;
+    if (!activeCampaignId || !currentUserId) return;
     void registerActivity({
       eventType: 'rewards_screen_viewed',
-      campaignId: activeCampaign.id,
+      campaignId: activeCampaignId,
       sourceModule: 'rewards',
       metadata: { screen: 'rewards' },
     });
-  }, [activeCampaign?.id, user?.id]);
+  }, [activeCampaignId, currentUserId]);
 
   const handleClaim = async (reward: Reward) => {
     if (!activeCampaign || !user || !campaignUser) return;
