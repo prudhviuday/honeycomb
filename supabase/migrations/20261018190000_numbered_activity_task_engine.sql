@@ -306,6 +306,7 @@ declare
   v_referrer_id uuid;
   v_referral_id uuid;
   v_referral_status text;
+  v_referral_code text;
 begin
   if p_event_type not in ('page_view', 'signup_started', 'signup_completed', 'campaign_joined') then
     raise exception using errcode = '22023', message = 'Unsupported QR landing event.';
@@ -358,7 +359,7 @@ begin
       p_visitor_id,
       jsonb_build_object(
         'qr_id', v_qr.id,
-        'referral_code', v_qr.referral_code,
+        'referral_code', v_referral_code,
         'referred_user_id', v_user_id
       )
     );
@@ -369,9 +370,15 @@ begin
      and v_qr.purpose = 'friend_invite'
      and v_qr.inviter_user_id is not null
      and v_qr.inviter_user_id <> v_user_id
-     and v_qr.referral_code is not null then
+     and v_qr.referral_code is not null
+     and exists (
+       select 1 from public.qr_landing_events le
+       where le.qr_id = v_qr.id
+         and le.visitor_id = p_visitor_id
+         and le.event_type = 'page_view'
+     ) then
 
-    -- Keep one referral relationship per campaign/referred user/code.
+    -- First referral attribution wins: one referrer per referred user/campaign.
     insert into public.referrals(
       campaign_id, referrer_user_id, referred_user_id, referral_code, status,
       qualified_at
@@ -388,15 +395,13 @@ begin
       from public.referrals r
       where r.campaign_id = v_qr.campaign_id
         and r.referred_user_id = v_user_id
-        and r.referral_code = v_qr.referral_code
     );
 
-    select r.id, r.referrer_user_id, r.status
-      into v_referral_id, v_referrer_id, v_referral_status
+    select r.id, r.referrer_user_id, r.status, r.referral_code
+      into v_referral_id, v_referrer_id, v_referral_status, v_referral_code
     from public.referrals r
     where r.campaign_id = v_qr.campaign_id
       and r.referred_user_id = v_user_id
-      and r.referral_code = v_qr.referral_code
     order by r.created_at
     limit 1
     for update;
