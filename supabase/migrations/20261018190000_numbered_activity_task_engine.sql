@@ -439,7 +439,7 @@ begin
           v_user_id,
           jsonb_build_object(
             'referral_id', v_referral_id,
-            'referral_code', v_qr.referral_code,
+            'referral_code', v_referral_code,
             'qualification_signal', 'campaign_joined'
           )
         );
