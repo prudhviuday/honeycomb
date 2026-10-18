@@ -142,19 +142,6 @@ export function HuntsScreen({ onNavigate }: Props) {
                 isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#0D0D10] border border-white/8'
               }`}
               onClick={() => {
-                void registerActivity({
-                  eventType: 'hunt_mission_selected',
-                  campaignId: activeCampaign.id,
-                  entityType: 'mission',
-                  entityId: mission.id,
-                  sourceModule: 'hunts',
-                  metadata: {
-                    mission_title: mission.title,
-                    completed: isCompleted,
-                    current_progress: currentProgress,
-                    target_count: mission.target_count,
-                  },
-                });
                 if (!isCompleted) onNavigate?.('scanner');
               }}
             >
