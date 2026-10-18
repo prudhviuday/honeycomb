@@ -88,10 +88,39 @@ export async function registerActivity(
     const userId = sessionData.session?.user.id;
     if (!userId) return { recorded: false, reason: "not_authenticated" };
 
-    const metadata = {
+    const metadata: Record<string, unknown> = {
       ...(input.metadata ?? {}),
       source_module: input.sourceModule?.trim() || "honeycomb",
     };
+
+    // Device location is collected only after the user has explicitly enabled
+    // activity-location sharing in their profile. It is attached to activity
+    // events only; there is no background or continuous GPS tracking.
+    const { data: trackingProfile } = await supabase
+      .from("profiles")
+      .select("location_tracking_enabled")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (trackingProfile?.location_tracking_enabled === true &&
+        typeof navigator !== "undefined" &&
+        "geolocation" in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            maximumAge: 60_000,
+            timeout: 4_000,
+          });
+        });
+        metadata.location_latitude = position.coords.latitude;
+        metadata.location_longitude = position.coords.longitude;
+        metadata.location_accuracy_m = Math.round(position.coords.accuracy);
+        metadata.location_recorded_at = new Date(position.timestamp).toISOString();
+      } catch {
+        // Location is optional: a denial or timeout must never block an activity.
+      }
+    }
 
     const { error } = await supabase.from("activity_events").insert({
       campaign_id: input.campaignId ?? null,
