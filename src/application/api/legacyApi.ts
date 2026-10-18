@@ -1179,15 +1179,28 @@ export async function getActivityEvents(
     .select('*')
     .eq('campaign_id', campaignId)
     .eq('user_id', userId)
-    .order('created_at', {
-      ascending: false,
-    })
+    .order('created_at', { ascending: false })
     .limit(30);
 
   if (error) throw error;
 
+  const rows = data ?? [];
+  const typeIds = [...new Set(rows.map((row) => row.event_type_id).filter((id): id is number => id !== null))];
+  const typeNames = new Map<number, string>();
+  if (typeIds.length) {
+    const { data: types, error: typeError } = await supabase
+      .from('activity_event_types')
+      .select('id, code')
+      .in('id', typeIds);
+    if (typeError) throw typeError;
+    for (const type of types ?? []) typeNames.set(type.id, type.code);
+  }
+
   return asAppType<ActivityEvent[]>(
-    data || []
+    rows.map((row) => ({
+      ...row,
+      event_type: typeNames.get(row.event_type_id) ?? row.event_type ?? 'unknown',
+    }))
   );
 }
 
