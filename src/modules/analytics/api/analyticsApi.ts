@@ -67,6 +67,29 @@ export async function registerActivity(
   }
 }
 
+/**
+ * Record public QR funnel events (including visitors who have not signed up).
+ * The database RPC owns anonymous visitor attribution and landing-event storage.
+ */
+export async function registerQrLandingActivity(
+  code: string,
+  eventType: "page_view" | "signup_started" | "signup_completed" | "campaign_joined",
+  visitorId: string,
+): Promise<void> {
+  const normalizedCode = code.trim();
+  if (!normalizedCode || !visitorId.trim()) return;
+  try {
+    const { error } = await supabase.rpc("record_qr_landing_event", {
+      p_code: normalizedCode,
+      p_event_type: eventType,
+      p_visitor_id: visitorId,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.warn("[Analytics] Public QR funnel event recording failed:", error);
+  }
+}
+
 /** Backwards-compatible API for older modules; new code should use registerActivity. */
 export async function logActivity(
   campaignId: string,
