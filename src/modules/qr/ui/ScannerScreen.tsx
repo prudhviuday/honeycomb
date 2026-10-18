@@ -5,7 +5,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
 import { normalizeScanCode } from '@/modules/qr/logic/qrLogic';
-import { registerActivity } from '@/modules/analytics/api/analyticsApi';
+import { captureEventLocation, registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 interface Props {
   onScanComplete: () => void;
@@ -195,26 +195,36 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
     setError('');
     setResult(null);
 
+    // QR scans are location-critical: ask for a position for this scan even
+    // when the user has not previously enabled location. Denial never blocks scanning.
+    const locationMetadata = await captureEventLocation('required');
+
     try {
       const res = await processScan(activeCampaign.id, user.id, normalizeScanCode(scanCode));
       setResult(res);
-      // Successful scans are already recorded transactionally by process_scan.
-      // Only rejected scans need a separate lightweight analytics event.
-      if (!res.success) {
-        void registerActivity({
-          eventType: 'qr_scan_rejected',
-          campaignId: activeCampaign.id,
-          sourceModule: 'qr',
-          metadata: {},
-        });
-      }
+      void registerActivity({
+        eventType: res.success ? 'qr_scan_succeeded' : 'qr_scan_rejected',
+        campaignId: activeCampaign.id,
+        sourceModule: 'qr',
+        entityType: 'qr_scan',
+        metadata: {
+          ...locationMetadata,
+          scan_result: res.success ? 'success' : 'rejected',
+        },
+        locationMode: 'none',
+      });
       if (res.success) await refreshCampaignUser();
     } catch (err) {
       void registerActivity({
-        eventType: 'qr_scan_error',
+        eventType: 'qr_scan_failed',
         campaignId: activeCampaign.id,
         sourceModule: 'qr',
-        metadata: {},
+        entityType: 'qr_scan',
+        metadata: {
+          ...locationMetadata,
+          scan_result: 'failed',
+        },
+        locationMode: 'none',
       });
       setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
       scanHandledRef.current = false;
