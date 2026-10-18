@@ -22,7 +22,7 @@ export function extractQrCodeFromScan(value: string): string {
   if (!input) return '';
   try {
     const url = new URL(input);
-    const match = url.pathname.match(/^\\/q\\/([^/]+)\\/?$/i);
+    const match = url.pathname.match(/^\/q\/([^/]+)\/?$/i);
     if (match) return decodeURIComponent(match[1]).trim();
   } catch {
     // Legacy QR codes may contain a raw code instead of a URL.
