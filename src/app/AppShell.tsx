@@ -12,6 +12,7 @@ import { HuntsScreen } from "@/modules/hunts/ui/HuntsScreen";
 import { MovieDetailScreen } from "@/modules/campaigns/ui/MovieDetailScreen";
 import { useCampaign } from "@/application/state/CampaignContext";
 import type { Campaign } from "@/types";
+import { supabase } from "@/lib/supabase";
 
 export type Tab =
   "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
@@ -41,10 +42,14 @@ function readMovieRoute(): MovieRoute {
 
 export function AppShell() {
   const { user, loading: authLoading } = useAuth();
-  const { selectCampaign } = useCampaign();
+  const { campaigns, activeCampaign, loading: campaignsLoading, selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [visitedTabs, setVisitedTabs] = useState<Tab[]>(["home"]);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
+  const [qrCode, setQrCode] = useState<string | null>(() => new URLSearchParams(window.location.search).get("qr"));
+  const [qrCampaignId, setQrCampaignId] = useState<string | null>(null);
+  const [qrResolving, setQrResolving] = useState(() => Boolean(new URLSearchParams(window.location.search).get("qr")));
+  const [qrError, setQrError] = useState("");
   const [navCompact, setNavCompact] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -85,10 +90,58 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    const handlePopState = () => setMovieRoute(readMovieRoute());
+    const handlePopState = () => {
+      setMovieRoute(readMovieRoute());
+      setQrCode(new URLSearchParams(window.location.search).get("qr"));
+    };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (!qrCode || !user || campaignsLoading) return;
+    let cancelled = false;
+    setQrResolving(true);
+    setQrError("");
+
+    void (async () => {
+      const { data: campaignId, error } = await supabase.rpc("resolve_qr_campaign", { p_code: qrCode });
+      if (cancelled) return;
+      if (error || !campaignId) {
+        setQrError("This QR link is invalid, inactive, or no longer available.");
+        setQrResolving(false);
+        return;
+      }
+      const campaign = campaigns.find((item) => item.id === campaignId);
+      if (!campaign) {
+        setQrError("The campaign for this QR is unavailable. Please contact the campaign team.");
+        setQrResolving(false);
+        return;
+      }
+      setQrCampaignId(campaignId);
+      try {
+        await selectCampaign(campaign);
+        if (!cancelled) setQrResolving(false);
+      } catch {
+        if (!cancelled) {
+          setQrError("Could not open this QR campaign. Please try again.");
+          setQrResolving(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [qrCode, user?.id, campaignsLoading, campaigns, selectCampaign]);
+
+  const clearQrRoute = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("qr");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    setQrCode(null);
+    setQrCampaignId(null);
+    setQrError("");
+    setQrResolving(false);
+  };
 
   const navigate = (tab: Tab) => {
     setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
@@ -140,6 +193,27 @@ export function AppShell() {
   }
 
   if (!user) return <AuthScreen />;
+
+  if (qrCode) {
+    if (qrError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg-primary px-6 text-center">
+          <div className="text-lg font-semibold text-text-primary">QR link unavailable</div>
+          <p className="max-w-sm text-sm leading-6 text-text-muted">{qrError}</p>
+          <button type="button" onClick={() => { clearQrRoute(); navigate("home"); }} className="rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white">Go to Honeycomb</button>
+        </div>
+      );
+    }
+    if (qrResolving || !qrCampaignId || activeCampaign?.id !== qrCampaignId) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-bg-primary text-text-primary">
+          <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-text-muted">Opening QR campaign…</p>
+        </div>
+      );
+    }
+    return <ScannerScreen initialCode={qrCode} onScanComplete={() => { clearQrRoute(); navigate("home"); }} />;
+  }
 
   if (showMovie) {
     return (
