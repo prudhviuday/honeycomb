@@ -122,7 +122,7 @@ export function ProfileScreen() {
           <div className="flex-1">
             <h2 className="text-sm font-medium text-text-primary">Share location with activity history</h2>
             <p className="text-xs leading-relaxed text-text-muted mt-1">
-              When enabled, your device location may be attached to events such as QR scans and mission completions, so the team can show those activity locations on a map. This does not run in the background. Your browser will ask for location permission.
+              When enabled, your device location may be attached to logged events such as QR scans and mission completions. Authorized administrators can see those event locations and their order on a map. This does not run in the background. Your browser will ask for location permission.
             </p>
             <button type="button" disabled={locationSaving} onClick={() => void handleLocationTrackingChange()}
               className="mt-3 rounded-lg border border-gold/30 px-3 py-2 text-xs font-medium text-gold disabled:opacity-50">
