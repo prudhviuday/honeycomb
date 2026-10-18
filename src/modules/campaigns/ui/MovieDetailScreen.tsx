@@ -17,6 +17,7 @@ import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import {
   getMoviePageData,
+  getCampaignUser,
   ensureCampaignUser,
   type MoviePageData,
 } from '@/modules/campaigns/api/campaignsApi';
@@ -26,20 +27,23 @@ import {
   getReferrals,
 } from '@/modules/qr/api/qrApi';
 import {
-  buildMovieReferralUrl,
+  buildPublicQrUrl,
   buildQrImageUrl,
 } from '@/modules/qr/logic/qrLogic';
+import { getOrCreateFriendInviteQr, recordQrLandingEvent } from '@/modules/qr/api/publicQrApi';
 import { buildMapFeatures } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
-import type { ReferralCode, Referral, Campaign } from '@/types';
+import type { ReferralCode, Referral, Campaign, ActivityEvent, PointTransaction } from '@/types';
+import { getActivityEvents, getPointTransactions } from '@/application/api/legacyApi';
 
 interface Props {
   campaignId: string;
   referralCode?: string;
+  qrCode?: string;
   onBack: () => void;
 }
 
-export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
+export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: Props) {
   const { user } = useAuth();
   const { selectCampaign } = useCampaign();
 
@@ -50,6 +54,8 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
   const [inviteUrl, setInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [pointHistory, setPointHistory] = useState<PointTransaction[]>([]);
 
   const loadMovie = async () => {
     setLoading(true);
@@ -58,14 +64,29 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
       const result = await getMoviePageData(campaignId);
       setData(result);
 
-      if (result.campaign) {
-        void selectCampaign(result.campaign as Campaign);
-      }
-
       if (user && result.campaign) {
-        const campaignUser = await ensureCampaignUser(result.campaign.id, user.id);
+        const [events, transactions] = await Promise.all([
+          getActivityEvents(campaignId, user.id).catch(() => [] as ActivityEvent[]),
+          getPointTransactions(campaignId, user.id).catch(() => [] as PointTransaction[]),
+        ]);
+        setActivityEvents(events);
+        setPointHistory(transactions);
+
+        const existingCampaignUser = await getCampaignUser(result.campaign.id, user.id);
+        const campaignUser = existingCampaignUser
+          ?? await ensureCampaignUser(result.campaign.id, user.id);
         setJoined(Boolean(campaignUser));
 
+        // Count a QR-attributed campaign join as a conversion once for this visitor.
+        if (!existingCampaignUser && qrCode) {
+          try {
+            await recordQrLandingEvent(qrCode, 'campaign_joined');
+          } catch (eventError) {
+            console.warn('[Honeycomb] QR conversion was not recorded:', eventError);
+          }
+        }
+
+        await selectCampaign(result.campaign as Campaign);
         let code = await getReferralCode(result.campaign.id, user.id);
 
         if (!code) {
@@ -83,8 +104,13 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
 
         if (code) {
           setReferral(code);
-          const url = buildMovieReferralUrl(result.campaign.id, code.code);
-          setInviteUrl(url);
+          try {
+            const inviteQrCode = await getOrCreateFriendInviteQr(result.campaign.id, code.code);
+            setInviteUrl(buildPublicQrUrl(inviteQrCode));
+          } catch (inviteError) {
+            console.warn('[Honeycomb] Friend invitation QR could not be prepared:', inviteError);
+            setInviteUrl('');
+          }
 
           try {
             const existingReferrals = await getReferrals(result.campaign.id, user.id);
@@ -93,6 +119,8 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
             setReferrals([]);
           }
         }
+      } else if (result.campaign) {
+        void selectCampaign(result.campaign as Campaign);
       }
     } catch {
       setData(null);
@@ -103,7 +131,7 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
 
   useEffect(() => {
     void loadMovie();
-  }, [campaignId, user?.id]);
+  }, [campaignId, user?.id, qrCode]);
 
   useEffect(() => {
     if (referralCode) {
@@ -176,6 +204,14 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
       const url = new URL(window.location.origin + '/');
       url.searchParams.set('campaign', campaign.id);
       if (referralCode) url.searchParams.set('ref', referralCode);
+      if (qrCode) {
+        url.searchParams.set('qr', qrCode);
+        try {
+          await recordQrLandingEvent(qrCode, 'signup_started');
+        } catch (eventError) {
+          console.warn('[Honeycomb] QR signup intent was not recorded:', eventError);
+        }
+      }
       url.searchParams.set('auth', '1');
       window.location.assign(url.toString());
       return;
@@ -355,6 +391,65 @@ export function MovieDetailScreen({ campaignId, referralCode, onBack }: Props) {
               </div>
             )}
           </section>
+
+          {user && (
+            <section className="rounded-[20px] bg-bg-secondary border border-white/[0.06] p-4">
+              <div className="flex items-end justify-between mb-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">
+                    Your activity
+                  </p>
+                  <h2 className="font-display text-[23px] leading-none text-white mt-1">
+                    MOVIE HISTORY
+                  </h2>
+                </div>
+                <span className="text-[10px] text-text-subtle">
+                  {activityEvents.length} events
+                </span>
+              </div>
+
+              {pointHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {pointHistory.slice(0, 4).map((transaction) => (
+                    <div key={transaction.id} className="flex items-start gap-3 rounded-[12px] bg-white/[0.03] border border-white/[0.04] px-3 py-3">
+                      <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-3.5 h-3.5 text-gold" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-white font-medium">{transaction.reason || 'Movie activity'}</p>
+                        <p className="text-[10px] text-text-subtle mt-1">{formatDate(transaction.created_at)}</p>
+                      </div>
+                      <span className="text-sm font-display text-gold flex-shrink-0">
+                        {transaction.points >= 0 ? '+' : ''}{transaction.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs leading-5 text-text-muted">
+                  Your scans, points and hunt progress for this movie will appear here.
+                </p>
+              )}
+
+              {activityEvents.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-white/[0.06]">
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-text-subtle mb-2">Recent events</p>
+                  <div className="space-y-2">
+                    {activityEvents.slice(0, 5).map((event) => (
+                      <div key={event.id} className="flex items-start justify-between gap-3">
+                        <span className="text-xs text-text-muted">
+                          {event.event_type.replace(/[_-]+/g, ' ')}
+                        </span>
+                        <span className="text-[10px] text-text-subtle whitespace-nowrap">
+                          {formatDate(event.created_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           <section>
             <div className="flex items-end justify-between mb-3">
