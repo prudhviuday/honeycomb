@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Activity, Share2, ScanLine, Pencil, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Activity, Share2, ScanLine, Pencil } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
@@ -8,21 +8,13 @@ import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/p
 import type { ActivityEvent } from '@/modules/analytics/types';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
-import { checkAdminAccess } from '@/modules/admin/api/adminApi';
 
-export function ProfileScreen({ onOpenAdmin }: { onOpenAdmin?: () => void } = {}) {
+export function ProfileScreen() {
   const { user, profile } = useAuth();
   const { activeCampaign, campaignUser } = useCampaign();
   const [editing, setEditing] = useState(false);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void checkAdminAccess().then((allowed) => { if (active) setIsAdmin(allowed); });
-    return () => { active = false; };
-  }, []);
 
   useEffect(() => {
     if (activeCampaign && user) {
@@ -132,17 +124,6 @@ export function ProfileScreen({ onOpenAdmin }: { onOpenAdmin?: () => void } = {}
           </div>
         )}
       </div>
-
-      {isAdmin && (
-        <button
-          type="button"
-          onClick={onOpenAdmin}
-          className="mb-3 w-full flex items-center justify-center gap-2 rounded-[10px] border border-gold/30 bg-gold/5 py-3.5 text-sm font-medium text-gold hover:bg-gold/10 transition-colors"
-        >
-          <ShieldCheck className="h-[18px] w-[18px]" />
-          Admin · User Activity
-        </button>
-      )}
 
       {/* Sign out */}
       <button
