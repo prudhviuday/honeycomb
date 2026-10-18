@@ -1,7 +1,7 @@
--- Compact activity numbering and configuration-driven task progress.
--- Activity number = one occurrence (31, 32, 33 ...).
--- event_type_id = the compact code for the kind of activity (e.g. referral_friend_qualified).
--- These are deliberately separate: the same activity type can occur many times and in many campaigns.
+-- Compact numeric activity codes and configuration-driven task progress.
+-- activity_event_types.id / activity_events.event_type_id identify the activity kind.
+-- Each activity_events row is an occurrence; campaign/user/entity identify its context.
+-- Keep the existing numeric IDs stable because historical rows and application code use them.
 
 -- activity_event_types.id is the compact numeric activity code.
 -- Do not add a second per-row number: it duplicates the existing event_type_id.
