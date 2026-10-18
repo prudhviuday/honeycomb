@@ -13,6 +13,8 @@ export interface RegisterActivityInput {
   entityId?: string | null;
   sourceModule?: string;
   metadata?: Record<string, unknown>;
+  /** passive never prompts; required may trigger the browser permission prompt; none skips capture. */
+  locationMode?: "passive" | "required" | "none";
 }
 
 export interface RegisterActivityResult {
@@ -66,6 +68,66 @@ const EVENT_ALIASES: Record<string, string> = {
   reward_claim_error: "reward_claim_failed",
 };
 
+/**
+ * Capture one position for one event. Passive mode only reads location when
+ * the browser already reports permission as granted. Required mode asks the
+ * browser when needed. This never starts a watch or background tracking.
+ */
+export async function captureEventLocation(
+  mode: "passive" | "required" = "passive",
+): Promise<Record<string, unknown>> {
+  const base: Record<string, unknown> = {
+    location_capture_mode: mode,
+    location_verified: false,
+  };
+
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+    return { ...base, location_status: "unsupported" };
+  }
+
+  if (mode === "passive") {
+    if (!navigator.permissions?.query) {
+      return { ...base, location_status: "permission_state_unavailable" };
+    }
+    try {
+      const permission = await navigator.permissions.query({ name: "geolocation" });
+      if (permission.state !== "granted") {
+        return {
+          ...base,
+          location_status: permission.state === "denied" ? "permission_denied" : "permission_not_granted",
+        };
+      }
+    } catch {
+      return { ...base, location_status: "permission_state_unavailable" };
+    }
+  }
+
+  try {
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: mode === "required",
+        maximumAge: mode === "required" ? 0 : 60_000,
+        timeout: mode === "required" ? 8_000 : 3_000,
+      });
+    });
+    return {
+      ...base,
+      location_latitude: position.coords.latitude,
+      location_longitude: position.coords.longitude,
+      location_accuracy_m: Math.round(position.coords.accuracy),
+      location_recorded_at: new Date(position.timestamp).toISOString(),
+      location_status: "captured",
+      location_verified: true,
+    };
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? Number((error as { code?: unknown }).code)
+      : 0;
+    const status = code === 1 ? "permission_denied" : code === 3 ? "location_timeout" : "location_unavailable";
+    return { ...base, location_status: status, location_verified: false };
+  }
+}
+
 export async function registerActivity(
   input: RegisterActivityInput,
 ): Promise<RegisterActivityResult> {
@@ -76,50 +138,28 @@ export async function registerActivity(
   const eventCode = EVENT_ALIASES[normalized] ?? normalized;
   const eventTypeId = EVENT_TYPE_IDS[eventCode];
 
-  // Deliberately ignore low-value UI events and unknown event names.
-  if (!eventTypeId) {
-    return { recorded: false, reason: "not_tracked" };
-  }
+  if (!eventTypeId) return { recorded: false, reason: "not_tracked" };
 
   try {
-    // Use the authenticated session identity, never a user ID supplied by a feature.
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
     const userId = sessionData.session?.user.id;
     if (!userId) return { recorded: false, reason: "not_authenticated" };
 
-    const metadata: Record<string, unknown> = {
+    let eventMetadata: Record<string, unknown> = {
       ...(input.metadata ?? {}),
       source_module: input.sourceModule?.trim() || "honeycomb",
     };
 
-    // Device location is collected only after the user has explicitly enabled
-    // activity-location sharing in their profile. It is attached to activity
-    // events only; there is no background or continuous GPS tracking.
-    const { data: trackingProfile } = await supabase
-      .from("profiles")
-      .select("location_tracking_enabled")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (trackingProfile?.location_tracking_enabled === true &&
-        typeof navigator !== "undefined" &&
-        "geolocation" in navigator) {
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: false,
-            maximumAge: 60_000,
-            timeout: 4_000,
-          });
-        });
-        metadata.location_latitude = position.coords.latitude;
-        metadata.location_longitude = position.coords.longitude;
-        metadata.location_accuracy_m = Math.round(position.coords.accuracy);
-        metadata.location_recorded_at = new Date(position.timestamp).toISOString();
-      } catch {
-        // Location is optional: a denial or timeout must never block an activity.
-      }
+    // Feature flows can supply a captured result (e.g. a QR scan). Otherwise,
+    // ordinary events only use location if permission was already granted.
+    if (input.locationMode !== "none" &&
+        !("location_status" in eventMetadata) &&
+        !("location_latitude" in eventMetadata)) {
+      eventMetadata = {
+        ...eventMetadata,
+        ...await captureEventLocation(input.locationMode ?? "passive"),
+      };
     }
 
     const { error } = await supabase.from("activity_events").insert({
@@ -128,14 +168,13 @@ export async function registerActivity(
       event_type_id: eventTypeId,
       entity_type: input.entityType ?? null,
       entity_id: input.entityId ?? null,
-      metadata,
+      metadata: eventMetadata,
       origin: "client",
     });
 
     if (error) throw error;
     return { recorded: true };
   } catch (error) {
-    // Activity collection must not break the user action being recorded.
     console.warn("[Analytics] Activity recording failed:", error);
     return { recorded: false, reason: "write_failed" };
   }
