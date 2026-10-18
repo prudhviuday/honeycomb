@@ -3,12 +3,8 @@
 -- event_type_id = the compact code for the kind of activity (e.g. referral_friend_qualified).
 -- These are deliberately separate: the same activity type can occur many times and in many campaigns.
 
-alter table public.activity_events
-  add column if not exists activity_number integer generated always as identity;
-
-create unique index if not exists activity_events_activity_number_uidx
-  on public.activity_events (activity_number);
-
+-- activity_event_types.id is the compact numeric activity code.
+-- Do not add a second per-row number: it duplicates the existing event_type_id.
 create unique index if not exists activity_events_event_key_uidx
   on public.activity_events (event_key)
   where event_key is not null;
@@ -42,13 +38,6 @@ alter table public.missions
   add constraint missions_progress_mode_check
   check (progress_mode in ('event_count', 'distinct_entities'));
 
-comment on column public.activity_events.activity_number is
-  'Compact sequential identifier for an individual activity occurrence. Use event_type_id to identify the activity category.';
-comment on column public.missions.progress_event_type_id is
-  'Optional activity category that advances this mission. When NULL, existing mission-specific processing remains in control.';
-comment on column public.missions.progress_mode is
-  'event_count counts trusted occurrences; distinct_entities counts unique entity_id values for the configured event type.';
-
 -- Internal entry point for trusted database functions only. Do not grant this
 -- to anon/authenticated: client-submitted events are not valid reward evidence.
 create or replace function public.record_trusted_activity_and_progress(
@@ -68,7 +57,6 @@ as $function$
 declare
   v_type_code text;
   v_activity_id uuid;
-  v_activity_number integer;
   v_campaign_user_id uuid;
   v_mission record;
   v_progress integer;
@@ -111,13 +99,13 @@ begin
     p_entity_id, coalesce(p_metadata, '{}'::jsonb), p_event_key, 'app'
   )
   on conflict (event_key) where event_key is not null do nothing
-  returning id, activity_number into v_activity_id, v_activity_number;
+  returning id into v_activity_id;
 
   if v_activity_id is null then
     return jsonb_build_object(
       'success', true,
       'duplicate', true,
-      'activityNumber', null,
+      'activityNumber', p_event_type_id,
       'tasksCompleted', '[]'::jsonb
     );
   end if;
@@ -127,7 +115,7 @@ begin
     return jsonb_build_object(
       'success', true,
       'duplicate', false,
-      'activityNumber', v_activity_number,
+      'activityNumber', p_event_type_id,
       'tasksCompleted', v_tasks_completed
     );
   end if;
@@ -145,7 +133,7 @@ begin
     return jsonb_build_object(
       'success', true,
       'duplicate', false,
-      'activityNumber', v_activity_number,
+      'activityNumber', p_event_type_id,
       'tasksCompleted', v_tasks_completed,
       'progressSkipped', 'user_not_active_in_campaign'
     );
@@ -262,7 +250,7 @@ begin
   return jsonb_build_object(
     'success', true,
     'duplicate', false,
-    'activityNumber', v_activity_number,
+    'activityNumber', p_event_type_id,
     'tasksCompleted', v_tasks_completed
   );
 end;
