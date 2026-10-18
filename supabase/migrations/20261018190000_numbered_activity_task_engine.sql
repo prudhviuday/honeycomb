@@ -5,18 +5,13 @@
 
 -- activity_event_types.id is the compact numeric activity code.
 -- Do not add a second per-row number: it duplicates the existing event_type_id.
-create unique index if not exists activity_events_event_key_uidx
-  on public.activity_events (event_key)
-  where event_key is not null;
-
+-- Existing activity_events_event_key_idx already enforces event-key idempotency.
 -- Supports the per-user/per-campaign event counts used by task progress.
 create index if not exists activity_events_task_progress_idx
   on public.activity_events (campaign_id, user_id, event_type_id, entity_id)
   where origin in ('app', 'server');
 
-create unique index if not exists mission_progress_mission_user_uidx
-  on public.mission_progress (mission_id, user_id);
-
+-- Existing mission_progress_mission_id_user_id_key already prevents duplicate progress rows.
 insert into public.activity_event_types (id, code, description, is_important)
 values
   (37, 'referral_qr_scanned', 'A friend opened/scanned a campaign referral QR', true),
