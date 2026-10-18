@@ -304,3 +304,162 @@ revoke all on function public.record_trusted_activity_and_progress(
   uuid, uuid, smallint, text, text, uuid, jsonb
 ) from public, anon, authenticated;
 
+
+-- Tie referral landing events into the shared activity/task engine.
+-- Signup completion and campaign joining are distinct qualification signals:
+-- missions can count event type 30 (signup) or 38 (qualified/joined friend).
+create or replace function public.record_qr_landing_event(
+  p_code text,
+  p_event_type text,
+  p_visitor_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  v_qr record;
+  v_user_id uuid := auth.uid();
+  v_referrer_id uuid;
+  v_referral_id uuid;
+  v_referral_status text;
+begin
+  if p_event_type not in ('page_view', 'signup_started', 'signup_completed', 'campaign_joined') then
+    raise exception using errcode = '22023', message = 'Unsupported QR landing event.';
+  end if;
+
+  if p_visitor_id is null then
+    raise exception using errcode = '22023', message = 'A session visitor id is required.';
+  end if;
+
+  if p_event_type in ('signup_completed', 'campaign_joined') and v_user_id is null then
+    raise exception using errcode = '42501', message = 'Authentication is required to record signup completion.';
+  end if;
+
+  select q.id, q.campaign_id, q.purpose, q.inviter_user_id, q.referral_code
+    into v_qr
+  from public.qr_codes q
+  join public.campaigns c on c.id = q.campaign_id and c.active = true
+  join public.movies m on m.id = c.movie_id and m.active = true
+  where (
+      q.public_code = upper(trim(p_code))
+      or q.short_code = upper(trim(p_code))
+      or q.code_hash = md5(upper(trim(p_code)))
+    )
+    and q.is_active = true
+    and (q.starts_at is null or q.starts_at <= now())
+    and (q.expires_at is null or q.expires_at >= now())
+    and (q.max_uses is null or q.use_count < q.max_uses)
+  limit 1;
+
+  if not found then
+    return false;
+  end if;
+
+  insert into public.qr_landing_events(qr_id, campaign_id, user_id, visitor_id, event_type)
+  values (v_qr.id, v_qr.campaign_id, v_user_id, p_visitor_id, p_event_type)
+  on conflict (qr_id, visitor_id, event_type)
+  do update set user_id = coalesce(excluded.user_id, public.qr_landing_events.user_id);
+
+  -- A referral QR visit is an activity for the inviter. The visitor UUID is
+  -- the entity, so repeat visits by the same visitor can be deduplicated.
+  if p_event_type = 'page_view'
+     and v_qr.purpose = 'friend_invite'
+     and v_qr.inviter_user_id is not null then
+    perform public.record_trusted_activity_and_progress(
+      v_qr.campaign_id,
+      v_qr.inviter_user_id,
+      37,
+      'referral-qr-visit:' || v_qr.id::text || ':' || p_visitor_id::text,
+      'referral_visitor',
+      p_visitor_id,
+      jsonb_build_object(
+        'qr_id', v_qr.id,
+        'referral_code', v_qr.referral_code,
+        'referred_user_id', v_user_id
+      )
+    );
+  end if;
+
+  if p_event_type in ('signup_completed', 'campaign_joined')
+     and v_user_id is not null
+     and v_qr.purpose = 'friend_invite'
+     and v_qr.inviter_user_id is not null
+     and v_qr.inviter_user_id <> v_user_id
+     and v_qr.referral_code is not null then
+
+    -- Keep one referral relationship per campaign/referred user/code.
+    insert into public.referrals(
+      campaign_id, referrer_user_id, referred_user_id, referral_code, status,
+      qualified_at
+    )
+    select
+      v_qr.campaign_id,
+      v_qr.inviter_user_id,
+      v_user_id,
+      v_qr.referral_code,
+      case when p_event_type = 'campaign_joined' then 'qualified' else 'registered' end,
+      case when p_event_type = 'campaign_joined' then now() else null end
+    where not exists (
+      select 1
+      from public.referrals r
+      where r.campaign_id = v_qr.campaign_id
+        and r.referred_user_id = v_user_id
+        and r.referral_code = v_qr.referral_code
+    );
+
+    select r.id, r.referrer_user_id, r.status
+      into v_referral_id, v_referrer_id, v_referral_status
+    from public.referrals r
+    where r.campaign_id = v_qr.campaign_id
+      and r.referred_user_id = v_user_id
+      and r.referral_code = v_qr.referral_code
+    order by r.created_at
+    limit 1
+    for update;
+
+    if found then
+      if p_event_type = 'campaign_joined' and v_referral_status <> 'qualified' then
+        update public.referrals
+        set status = 'qualified',
+            qualified_at = coalesce(qualified_at, now())
+        where id = v_referral_id;
+        v_referral_status := 'qualified';
+      end if;
+
+      if p_event_type = 'signup_completed' then
+        perform public.record_trusted_activity_and_progress(
+          v_qr.campaign_id,
+          v_referrer_id,
+          30,
+          'referral-signup:' || v_qr.campaign_id::text || ':' || v_user_id::text,
+          'referred_user',
+          v_user_id,
+          jsonb_build_object(
+            'referral_id', v_referral_id,
+            'referral_code', v_qr.referral_code,
+            'qualification_signal', 'signup_completed'
+          )
+        );
+      elsif p_event_type = 'campaign_joined' then
+        perform public.record_trusted_activity_and_progress(
+          v_qr.campaign_id,
+          v_referrer_id,
+          38,
+          'referral-qualified:' || v_qr.campaign_id::text || ':' || v_user_id::text,
+          'referred_user',
+          v_user_id,
+          jsonb_build_object(
+            'referral_id', v_referral_id,
+            'referral_code', v_qr.referral_code,
+            'qualification_signal', 'campaign_joined'
+          )
+        );
+      end if;
+    end if;
+  end if;
+
+  return true;
+end;
+$function$;
