@@ -7,6 +7,7 @@ import { getActivityEvents } from '@/modules/analytics/api/analyticsApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
 import type { ActivityEvent } from '@/modules/analytics/types';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 export function ProfileScreen() {
   const { user, profile } = useAuth();
@@ -36,6 +37,11 @@ export function ProfileScreen() {
     if (!user) return;
     const normalized = normalizeProfileInput(data);
     await upsertProfile({ user_id: user.id, ...normalized });
+    void registerActivity({
+      eventType: 'profile_updated',
+      sourceModule: 'profile',
+      metadata: { fields_updated: Object.keys(normalized) },
+    });
   };
 
   const points = campaignUser?.points ?? 0;
