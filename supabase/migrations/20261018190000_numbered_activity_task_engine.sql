@@ -1,10 +1,13 @@
--- Compact numeric activity codes and configuration-driven task progress.
--- activity_event_types.id / activity_events.event_type_id identify the activity kind.
--- Each activity_events row is an occurrence; campaign/user/entity identify its context.
--- Keep the existing numeric IDs stable because historical rows and application code use them.
+-- Compact per-occurrence activity numbers and configuration-driven task progress.
+-- activity_number identifies one recorded occurrence; event_type_id identifies its category.
+-- Keep category IDs stable because historical rows and application code use them.
 
--- activity_event_types.id is the compact numeric activity code.
--- Do not add a second per-row number: it duplicates the existing event_type_id.
+alter table public.activity_events
+  add column if not exists activity_number integer generated always as identity;
+
+create unique index if not exists activity_events_activity_number_uidx
+  on public.activity_events (activity_number);
+
 -- Existing activity_events_event_key_idx already enforces event-key idempotency.
 -- Supports the per-user/per-campaign event counts used by task progress.
 create index if not exists activity_events_task_progress_idx
@@ -62,6 +65,7 @@ as $function$
 declare
   v_type_code text;
   v_activity_id uuid;
+  v_activity_number integer;
   v_campaign_user_id uuid;
   v_mission record;
   v_progress integer;
@@ -104,13 +108,13 @@ begin
     p_entity_id, coalesce(p_metadata, '{}'::jsonb), p_event_key, 'app'
   )
   on conflict (event_key) where event_key is not null do nothing
-  returning id into v_activity_id;
+  returning id, activity_number into v_activity_id, v_activity_number;
 
   if v_activity_id is null then
     return jsonb_build_object(
       'success', true,
       'duplicate', true,
-      'activityNumber', p_event_type_id,
+      'activityNumber', v_activity_number,
       'tasksCompleted', '[]'::jsonb
     );
   end if;
@@ -120,7 +124,7 @@ begin
     return jsonb_build_object(
       'success', true,
       'duplicate', false,
-      'activityNumber', p_event_type_id,
+      'activityNumber', v_activity_number,
       'tasksCompleted', v_tasks_completed
     );
   end if;
@@ -138,7 +142,7 @@ begin
     return jsonb_build_object(
       'success', true,
       'duplicate', false,
-      'activityNumber', p_event_type_id,
+      'activityNumber', v_activity_number,
       'tasksCompleted', v_tasks_completed,
       'progressSkipped', 'user_not_active_in_campaign'
     );
@@ -255,7 +259,7 @@ begin
   return jsonb_build_object(
     'success', true,
     'duplicate', false,
-    'activityNumber', p_event_type_id,
+    'activityNumber', v_activity_number,
     'tasksCompleted', v_tasks_completed
   );
 end;
