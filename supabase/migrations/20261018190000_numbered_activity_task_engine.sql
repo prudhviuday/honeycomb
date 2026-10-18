@@ -4,7 +4,7 @@
 -- These are deliberately separate: the same activity type can occur many times and in many campaigns.
 
 alter table public.activity_events
-  add column if not exists activity_number bigint generated always as identity;
+  add column if not exists activity_number integer generated always as identity;
 
 create unique index if not exists activity_events_activity_number_uidx
   on public.activity_events (activity_number);
@@ -162,7 +162,7 @@ begin
       where e.campaign_id = p_campaign_id
         and e.user_id = p_user_id
         and e.event_type_id = p_event_type_id
-        and e.origin = 'server'
+        and e.origin in ('app', 'server')
         and e.entity_id is not null;
     else
       select count(*)::integer
@@ -484,7 +484,7 @@ begin
           'completed_at', coalesce(new.completed_at, now())
         ),
         'task-completed:' || v_mission.id::text || ':' || new.user_id::text,
-        'server'
+        'app'
       )
       on conflict (event_key) where event_key is not null do nothing;
     end if;
