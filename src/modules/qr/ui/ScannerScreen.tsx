@@ -208,6 +208,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
 
     let targetCampaignId = activeCampaign?.id ?? null;
     let targetCampaign = activeCampaign;
+    let isMoviePromotionQr = false;
     let code = normalizeScanCode(scanCode);
 
     try {
@@ -221,6 +222,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
       if (isUrl || isPublicCode) {
         const resolved = await resolvePublicQr(code);
         if (resolved.success && resolved.campaignId) {
+          isMoviePromotionQr = true;
           targetCampaignId = resolved.campaignId;
           targetCampaign = await getCampaign(targetCampaignId);
           if (!targetCampaign) {
@@ -259,6 +261,16 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
       if (!res.success && /already scanned this QR code/i.test(res.message)) {
         const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
         if (campaign) await selectCampaign(campaign);
+        onScanComplete(targetCampaignId);
+        return;
+      }
+
+      if (res.success && isMoviePromotionQr && Number(res.movieEntryBonus ?? 0) === 0) {
+        // This user has already discovered this movie. Keep processing distinct
+        // vendor/mall/hunt QR rewards, but take them straight to their movie page.
+        const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
+        if (campaign) await selectCampaign(campaign);
+        else await refreshCampaignUser();
         onScanComplete(targetCampaignId);
         return;
       }
