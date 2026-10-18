@@ -58,7 +58,7 @@ The function:
 2. Finds active missions configured for that event type.
 3. Computes progress from server-origin activity rows.
 4. Locks the user's campaign membership and mission-progress row.
-5. Writes the completion activity and points ledger entry once, and updates the balance in the same transaction.
+5. Updates the points ledger and balance in the same transaction; a database trigger writes the completion activity on the first transition to completed.
 
 Do not grant direct client access to this helper. The activity log is the history, `mission_progress` is the current state, `referrals` stores the referral relationship, and `point_transactions` is the points ledger.
 
