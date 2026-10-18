@@ -170,13 +170,20 @@ export interface Referral {
 }
 
 export interface ActivityEvent {
+  /** UUID primary key; use activity_number for compact display/exports. */
   id: string;
+  /** Sequential numeric ID for this individual activity occurrence. Not guaranteed gapless. */
+  activity_number: number;
+  /** Compact numeric category ID; maps to public.activity_event_types.id. */
+  event_type_id: number;
   campaign_id: string | null;
-  user_id: string;
-  event_type: string;
-  entity_type: string;
+  user_id: string | null;
+  event_type: string | null;
+  entity_type: string | null;
   entity_id: string | null;
   metadata: Record<string, unknown>;
+  event_key?: string | null;
+  origin?: string;
   created_at: string;
 }
 
