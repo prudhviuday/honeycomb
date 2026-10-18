@@ -5,6 +5,8 @@ revoke all on function public.create_friend_invite_qr(uuid, text) from anon, pub
 grant execute on function public.create_friend_invite_qr(uuid, text) to authenticated;
 revoke all on function public.create_promotion_qr(uuid, text, uuid, uuid, uuid, text) from anon, public;
 grant execute on function public.create_promotion_qr(uuid, text, uuid, uuid, uuid, text) to authenticated;
+revoke all on function public.admin_create_friend_invite_qr(uuid, uuid, text) from anon, public;
+grant execute on function public.admin_create_friend_invite_qr(uuid, uuid, text) to authenticated;
 
 create index if not exists qr_codes_venue_id_idx on public.qr_codes(venue_id);
 create index if not exists qr_codes_inviter_user_id_idx on public.qr_codes(inviter_user_id);
