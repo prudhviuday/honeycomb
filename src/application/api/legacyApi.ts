@@ -1193,7 +1193,7 @@ export async function getActivityEvents(
 
 export async function logActivity(
   campaignId: string,
-  userId: string,
+  _userId: string,
   eventType: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
