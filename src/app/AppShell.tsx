@@ -14,7 +14,6 @@ import { useCampaign } from "@/application/state/CampaignContext";
 import type { Campaign } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { registerActivity } from "@/modules/analytics/api/analyticsApi";
-import { AdminActivityScreen } from "@/modules/admin/ui/AdminActivityScreen";
 
 export type Tab =
   "home" | "hunts" | "scanner" | "map" | "rewards" | "profile" | "analytics";
@@ -53,7 +52,6 @@ export function AppShell() {
   const [qrResolving, setQrResolving] = useState(() => Boolean(new URLSearchParams(window.location.search).get("qr")));
   const [qrError, setQrError] = useState("");
   const [navCompact, setNavCompact] = useState(false);
-  const [showAdminActivity, setShowAdminActivity] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -207,10 +205,6 @@ export function AppShell() {
 
   if (!user) return <AuthScreen />;
 
-  if (showAdminActivity) {
-    return <AdminActivityScreen onBack={() => setShowAdminActivity(false)} />;
-  }
-
   if (qrCode) {
     if (qrError) {
       return (
@@ -281,7 +275,7 @@ export function AppShell() {
             <button className="m-4 text-gold underline" onClick={() => navigate("analytics")}>
               Producer analytics
             </button>
-            <ProfileScreen onOpenAdmin={() => setShowAdminActivity(true)} />
+            <ProfileScreen />
           </div>
         )}
         {visitedTabs.includes("analytics") && (
