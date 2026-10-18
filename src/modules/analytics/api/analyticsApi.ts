@@ -134,7 +134,7 @@ export async function registerActivity(
   const normalized = input.eventType
     .trim()
     .toLowerCase()
-    .replace(/[\\s-]+/g, "_");
+    .replace(/[\s-]+/g, "_");
   const eventCode = EVENT_ALIASES[normalized] ?? normalized;
   const eventTypeId = EVENT_TYPE_IDS[eventCode];
 
