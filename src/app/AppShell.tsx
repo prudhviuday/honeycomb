@@ -143,17 +143,19 @@ export function AppShell() {
     setQrResolving(false);
   };
 
+  useEffect(() => {
+    if (!user) return;
+    void registerActivity({
+      eventType: "app_tab_viewed",
+      campaignId: movieRoute.campaignId,
+      sourceModule: "navigation",
+      metadata: { tab: activeTab },
+    });
+  }, [activeTab, user?.id, movieRoute.campaignId]);
+
   const navigate = (tab: Tab) => {
     setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
     setActiveTab(tab);
-    if (user) {
-      void registerActivity({
-        eventType: "app_tab_opened",
-        campaignId: movieRoute.campaignId,
-        sourceModule: "navigation",
-        metadata: { tab },
-      });
-    }
     setNavCompact(false);
     if (movieRoute.campaignId) {
       window.history.pushState({}, "", "/");
