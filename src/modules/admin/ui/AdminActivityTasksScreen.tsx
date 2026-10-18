@@ -44,7 +44,7 @@ export function AdminActivityTasksScreen() {
     setAuthorized(true);
     const [typeResult, campaignResult, missionResult, logResult] = await Promise.all([
       supabase.from("activity_event_types").select("id,code,description,is_important").order("id"),
-      supabase.from("campaigns").select("id,name,active").order("title"),
+      supabase.from("campaigns").select("id,name,active").order("name"),
       supabase.from("missions").select("id,name,campaign_id,target_value,reward_points,progress_event_type_id,progress_mode,is_active").order("created_at", { ascending: false }),
       supabase.from("activity_events").select("activity_number,event_type_id,user_id,campaign_id,entity_type,entity_id,created_at,event_key").order("activity_number", { ascending: false }).limit(100),
     ]);
@@ -68,7 +68,7 @@ export function AdminActivityTasksScreen() {
     setSaving(true); setNotice(null);
     const nextId = Math.max(0, ...types.map((item) => item.id)) + 1;
     const { error } = await supabase.from("activity_event_types").insert({
-      id: nextId, code: activityCode.trim(), description: activityDescription.trim() || null, is_important: important,
+      id: nextId, code: activityCode.trim(), description: activityDescription.trim() || activityName.trim(), is_important: important,
     });
     setSaving(false);
     if (error) { setNotice({ kind: "error", message: error.message }); return; }
