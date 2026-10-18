@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
 import { signIn, signUp } from '@/modules/auth/api/authApi';
 import { normalizeDisplayName, normalizeEmail } from '@/modules/auth/logic/authLogic';
+import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 
 export function AuthScreen() {
   const [mode, setMode] = useState<'login' | 'signup'>('signup');
@@ -23,8 +24,18 @@ export function AuthScreen() {
         // receives a harmless default and the user can edit it later.
         const name = normalizeDisplayName(displayName);
         await signUp(normalizeEmail(email), password, name);
+        void registerActivity({
+          eventType: 'account_signup_submitted',
+          sourceModule: 'auth',
+          metadata: { method: 'email_password' },
+        });
       } else {
         await signIn(normalizeEmail(email), password);
+        void registerActivity({
+          eventType: 'user_signed_in',
+          sourceModule: 'auth',
+          metadata: { method: 'email_password' },
+        });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
