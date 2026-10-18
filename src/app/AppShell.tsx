@@ -11,8 +11,8 @@ import { ProfileScreen } from "@/modules/profile/ui/ProfileScreen";
 import { HuntsScreen } from "@/modules/hunts/ui/HuntsScreen";
 import { MovieDetailScreen } from "@/modules/campaigns/ui/MovieDetailScreen";
 import { useCampaign } from "@/application/state/CampaignContext";
+import { resolvePublicQr, recordQrLandingEvent } from "@/modules/qr/api/publicQrApi";
 import type { Campaign } from "@/types";
-import { supabase } from "@/lib/supabase";
 import { registerActivity } from "@/modules/analytics/api/analyticsApi";
 
 export type Tab =
@@ -30,27 +30,32 @@ interface MovieRoute {
   campaignId: string | null;
   referralCode: string | undefined;
   authMode: boolean;
+  qrCode?: string;
+  qrPurpose?: string;
+  qrResolved?: boolean;
+  qrInvalid?: boolean;
 }
 
 function readMovieRoute(): MovieRoute {
   const params = new URLSearchParams(window.location.search);
+  const match = window.location.pathname.match(/^\/q\/([^/]+)\/?$/i);
+  const pathCode = match ? decodeURIComponent(match[1]) : undefined;
   return {
     campaignId: params.get("campaign"),
     referralCode: params.get("ref") || undefined,
     authMode: params.get("auth") === "1",
+    qrCode: pathCode || params.get("qr") || undefined,
+    qrResolved: !(pathCode || params.get("qr")),
   };
 }
 
 export function AppShell() {
   const { user, loading: authLoading } = useAuth();
-  const { campaigns, activeCampaign, loading: campaignsLoading, selectCampaign } = useCampaign();
+  const { selectCampaign } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [visitedTabs, setVisitedTabs] = useState<Tab[]>(["home"]);
   const [movieRoute, setMovieRoute] = useState<MovieRoute>(() => readMovieRoute());
-  const [qrCode, setQrCode] = useState<string | null>(() => new URLSearchParams(window.location.search).get("qr"));
-  const [qrCampaignId, setQrCampaignId] = useState<string | null>(null);
-  const [qrResolving, setQrResolving] = useState(() => Boolean(new URLSearchParams(window.location.search).get("qr")));
-  const [qrError, setQrError] = useState("");
+  const [qrResolving, setQrResolving] = useState(() => Boolean(readMovieRoute().qrCode && !readMovieRoute().qrResolved));
   const [navCompact, setNavCompact] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -92,57 +97,54 @@ export function AppShell() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setMovieRoute(readMovieRoute());
-      setQrCode(new URLSearchParams(window.location.search).get("qr"));
+      const next = readMovieRoute();
+      setMovieRoute(next);
+      setQrResolving(Boolean(next.qrCode && !next.qrResolved));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   useEffect(() => {
-    if (!qrCode || !user || campaignsLoading) return;
+    const code = movieRoute.qrCode;
+    if (!code || movieRoute.campaignId || movieRoute.qrResolved) return;
+
     let cancelled = false;
     setQrResolving(true);
-    setQrError("");
-
-    void (async () => {
-      const { data: campaignId, error } = await supabase.rpc("resolve_qr_campaign", { p_code: qrCode });
-      if (cancelled) return;
-      if (error || !campaignId) {
-        setQrError("This QR link is invalid, inactive, or no longer available.");
-        setQrResolving(false);
-        return;
-      }
-      const campaign = campaigns.find((item) => item.id === campaignId);
-      if (!campaign) {
-        setQrError("The campaign for this QR is unavailable. Please contact the campaign team.");
-        setQrResolving(false);
-        return;
-      }
-      setQrCampaignId(campaignId);
-      try {
-        await selectCampaign(campaign);
-        if (!cancelled) setQrResolving(false);
-      } catch {
-        if (!cancelled) {
-          setQrError("Could not open this QR campaign. Please try again.");
-          setQrResolving(false);
+    void resolvePublicQr(code)
+      .then(async (resolved) => {
+        if (cancelled) return;
+        if (!resolved.success || !resolved.campaignId) {
+          setMovieRoute((current) => ({ ...current, qrResolved: true, qrInvalid: true }));
+          return;
         }
-      }
-    })();
+        setMovieRoute((current) => ({
+          ...current,
+          campaignId: resolved.campaignId!,
+          referralCode: resolved.purpose === "friend_invite"
+            ? resolved.referralCode || current.referralCode
+            : current.referralCode,
+          qrPurpose: resolved.purpose,
+          qrResolved: true,
+          qrInvalid: false,
+        }));
+        try {
+          await recordQrLandingEvent(code, "page_view");
+        } catch (eventError) {
+          console.warn("[Honeycomb] QR landing event was not recorded:", eventError);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn("[Honeycomb] QR resolution failed:", error);
+        setMovieRoute((current) => ({ ...current, qrResolved: true, qrInvalid: true }));
+      })
+      .finally(() => {
+        if (!cancelled) setQrResolving(false);
+      });
 
     return () => { cancelled = true; };
-  }, [qrCode, user?.id, campaignsLoading, campaigns, selectCampaign]);
-
-  const clearQrRoute = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("qr");
-    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-    setQrCode(null);
-    setQrCampaignId(null);
-    setQrError("");
-    setQrResolving(false);
-  };
+  }, [movieRoute.qrCode, movieRoute.campaignId, movieRoute.qrResolved]);
 
   const navigate = (tab: Tab) => {
     setVisitedTabs((visited) => visited.includes(tab) ? visited : [...visited, tab]);
@@ -179,16 +181,28 @@ export function AppShell() {
 
   const closeMovie = () => {
     window.history.pushState({}, "", "/");
-    setMovieRoute({ campaignId: null, referralCode: undefined, authMode: false });
+    setMovieRoute({ campaignId: null, referralCode: undefined, authMode: false, qrResolved: true });
   };
 
   const publicMovie = Boolean(movieRoute.campaignId && !user && !movieRoute.authMode);
   const showMovie = Boolean(movieRoute.campaignId && user);
 
-  if (authLoading) {
+  if (authLoading || qrResolving) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg-primary">
         <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (movieRoute.qrInvalid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 bg-bg-primary text-text-primary">
+        <div className="text-center max-w-sm">
+          <p className="font-display text-2xl text-white">QR NOT AVAILABLE</p>
+          <p className="text-sm text-text-muted mt-3">This movie promotion QR may be invalid, expired or temporarily unavailable.</p>
+          <button type="button" onClick={closeMovie} className="mt-6 px-5 py-3 rounded-xl bg-accent text-white text-sm font-semibold">Explore Honeycomb</button>
+        </div>
       </div>
     );
   }
@@ -198,6 +212,7 @@ export function AppShell() {
       <MovieDetailScreen
         campaignId={movieRoute.campaignId!}
         referralCode={movieRoute.referralCode}
+        qrCode={movieRoute.qrCode}
         onBack={closeMovie}
       />
     );
@@ -205,32 +220,12 @@ export function AppShell() {
 
   if (!user) return <AuthScreen />;
 
-  if (qrCode) {
-    if (qrError) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg-primary px-6 text-center">
-          <div className="text-lg font-semibold text-text-primary">QR link unavailable</div>
-          <p className="max-w-sm text-sm leading-6 text-text-muted">{qrError}</p>
-          <button type="button" onClick={() => { clearQrRoute(); navigate("home"); }} className="rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white">Go to Honeycomb</button>
-        </div>
-      );
-    }
-    if (qrResolving || !qrCampaignId || activeCampaign?.id !== qrCampaignId) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-bg-primary text-text-primary">
-          <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-text-muted">Opening QR campaign…</p>
-        </div>
-      );
-    }
-    return <ScannerScreen initialCode={qrCode} onScanComplete={() => { clearQrRoute(); navigate("home"); }} />;
-  }
-
   if (showMovie) {
     return (
       <MovieDetailScreen
         campaignId={movieRoute.campaignId!}
         referralCode={movieRoute.referralCode}
+        qrCode={movieRoute.qrCode}
         onBack={closeMovie}
       />
     );
