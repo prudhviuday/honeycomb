@@ -13,6 +13,11 @@ create unique index if not exists activity_events_event_key_uidx
   on public.activity_events (event_key)
   where event_key is not null;
 
+-- Supports the per-user/per-campaign event counts used by task progress.
+create index if not exists activity_events_task_progress_idx
+  on public.activity_events (campaign_id, user_id, event_type_id, entity_id)
+  where origin in ('app', 'server');
+
 create unique index if not exists mission_progress_mission_user_uidx
   on public.mission_progress (mission_id, user_id);
 
@@ -155,25 +160,8 @@ begin
       and (m.ends_at is null or m.ends_at >= now())
     order by m.id
   loop
-    if v_mission.progress_mode = 'distinct_entities' then
-      select count(distinct e.entity_id)::integer
-        into v_progress
-      from public.activity_events e
-      where e.campaign_id = p_campaign_id
-        and e.user_id = p_user_id
-        and e.event_type_id = p_event_type_id
-        and e.origin in ('app', 'server')
-        and e.entity_id is not null;
-    else
-      select count(*)::integer
-        into v_progress
-      from public.activity_events e
-      where e.campaign_id = p_campaign_id
-        and e.user_id = p_user_id
-        and e.event_type_id = p_event_type_id
-        and e.origin in ('app', 'server');
-    end if;
-
+    -- Progress is recomputed once below, after the mission_progress row lock.
+    -- Avoid an extra full aggregate for every matching mission.
     v_target := greatest(1, coalesce(v_mission.target_value, 1));
     v_reward := greatest(0, coalesce(v_mission.reward_points, 0));
     v_progress := least(v_progress, v_target);
