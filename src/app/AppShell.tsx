@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { AnalyticsScreen } from "@/modules/analytics/ui/AnalyticsScreen";
-import { AdminActivityTasksScreen } from "@/modules/admin/ui/AdminActivityTasksScreen";
 import { House, Map, ScanLine, Ticket, UserRound, X } from "lucide-react";
 import { useAuth } from "@/application/state/AuthContext";
 import { AuthScreen } from "@/modules/auth/ui/AuthScreen";
@@ -222,8 +221,6 @@ export function AppShell() {
 
   if (!user) return <AuthScreen />;
 
-  if (window.location.pathname.replace(/\\/+$/, "") === "/admin") return <AdminActivityTasksScreen />;
-
   if (showMovie) {
     return (
       <MovieDetailScreen
@@ -281,11 +278,9 @@ export function AppShell() {
         )}
         {visitedTabs.includes("profile") && (
           <div hidden={activeTab !== "profile"}>
-            <div className="m-4 flex flex-wrap gap-4"><button className="text-gold underline" onClick={() => navigate("analytics")}>
+            <button className="m-4 text-gold underline" onClick={() => navigate("analytics")}>
               Producer analytics
-            </button><button className="text-gold underline" onClick={() => { window.location.href = "/admin"; }}>
-              Admin console
-            </button></div>
+            </button>
             <ProfileScreen />
           </div>
         )}
