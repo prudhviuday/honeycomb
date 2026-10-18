@@ -49,19 +49,6 @@ export function RewardsScreen() {
 
   useEffect(() => { loadData(); }, [activeCampaign, user]);
 
-  const activeCampaignId = activeCampaign?.id;
-  const currentUserId = user?.id;
-
-  useEffect(() => {
-    if (!activeCampaignId || !currentUserId) return;
-    void registerActivity({
-      eventType: 'rewards_screen_viewed',
-      campaignId: activeCampaignId,
-      sourceModule: 'rewards',
-      metadata: { screen: 'rewards' },
-    });
-  }, [activeCampaignId, currentUserId]);
-
   const handleClaim = async (reward: Reward) => {
     if (!activeCampaign || !user || !campaignUser) return;
     if (!canClaimReward(campaignUser.points, reward)) return;
@@ -71,13 +58,11 @@ export function RewardsScreen() {
       setClaimResult(claim);
       void registerActivity({
         eventType: reward.reward_type === 'lucky_draw' ? 'lucky_draw_entered' : 'reward_claim_succeeded',
-        description: reward.title,
         campaignId: activeCampaign.id,
         entityType: 'reward',
         entityId: reward.id,
         sourceModule: 'rewards',
         metadata: {
-          reward_title: reward.title,
           reward_type: reward.reward_type,
           points_required: reward.points_required,
           claim_status: claim.status,
@@ -88,12 +73,11 @@ export function RewardsScreen() {
     } catch (err) {
       void registerActivity({
         eventType: 'reward_claim_failed',
-        description: err instanceof Error ? err.message : 'Reward claim failed',
         campaignId: activeCampaign.id,
         entityType: 'reward',
         entityId: reward.id,
         sourceModule: 'rewards',
-        metadata: { reward_title: reward.title, reward_type: reward.reward_type },
+        metadata: { reward_type: reward.reward_type },
       });
     } finally {
       setClaiming(null);
