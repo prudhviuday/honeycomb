@@ -18,22 +18,68 @@ export interface RegisterActivityInput {
 
 export interface RegisterActivityResult {
   recorded: boolean;
-  reason?: "not_authenticated" | "write_failed";
+  reason?: "not_authenticated" | "write_failed" | "not_tracked";
 }
 
-const EVENT_TYPE_PATTERN = /^[a-z][a-z0-9_]{1,79}$/;
+/**
+ * Stable compact event IDs mirrored by public.activity_event_types.
+ * Only business-important events are included. Navigation noise is ignored.
+ */
+const EVENT_TYPE_IDS: Record<string, number> = {
+  account_created: 1,
+  user_signed_in: 2,
+  profile_updated: 3,
+  movie_campaign_opened: 4,
+  campaign_joined: 5,
+  qr_scan_succeeded: 6,
+  qr_scan_rejected: 7,
+  qr_scan_failed: 8,
+  reward_claim_succeeded: 9,
+  reward_claim_failed: 10,
+  lucky_draw_entered: 11,
+  mission_completed: 12,
+  hunt_started: 13,
+  hunt_completed: 14,
+  mission_started: 15,
+  task_started: 16,
+  task_completed: 17,
+  location_visited: 18,
+  reward_unlocked: 19,
+  reward_claimed: 20,
+  reward_redeemed: 21,
+  share_completed: 22,
+  scan: 23,
+  reward_claim: 24,
+  mission_complete: 26,
+  qr_scanned: 27,
+  referral_signup_completed: 30,
+  referral_reward_awarded: 31,
+};
+
+const EVENT_ALIASES: Record<string, string> = {
+  qr_scan_success: "qr_scan_succeeded",
+  qr_scan_error: "qr_scan_failed",
+  qr_scan_failure: "qr_scan_failed",
+  qr_scanned: "qr_scanned",
+  task_completed: "task_completed",
+  campaign_join: "campaign_joined",
+  reward_claim_success: "reward_claim_succeeded",
+  reward_claim_error: "reward_claim_failed",
+};
 
 export async function registerActivity(
   input: RegisterActivityInput,
 ): Promise<RegisterActivityResult> {
-  const eventType = input.eventType
+  const normalized = input.eventType
     .trim()
     .toLowerCase()
-    .replace(/[\s-]+/g, "_");
+    .replace(/[\\s-]+/g, "_");
+  const eventCode = EVENT_ALIASES[normalized] ?? normalized;
+  const eventTypeId = EVENT_TYPE_IDS[eventCode];
 
-  if (!EVENT_TYPE_PATTERN.test(eventType)) {
-    console.warn("[Analytics] Ignoring invalid activity event type.");
-    return { recorded: false, reason: "write_failed" };
+  // Deliberately ignore low-value UI events and unknown event names.
+  if (!eventTypeId) {
+    return { recorded: false, reason: "not_tracked" };
   }
 
   try {
@@ -52,10 +98,11 @@ export async function registerActivity(
     const { error } = await supabase.from("activity_events").insert({
       campaign_id: input.campaignId ?? null,
       user_id: userId,
-      event_type: eventType,
-      entity_type: input.entityType ?? "",
+      event_type_id: eventTypeId,
+      entity_type: input.entityType ?? null,
       entity_id: input.entityId ?? null,
       metadata,
+      origin: "client",
     });
 
     if (error) throw error;
