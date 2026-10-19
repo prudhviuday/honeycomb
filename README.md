@@ -47,6 +47,8 @@ Read [Development, testing and release](docs/development.md) before touching dat
 
 ## Documentation map
 
+- [Repository map](docs/repository-map.md)
+
 - [Documentation index](docs/README.md)
 - [Architecture](docs/architecture.md)
 - [UI screen reference](docs/ui-reference.md)

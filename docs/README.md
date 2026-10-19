@@ -7,6 +7,7 @@ This folder is the shared onboarding manual for anyone working on Honeycomb. Sta
 | Need | Read |
 | --- | --- |
 | Understand the whole app | [Architecture](architecture.md) |
+| Find source folders, Edge Functions, migrations and tests | [Repository map](repository-map.md) |
 | Find the component behind a button or screen | [UI screen reference](ui-reference.md) |
 | Understand what happens after an action | [User journeys and sequence diagrams](flows.md) |
 | Understand which records link a movie, campaign, location, scan or reward | [Database model](data-model.md) |
