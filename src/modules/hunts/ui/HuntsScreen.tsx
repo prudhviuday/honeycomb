@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Target, Check, Zap, ChevronRight, Flame, Crown, MapPin, ScanLine, ShoppingBag, Waves } from 'lucide-react';
+import { Target, Check, Zap, ChevronRight, Flame, Crown, MapPin, ScanLine, ShoppingBag, Waves, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/hunts/api/huntsApi';
@@ -12,15 +12,25 @@ interface Props {
 }
 
 const missionIcons: Record<string, typeof Target> = {
-  ScanLine: ScanLine,
-  MapPin: MapPin,
-  ShoppingBag: ShoppingBag,
-  Waves: Waves,
-  Zap: Zap,
-  Crown: Crown,
-  Target: Target,
-  Flame: Flame,
+  ScanLine: ScanLine, MapPin: MapPin, ShoppingBag: ShoppingBag, Waves: Waves,
+  Zap: Zap, Crown: Crown, Target: Target, Flame: Flame,
 };
+type MissionUi = { label: string; external: boolean; run: (config: Record<string, unknown> | undefined, onNavigate?: (tab: Tab) => void) => void };
+function openConfiguredUrl(config: Record<string, unknown> | undefined) {
+  const value = typeof config?.url === 'string' ? config.url.trim() : '';
+  try { const url = new URL(value); if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.toString(), '_blank', 'noopener,noreferrer'); }
+  catch { /* Invalid UI config does not navigate. */ }
+}
+const missionUiRegistry: Record<string, MissionUi> = {
+  generic: { label: 'Start', external: false, run: (_config, navigate) => navigate?.('scanner') },
+  qr_scanner: { label: 'Scan', external: false, run: (_config, navigate) => navigate?.('scanner') },
+  open_url: { label: 'Open', external: true, run: (config) => openConfiguredUrl(config) },
+  video_link: { label: 'Watch trailer', external: true, run: (config) => openConfiguredUrl(config) },
+};
+function missionUi(component: string | undefined, config: Record<string, unknown> | undefined): MissionUi {
+  const renderer = missionUiRegistry[component || 'generic'] || missionUiRegistry.generic;
+  return { ...renderer, label: typeof config?.button_label === 'string' ? config.button_label : renderer.label };
+}
 
 export function HuntsScreen({ onNavigate }: Props) {
   const { user } = useAuth();
@@ -134,6 +144,7 @@ export function HuntsScreen({ onNavigate }: Props) {
           const currentProgress = progress?.progress ?? 0;
           const pct = Math.min((currentProgress / mission.target_count) * 100, 100);
           const Icon = missionIcons[mission.icon_name] ?? Target;
+          const action = missionUi(mission.ui_component, mission.ui_config);
 
           return (
             <div
@@ -142,7 +153,7 @@ export function HuntsScreen({ onNavigate }: Props) {
                 isCompleted ? 'bg-bg-surface/45 border border-emerald-400/10' : 'bg-gradient-to-br from-bg-surface to-[#0D0D10] border border-white/8'
               }`}
               onClick={() => {
-                if (!isCompleted) onNavigate?.('scanner');
+                if (!isCompleted) action.run(mission.ui_config, onNavigate);
               }}
             >
               <div className="p-4">
@@ -193,7 +204,10 @@ export function HuntsScreen({ onNavigate }: Props) {
                     {currentProgress}/{mission.target_count}
                   </span>
                   {!isCompleted && (
-                    <ChevronRight className="w-4 h-4 text-text-subtle" />
+                    <span className="flex items-center gap-1 text-[10px] text-text-muted">
+                      {action.label}
+                      {action.external ? <ExternalLink className="w-3.5 h-3.5" /> : <ChevronRight className="w-4 h-4 text-text-subtle" />}
+                    </span>
                   )}
                 </div>
               </div>

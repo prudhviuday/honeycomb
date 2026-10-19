@@ -1,5 +1,9 @@
 import { jsonResponse, isUuid, requireUser } from "../_shared/auth.ts";
-import { resolveActiveQr } from "../_shared/verification.ts";
+import {
+  getActivityVerifier,
+  getSupportedVerificationActions,
+  runVerification,
+} from "../_shared/verification/index.ts";
 
 const corsHeaders = {
   "access-control-allow-origin": "*",
@@ -35,8 +39,8 @@ Deno.serve(async (req: Request) => {
   if (!contentType.toLowerCase().includes("application/json")) {
     return respond({ error: "Content-Type must be application/json." }, 415);
   }
-
   if (!req.body) return respond({ error: "Request body is required." }, 400);
+
   const reader = req.body.getReader();
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
@@ -72,46 +76,32 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Request body must be a JSON object." }, 400);
   }
   const body = parsed as Record<string, unknown>;
-
-  const action = body.action;
-  if (action === "resolve_qr") {
-    // This is a lookup/preview only; it does not award points or advance tasks.
-    // Actual reward-bearing scans must go through the existing transactional
-    // process_scan RPC until it is migrated to the shared task engine.
-    if (typeof body.code !== "string") return respond({ error: "code is required." }, 400);
-    try {
-      const qr = await resolveActiveQr(ctx.admin, body.code);
-      if (!qr) return respond({ valid: false, message: "QR is invalid, inactive, expired, or exhausted." });
-      return respond({
-        valid: true,
-        qr: {
-          id: qr.id,
-          campaignId: qr.campaign_id,
-          purpose: qr.purpose,
-          qrType: qr.qr_type,
-          venueId: qr.venue_id,
-          huntId: qr.hunt_id,
-          displayName: qr.display_name,
-        },
-      });
-    } catch (error) {
-      console.error("QR verification failed", error);
-      return respond({ error: "QR verification is temporarily unavailable." }, 500);
-    }
+  if (typeof body.action !== "string") {
+    return respond({ error: "action is required." }, 400);
   }
+  if (!isUuid(ctx.user.id)) return respond({ error: "Authenticated user id is invalid." }, 401);
 
-  // Deliberately fail closed: do not accept frontend assertions such as
-  // {action:"trailer_completed"} as evidence. These actions will be enabled
-  // only when backed by server-verifiable playback, quiz, VR or referral records.
-  const supportedActions = ["resolve_qr"];
-  if (typeof action !== "string" || !supportedActions.includes(action)) {
+  const verifier = getActivityVerifier(body.action);
+  if (!verifier) {
     return respond({
       error: "Unsupported or not-yet-enabled verification action.",
-      supportedActions,
+      supportedActions: getSupportedVerificationActions(),
       note: "Client claims alone never qualify a task or grant a reward.",
     }, 400);
   }
 
-  if (!isUuid(ctx.user.id)) return respond({ error: "Authenticated user id is invalid." }, 401);
-  return respond({ error: "Unexpected request state." }, 400);
+  try {
+    const outcome = await runVerification(verifier, {
+      admin: ctx.admin,
+      userId: ctx.user.id,
+      body,
+    });
+    return respond(outcome.body, outcome.status ?? 200);
+  } catch (error) {
+    console.error("Activity verification failed", {
+      action: body.action,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+    return respond({ error: "Verification is temporarily unavailable." }, 500);
+  }
 });
