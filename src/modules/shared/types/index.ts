@@ -15,6 +15,12 @@ export interface Campaign {
   movie_title: string;
   description: string;
   hero_image_url: string;
+  /** Status of the underlying movies row; distinct from campaign.active. */
+  movie_active?: boolean;
+  /** Official trailer URL entered in the Admin Movies panel. */
+  movie_trailer_url?: string | null;
+  /** Ordered poster images, with hero_image_url retaining the first poster for legacy views. */
+  movie_poster_urls?: string[];
   active: boolean;
   starts_at: string;
   ends_at: string;
