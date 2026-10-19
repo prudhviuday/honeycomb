@@ -15,6 +15,10 @@ export interface Campaign {
   movie_title: string;
   description: string;
   hero_image_url: string;
+  /** Status of the movie record, independent of whether its campaign is active. */
+  movie_active?: boolean;
+  /** Official trailer URL stored on the movie record (falls back to campaign media). */
+  trailer_url?: string | null;
   active: boolean;
   starts_at: string;
   ends_at: string;
