@@ -89,6 +89,10 @@ export interface Mission {
   is_active: boolean;
   starts_at: string;
   ends_at: string;
+  verification_action?: string;
+  verification_config?: Record<string, unknown>;
+  ui_component?: string;
+  ui_config?: Record<string, unknown>;
 }
 
 export interface MissionProgress {
