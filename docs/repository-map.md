@@ -49,7 +49,7 @@ A directory-level orientation for developers. This inventory describes what is i
 | --- | --- |
 | functions/process-qr-scan | Authenticated HTTP wrapper around scan RPC (not the current ScannerScreen call path) |
 | functions/claim-reward | Authenticated HTTP wrapper around claim_reward RPC (not the current RewardsScreen call path) |
-| functions/complete-task | Authenticated placeholder; currently returns 501 NOT_IMPLEMENTED |
+| functions/complete-task | Configured-task verifier: checks task/campaign/member state, validates registered evidence and records trusted task progress | Source is not deployed to production; task-engine migrations and scan double-award handling must be resolved before activation |
 | functions/verify-activity | Fail-closed activity/QR verifier; resolve_qr is the currently supported action |
 | functions/producer-films | Blueprint producer campaign/movie picker |
 | functions/producer-overview | Blueprint producer summary |
