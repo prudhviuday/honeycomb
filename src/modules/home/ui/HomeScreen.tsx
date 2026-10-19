@@ -12,6 +12,7 @@ import { getHomePoints, getCompletedMissionCount } from '@/modules/home/logic/ho
 import { calculateDistance } from '@/modules/maps/logic/mapData';
 import type { Tab } from './AppShell';
 import type { Campaign } from '@/types';
+import { RewardIdeas } from '@/modules/rewards/ui/RewardIdeas';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
@@ -579,6 +580,9 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
           </div>
         </section>
       )}
+
+      {/* REWARD PREVIEW */}
+      <RewardIdeas onOpenRewards={() => onNavigate?.('rewards')} />
 
       {/* NEAREST CHALLENGES */}
       {nearbyChallenges.length > 0 && (
