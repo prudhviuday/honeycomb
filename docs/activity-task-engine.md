@@ -73,3 +73,12 @@ The migration currently wires referral QR landing, signup-completed, and campaig
 ## Currently registered verifier
 
 - `resolve_qr`: informational QR preview only. It does not record an activity or award points. Reward-bearing scans still use `process_scan`.
+
+
+## Configurable verification and UI contract
+
+Each task can choose a registered `verification_action` (or `event_progress` for existing trusted-event progress), admin-authored `verification_config` JSON, a centralized `ui_component` key, and presentation-only `ui_config` JSON. Never put credentials or quiz answers in UI settings.
+
+HoneyBadgerAdmin fetches labels/descriptions from `complete-task`'s registry catalog. To add a capability, write one `TaskVerifier` module under `supabase/functions/_shared/verification/verifiers/`, register it in `task-registry.ts`, declare its required activity category/UI components, and add tests. The task form and API dispatcher need no new conditional branch for each verifier.
+
+The initial `recorded_qr_scan` verifier checks recent accepted scan evidence already written by protected `process_scan`, supports optional QR/venue/hunt filters, and writes a deduplicated task-scoped event through `record_verified_task_activity`. Only that configured task advances. A video link is presentation only; true watch verification requires trusted watch evidence and a verifier.
