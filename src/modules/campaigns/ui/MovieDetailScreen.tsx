@@ -212,7 +212,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     : moviePosters[0] || campaign.hero_image_url || '';
   const movieTrailerUrl = campaign.movie_trailer_url?.trim() || '';
   const trailerEmbedUrl = movieTrailerUrl ? toYouTubeEmbedUrl(movieTrailerUrl) : null;
-  const isNativeTrailer = /\\.(mp4|webm|ogg)(?:$|[?#])/i.test(movieTrailerUrl);
+  const isNativeTrailer = /\.(mp4|webm|ogg)(?:$|[?#])/i.test(movieTrailerUrl);
   const completedReferrals = referrals.filter((item) =>
     item.status === 'completed' || item.status === 'rewarded',
   ).length;
@@ -739,7 +739,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
 function toYouTubeEmbedUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    const host = url.hostname.toLowerCase().replace(/^www\\./, '');
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
     let videoId = '';
 
     if (host === 'youtu.be') {
