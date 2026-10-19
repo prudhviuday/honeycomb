@@ -775,7 +775,12 @@ export async function getMissions(
 
   if (error) throw error;
 
-  const mapped = (data || []).map((row) => ({
+  const now = Date.now();
+  const inWindow = (data || []).filter((row) =>
+    (!row.starts_at || Date.parse(row.starts_at) <= now) &&
+    (!row.ends_at || Date.parse(row.ends_at) >= now)
+  );
+  const mapped = inWindow.map((row) => ({
     ...row,
 
     /*
@@ -1258,6 +1263,21 @@ export async function processScan(
   }
 
   return asAppType<ScanResult>(data);
+}
+
+/** Dispatch configured accepted-scan tasks after process_scan has committed. */
+export async function completeConfiguredScanTasks(campaignId: string): Promise<void> {
+  const { data: tasks, error } = await supabase.from("missions").select("id")
+    .eq("campaign_id", campaignId).eq("is_active", true).eq("verification_action", "recorded_qr_scan");
+  if (error) {
+    if (/verification_action|schema cache|does not exist/i.test(error.message)) return;
+    console.warn("[Tasks] Could not load scan-verifiable tasks:", error.message); return;
+  }
+  for (const task of tasks ?? []) {
+    const { data, error: invokeError } = await supabase.functions.invoke("complete-task", { body: { task_id: task.id } });
+    if (invokeError) console.warn("[Tasks] Verification request failed:", invokeError.message);
+    else if (data?.success !== true && data?.error) console.info("[Tasks] Task not advanced:", data.error);
+  }
 }
 
 /* ============================================================
