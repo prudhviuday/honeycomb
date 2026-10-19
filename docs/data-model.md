@@ -71,7 +71,7 @@ The current consumer Map screen queries locations for one active campaign. The r
 | badges / user_badges | Badge definitions and awards | Home displays the campaign's badge inventory and earned state |
 | rewards | Available guaranteed or lucky-draw rewards | In live schema observed for the current app, display text is stored in name and quantity in inventory; legacyApi maps it to the older frontend shape |
 | reward_entries | Lucky-draw entries earned by a user | Entries are campaign-scoped |
-| reward_claims | Claim record/status/code and points used | The claim_reward database function should enforce the write atomically |
+| reward_claims | Claim record, status and code; points-consumption data may be returned by the RPC | The legacy RewardClaim type includes points_used, but do not assume it is a physical column in every deployed schema; inspect the live columns/RPC payload |
 | referral_codes / referrals | Invite codes and relationships between inviter and referred user | A QR landing is attribution; qualifying a referral task is a separate rule |
 
 ## 4. Activity/event records
