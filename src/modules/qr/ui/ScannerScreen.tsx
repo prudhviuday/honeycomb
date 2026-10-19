@@ -8,6 +8,7 @@ import { extractQrCodeFromScan, normalizeScanCode } from '@/modules/qr/logic/qrL
 import { resolvePublicQr } from '@/modules/qr/api/publicQrApi';
 import { getCampaign, ensureCampaignUser } from '@/modules/campaigns/api/campaignsApi';
 import { captureEventLocation, registerActivity } from '@/modules/analytics/api/analyticsApi';
+import { completeConfiguredScanTasks } from '@/application/api/legacyApi';
 
 interface Props {
   onScanComplete: (campaignId?: string) => void;
@@ -242,6 +243,14 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
       // Raw legacy short codes still use the currently selected campaign.
       await ensureCampaignUser(targetCampaignId, user.id);
       const res = await processScan(targetCampaignId, user.id, code);
+      if (res.success) {
+        try { await completeConfiguredScanTasks(targetCampaignId); }
+        catch (taskError) {
+          // process_scan already committed; an optional verifier outage must not
+          // turn an accepted scan into a scan failure.
+          console.warn('[Tasks] Could not verify scan-based task progress:', taskError);
+        }
+      }
 
       void registerActivity({
         eventType: res.success ? 'qr_scan_succeeded' : 'qr_scan_rejected',
