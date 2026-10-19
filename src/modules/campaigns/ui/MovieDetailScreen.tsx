@@ -70,10 +70,19 @@ function buildTrailerEmbedUrl(rawUrl: string): string | null {
   return null;
 }
 
+function isSafeHttpUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 function isDirectVideoFile(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl);
-    return (url.protocol === 'https:' || url.protocol === 'http:') && /\.(mp4|webm|ogg)$/i.test(url.pathname);
+    return isSafeHttpUrl(rawUrl) && /\.(mp4|webm|ogg)$/i.test(url.pathname);
   } catch {
     return false;
   }
@@ -241,8 +250,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const movieTitle = campaign.movie_title || campaign.title || 'Movie';
   const movieIsActive = campaign.movie_active !== false;
   const trailerUrl = String(campaign.trailer_url ?? '').trim();
-  const trailerEmbedUrl = trailerUrl ? buildTrailerEmbedUrl(trailerUrl) : null;
-  const trailerIsVideoFile = trailerUrl ? isDirectVideoFile(trailerUrl) : false;
+  const safeTrailerUrl = isSafeHttpUrl(trailerUrl) ? trailerUrl : '';
+  const trailerEmbedUrl = safeTrailerUrl ? buildTrailerEmbedUrl(safeTrailerUrl) : null;
+  const trailerIsVideoFile = safeTrailerUrl ? isDirectVideoFile(safeTrailerUrl) : false;
   const completedReferrals = referrals.filter((item) =>
     item.status === 'completed' || item.status === 'rewarded',
   ).length;
@@ -387,7 +397,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             />
           </section>
 
-          {trailerUrl && (
+          {safeTrailerUrl && (
             <section className="rounded-[20px] overflow-hidden bg-bg-secondary border border-white/[0.06]">
               <div className="p-4 pb-3">
                 <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Official trailer</p>
@@ -406,7 +416,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                 </div>
               ) : trailerIsVideoFile ? (
                 <video
-                  src={trailerUrl}
+                  src={safeTrailerUrl}
                   controls
                   playsInline
                   preload="metadata"
@@ -416,7 +426,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
               ) : (
                 <div className="p-4 pt-0">
                   <a
-                    href={trailerUrl}
+                    href={safeTrailerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-3 text-xs font-semibold text-white"
