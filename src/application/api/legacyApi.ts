@@ -161,30 +161,50 @@ export async function upsertProfile(
 
 function mapCampaignRow(row: any): Campaign {
   const movie = Array.isArray(row.movies) ? row.movies[0] : row.movies;
+  const storedPosterUrls = Array.isArray(movie?.poster_urls)
+    ? movie.poster_urls.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
+    : [];
+  const legacyPosterUrl = typeof movie?.poster_url === 'string' ? movie.poster_url.trim() : '';
+  const moviePosterUrls = storedPosterUrls.length
+    ? storedPosterUrls
+    : legacyPosterUrl ? [legacyPosterUrl] : [];
 
   return {
     ...row,
     // Database schema uses campaigns.name/media_url and a movie_id relation.
-    // The public app uses the normalized Campaign shape below.
+    // The public app keeps campaign and movie status separate.
     title: row.name ?? '',
     movie_title: movie?.title ?? '',
-    hero_image_url: movie?.poster_url ?? row.media_url ?? '',
+    hero_image_url: moviePosterUrls[0] ?? row.media_url ?? '',
+    movie_active: movie?.active !== false,
+    movie_trailer_url: movie?.trailer_url ?? null,
+    movie_poster_urls: moviePosterUrls,
   };
 }
 
 export async function getCampaigns(): Promise<Campaign[]> {
-  const { data, error } = await supabase
+  let result = await supabase
     .from('campaigns')
-    .select('*, movies(title, poster_url)')
+    .select('*, movies(title, poster_url, poster_urls, trailer_url, active)')
     .eq('active', true)
     .order('created_at', {
       ascending: false,
     });
 
-  if (error) throw error;
+  // Keep the public app readable during a staged rollout where the additive
+  // poster_urls migration has not yet reached the connected database.
+  if (result.error && /poster_urls/i.test(result.error.message)) {
+    result = await supabase
+      .from('campaigns')
+      .select('*, movies(title, poster_url, trailer_url, active)')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+  }
+
+  if (result.error) throw result.error;
 
   return asAppType<Campaign[]>(
-    (data || []).map(mapCampaignRow)
+    (result.data || []).map(mapCampaignRow)
   );
 }
 
@@ -195,16 +215,24 @@ export async function getActiveCampaigns(): Promise<Campaign[]> {
 export async function getCampaign(
   id: string
 ): Promise<Campaign | null> {
-  const { data, error } = await supabase
+  let result = await supabase
     .from('campaigns')
-    .select('*, movies(title, poster_url)')
+    .select('*, movies(title, poster_url, poster_urls, trailer_url, active)')
     .eq('id', id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (result.error && /poster_urls/i.test(result.error.message)) {
+    result = await supabase
+      .from('campaigns')
+      .select('*, movies(title, poster_url, trailer_url, active)')
+      .eq('id', id)
+      .maybeSingle();
+  }
 
-  return data
-    ? asAppType<Campaign>(mapCampaignRow(data))
+  if (result.error) throw result.error;
+
+  return result.data
+    ? asAppType<Campaign>(mapCampaignRow(result.data))
     : null;
 }
 
