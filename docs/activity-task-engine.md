@@ -38,7 +38,7 @@ insert into public.missions (
 );
 ```
 
-## Extensible verification registry
+## Informational API verifier registry
 
 The API dispatcher in `supabase/functions/verify-activity/index.ts` does not contain a growing chain of action-specific branches. It asks the central registry in `supabase/functions/_shared/verification/index.ts` for a verifier.
 
@@ -51,7 +51,7 @@ To add a genuinely new verification method:
 5. If it awards progress or rewards, write the trusted activity through the atomic database engine after validation, with a stable idempotency key.
 6. Add tests for success, invalid evidence, replay/duplicates and authorization. Add a migration only if the data model or transaction logic requires it.
 
-Most new *campaign tasks* should only require mission configuration when they use an existing, fully implemented verifier. A new *verification capability* still requires code and potentially a database migration. Registry registration alone does not enable rewards.
+This registry serves informational API actions such as QR preview. Reward-bearing task verification is a separate registry in `supabase/functions/_shared/verification/task-registry.ts`. A task using an existing task verifier should be configurable in HoneyBadgerAdmin; adding new evidence handling still requires a verifier module and a registry entry. Registration alone does not enable a task until the related migration and function version are deployed.
 
 ## Trusted write contract
 
@@ -70,9 +70,9 @@ Do not grant direct client access to this helper. The activity log is the histor
 
 The migration currently wires referral QR landing, signup-completed, and campaign-joined events into the helper. Existing scan and hunt processing is preserved; its established `process_scan` mission flow continues to handle current scan-count/hunt tasks. To move another action type to the generic engine, call the helper from that action's trusted validator and configure the corresponding mission event type. Do not treat browser-submitted activity as trusted evidence.
 
-## Currently registered verifier
+## Currently registered informational verifier
 
-- `resolve_qr`: informational QR preview only. It does not record an activity or award points. Reward-bearing scans still use `process_scan`.
+- `resolve_qr`: informational QR preview only. It does not record an activity or award points. Accepted QR scans that support configurable tasks still use the protected `process_scan` transaction, followed by the task-verifier dispatcher.
 
 
 ## Configurable verification and UI contract
@@ -81,4 +81,4 @@ Each task can choose a registered `verification_action` (or `event_progress` for
 
 HoneyBadgerAdmin fetches labels/descriptions from `complete-task`'s registry catalog. To add a capability, write one `TaskVerifier` module under `supabase/functions/_shared/verification/verifiers/`, register it in `task-registry.ts`, declare its required activity category/UI components, and add tests. The task form and API dispatcher need no new conditional branch for each verifier.
 
-The initial `recorded_qr_scan` verifier checks recent accepted scan evidence already written by protected `process_scan`, supports optional QR/venue/hunt filters, and writes a deduplicated task-scoped event through `record_verified_task_activity`. Only that configured task advances. A video link is presentation only; true watch verification requires trusted watch evidence and a verifier.
+The initial `recorded_qr_scan` verifier checks recent accepted scan evidence already written by protected `process_scan`, supports optional QR/venue/hunt filters, and writes a deduplicated task-scoped event through `record_verified_task_activity`. Only that configured task advances. On completion, the RPC awards configured points and reward entries idempotently; claiming a reward remains a separate flow. A video link is presentation only; true watch verification requires trusted watch evidence and a verifier.
