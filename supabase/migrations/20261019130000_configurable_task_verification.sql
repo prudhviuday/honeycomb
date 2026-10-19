@@ -14,6 +14,12 @@ alter table public.missions
 
 create index if not exists missions_task_verification_dispatch_idx
   on public.missions (campaign_id, verification_action, is_active) where is_active = true;
+create index if not exists activity_events_verified_task_progress_idx
+  on public.activity_events (campaign_id, user_id, event_type_id, (metadata ->> 'mission_id'), entity_id)
+  where origin = 'server';
+create index if not exists reward_entries_mission_source_lookup_idx
+  on public.reward_entries (campaign_id, user_id, source_id)
+  where source_type = 'mission' and source_id is not null;
 
 do $$
 declare v_next_id smallint;
@@ -56,7 +62,7 @@ begin
   end if;
   select m.id, m.campaign_id, m.name, m.target_value, m.reward_points, m.reward_entries,
          m.progress_mode, m.progress_event_type_id, m.is_active, m.starts_at, m.ends_at
-    into v_mission from public.missions m where m.id = p_mission_id for update;
+    into v_mission from public.missions m where m.id = p_mission_id for share;
   if not found then raise exception using errcode = '22023', message = 'Task does not exist.'; end if;
   if v_mission.is_active is distinct from true
      or (v_mission.starts_at is not null and v_mission.starts_at > now())
