@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Gift, Ticket, Shirt, Star, Zap, Check, Clock, Package } from 'lucide-react';
+import { Gift, Ticket, Shirt, Star, Check, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getRewards, getRewardEntries, getRewardClaims, claimReward } from '@/modules/rewards/api/rewardsApi';

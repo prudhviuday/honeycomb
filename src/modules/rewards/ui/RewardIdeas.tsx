@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ChevronRight,
-  Clapperboard,
   Shirt,
   Ticket,
   UsersRound,
