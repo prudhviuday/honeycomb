@@ -13,5 +13,13 @@ export function getTaskVerificationCatalog() {
   return {
     methods: Object.values(taskVerifiers).map(({ verify: _verify, ...definition }) => definition),
     modes: [{ key: "event_progress", label: "Trusted event progress", description: "Existing trusted app/server events advance this task; manual completion claims are rejected." }],
+    // Presentation actions are separate from evidence verification. This list is
+    // metadata for the admin selector; the actual renderers live in the app UI registry.
+    uiComponents: [
+      { key: "generic", label: "Generic task action", description: "Open the default task flow." },
+      { key: "qr_scanner", label: "Open QR scanner", description: "Navigate to the campaign QR scanner." },
+      { key: "open_url", label: "Open URL", description: "Open a configured HTTP(S) destination." },
+      { key: "video_link", label: "Open trailer / video link", description: "Open a configured trailer URL; this does not prove playback." },
+    ],
   };
 }
