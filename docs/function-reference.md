@@ -138,7 +138,7 @@ These are the entry points under supabase/functions/. Each request handler has i
 | --- | --- |
 | process-qr-scan | authenticate request → validate scan_code → call process_scan RPC |
 | claim-reward | authenticate request → validate reward_id → call claim_reward RPC |
-| complete-task | authenticate request → validate task_id → return NOT_IMPLEMENTED (501) |
+| complete-task | authenticate → check task/campaign/membership → run registered verifier → call record_verified_task_activity |
 | verify-activity | authenticate and bound request size/content type → currently accept resolve_qr only → resolveActiveQr |
 | producer-films / producer-overview / producer-map / producer-venues / producer-funnel | producerHandler validates request/user/date/campaign/metric → calls blueprint campaign/report RPC |
 | scheduled-compute-stats | statsJobHandler validates server key and campaign UUID → recomputes blueprint rollups/hype snapshots |
