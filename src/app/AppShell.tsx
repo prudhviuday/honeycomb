@@ -293,7 +293,7 @@ export function AppShell() {
             <button className="m-4 text-gold underline" onClick={() => navigate("analytics")}>
               Producer analytics
             </button>
-            <ProfileScreen />
+            <ProfileScreen onNavigate={navigate} onOpenMovie={openMovie} />
           </div>
         )}
         {visitedTabs.includes("analytics") && (

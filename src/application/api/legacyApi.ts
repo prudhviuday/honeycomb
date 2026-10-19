@@ -854,7 +854,20 @@ export async function getRewards(
 
   if (error) throw error;
 
-  return asAppType<Reward[]>(data || []);
+  const mapped = (data || []).map((row: any) => ({
+    ...row,
+    // The live rewards table stores the display label in "name" and
+    // inventory in "inventory"; the UI uses "title" and "stock".
+    title: row.title ?? row.name ?? 'Reward',
+    stock: Number(row.stock ?? row.inventory ?? 0),
+    description: row.description ?? '',
+    points_required: Number(row.points_required ?? 0),
+    image_url: row.image_url ?? '',
+    reward_type: row.reward_type === 'lucky_draw' ? 'lucky_draw' : 'guaranteed',
+    is_active: row.is_active ?? true,
+  }));
+
+  return asAppType<Reward[]>(mapped);
 }
 
 /* ============================================================
