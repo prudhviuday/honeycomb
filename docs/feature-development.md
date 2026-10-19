@@ -34,7 +34,7 @@ The browser can display an eligibility hint, but it cannot be the authority for 
 - Accepted QR scans go through the established process_scan transaction.
 - Reward redemption goes through claim_reward.
 - Activity-driven task rewards require a trusted feature-specific verifier and the internal record_trusted_activity_and_progress contract.
-- complete-task currently returns NOT_IMPLEMENTED; do not call it as though it were complete.
+- complete-task has a verifier-registry implementation in source, but deployment depends on the task-engine and configurable-verification migrations. The connected production project has not deployed it. Do not enable reward-bearing QR-scan task settings until scan_count progress is prevented from being awarded by both process_scan and the verifier RPC.
 - Client registerActivity records product analytics. A client event by itself is not verification evidence.
 
 For an event that advances a task, use a stable event key so request retries cannot duplicate progress or points. Validate campaign, user, QR/source/location attribution and event type on the trusted path.
