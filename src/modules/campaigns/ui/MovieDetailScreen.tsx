@@ -100,6 +100,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const { selectCampaign } = useCampaign();
 
   const [data, setData] = useState<MoviePageData | null>(null);
+  const [selectedPosterUrl, setSelectedPosterUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [referral, setReferral] = useState<ReferralCode | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -115,6 +116,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     try {
       const result = await getMoviePageData(campaignId);
       setData(result);
+      setSelectedPosterUrl(
+        result.campaign?.movie_poster_urls?.[0] || result.campaign?.hero_image_url || null,
+      );
       // Render the movie page as soon as its core data arrives. Activity, membership,
       // referral and invite-QR requests below are optional enhancements and must not
       // keep the entire public landing page on a spinner.
@@ -248,6 +252,15 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   }
 
   const movieTitle = campaign.movie_title || campaign.title || 'Movie';
+  const moviePosters = Array.from(new Set(
+    (campaign.movie_poster_urls?.length
+      ? campaign.movie_poster_urls
+      : campaign.hero_image_url ? [campaign.hero_image_url] : [])
+      .filter((url): url is string => typeof url === 'string' && url.trim().length > 0),
+  ));
+  const heroPosterUrl = selectedPosterUrl && moviePosters.includes(selectedPosterUrl)
+    ? selectedPosterUrl
+    : moviePosters[0] || campaign.hero_image_url || '';
   const movieIsActive = campaign.movie_active !== false;
   const trailerUrl = String(campaign.trailer_url ?? '').trim();
   const safeTrailerUrl = isSafeHttpUrl(trailerUrl) ? trailerUrl : '';
@@ -347,9 +360,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
       <div className="space-y-6">
         <section className="relative overflow-hidden min-h-[300px]">
           <div className="absolute inset-0 bg-bg-elevated" />
-          {campaign.hero_image_url ? (
+          {heroPosterUrl ? (
             <img
-              src={campaign.hero_image_url}
+              src={heroPosterUrl}
               alt={movieTitle}
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -382,6 +395,39 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             )}
           </div>
         </section>
+
+        {moviePosters.length > 1 && (
+          <section className="px-4 -mt-2">
+            <div className="flex items-end justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Movie artwork</p>
+                <h2 className="font-display text-[19px] leading-none text-white mt-1">POSTER GALLERY</h2>
+              </div>
+              <span className="text-[10px] text-text-subtle">{moviePosters.length} posters</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Movie poster gallery">
+              {moviePosters.map((posterUrl, index) => (
+                <button
+                  key={posterUrl}
+                  type="button"
+                  onClick={() => setSelectedPosterUrl(posterUrl)}
+                  aria-label={'Show movie poster ' + (index + 1)}
+                  aria-pressed={heroPosterUrl === posterUrl}
+                  className={'shrink-0 overflow-hidden rounded-xl border transition-colors ' + (
+                    heroPosterUrl === posterUrl ? 'border-accent ring-1 ring-accent/50' : 'border-white/10'
+                  )}
+                >
+                  <img
+                    src={posterUrl}
+                    alt={movieTitle + ' poster ' + (index + 1)}
+                    loading="lazy"
+                    className="w-[82px] h-[122px] object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="px-4 pt-1 space-y-5">
           <section className="grid grid-cols-2 gap-2.5">
