@@ -4,7 +4,9 @@ import {
   CalendarDays,
   Check,
   Copy,
+  ExternalLink,
   MapPin,
+  PlayCircle,
   QrCode,
   ScanLine,
   Share2,
@@ -35,6 +37,47 @@ import { buildMapFeatures } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { ReferralCode, Referral, Campaign, ActivityEvent, PointTransaction } from '@/types';
 import { getActivityEvents, getPointTransactions } from '@/application/api/legacyApi';
+
+
+/** Only trusted video platforms are embedded; unknown URLs remain ordinary external links. */
+function buildTrailerEmbedUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    const hostname = url.hostname.toLowerCase().replace(/^www\\./, '');
+    const segments = url.pathname.split('/').filter(Boolean);
+    let videoId = '';
+
+    if (hostname === 'youtu.be') {
+      videoId = segments[0] || '';
+    } else if (['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'].includes(hostname)) {
+      if (url.pathname === '/watch') {
+        videoId = url.searchParams.get('v') || '';
+      } else if (['embed', 'shorts', 'live', 'v'].includes(segments[0] || '')) {
+        videoId = segments[1] || '';
+      }
+      if (/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) {
+        return 'https://www.youtube-nocookie.com/embed/' + videoId + '?rel=0';
+      }
+    } else if (hostname === 'vimeo.com' || hostname === 'player.vimeo.com') {
+      const index = segments[0] === 'video' ? 1 : 0;
+      videoId = segments[index] || '';
+      if (/^\\d{5,15}$/.test(videoId)) return 'https://player.vimeo.com/video/' + videoId;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function isDirectVideoFile(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && /\\.(mp4|webm|ogg)$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
 
 interface Props {
   campaignId: string;
@@ -196,6 +239,10 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   }
 
   const movieTitle = campaign.movie_title || campaign.title || 'Movie';
+  const movieIsActive = campaign.movie_active !== false;
+  const trailerUrl = String(campaign.trailer_url ?? '').trim();
+  const trailerEmbedUrl = trailerUrl ? buildTrailerEmbedUrl(trailerUrl) : null;
+  const trailerIsVideoFile = trailerUrl ? isDirectVideoFile(trailerUrl) : false;
   const completedReferrals = referrals.filter((item) =>
     item.status === 'completed' || item.status === 'rewarded',
   ).length;
@@ -301,10 +348,20 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/20 to-transparent" />
           <div className="absolute left-5 right-5 bottom-7">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-              <Sparkles className="w-3 h-3 text-gold" />
-              <span className="text-[9px] text-white/80 uppercase tracking-[0.16em]">
-                {campaign.active ? 'Live campaign' : 'Campaign'}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={'inline-flex items-center gap-2 px-2.5 py-1 rounded-full backdrop-blur-md border text-[9px] uppercase tracking-[0.12em] ' +
+                (movieIsActive
+                  ? 'bg-emerald-950/75 border-emerald-400/25 text-emerald-200'
+                  : 'bg-rose-950/80 border-rose-400/30 text-rose-200')}>
+                <span className={'w-1.5 h-1.5 rounded-full ' + (movieIsActive ? 'bg-emerald-400' : 'bg-rose-400')} />
+                {movieIsActive ? 'Movie active' : 'Movie inactive'}
+              </span>
+              <span className={'inline-flex items-center gap-2 px-2.5 py-1 rounded-full backdrop-blur-md border text-[9px] uppercase tracking-[0.12em] ' +
+                (campaign.active
+                  ? 'bg-black/40 border-white/10 text-white/80'
+                  : 'bg-white/5 border-white/10 text-white/55')}>
+                <Sparkles className="w-3 h-3 text-gold" />
+                {campaign.active ? 'Campaign active' : 'Campaign inactive'}
               </span>
             </div>
             <h1 className="font-display text-[34px] leading-[0.92] text-white mt-3 tracking-[-0.02em]">
@@ -321,7 +378,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             <InfoTile
               icon={CalendarDays}
               label="Campaign"
-              value={campaign.active ? 'Live now' : 'Coming soon'}
+              value={campaign.active ? 'Live now' : 'Paused'}
             />
             <InfoTile
               icon={MapPin}
@@ -329,6 +386,50 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
               value={String(locations.length)}
             />
           </section>
+
+          {trailerUrl && (
+            <section className="rounded-[20px] overflow-hidden bg-bg-secondary border border-white/[0.06]">
+              <div className="p-4 pb-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Official trailer</p>
+                <h2 className="font-display text-[23px] leading-none text-white mt-1">WATCH THE TRAILER</h2>
+              </div>
+              {trailerEmbedUrl ? (
+                <div className="aspect-video bg-black">
+                  <iframe
+                    src={trailerEmbedUrl}
+                    title={movieTitle + ' official trailer'}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
+              ) : trailerIsVideoFile ? (
+                <video
+                  src={trailerUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="block w-full aspect-video bg-black"
+                  aria-label={movieTitle + ' official trailer'}
+                />
+              ) : (
+                <div className="p-4 pt-0">
+                  <a
+                    href={trailerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-3 text-xs font-semibold text-white"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    Open official trailer
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <p className="text-[10px] text-text-subtle mt-2">This trailer opens on its original video site.</p>
+                </div>
+              )}
+            </section>
+          )}
 
           {(campaign.description || campaign.starts_at || campaign.ends_at) && (
             <section>
