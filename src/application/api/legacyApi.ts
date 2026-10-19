@@ -169,13 +169,15 @@ function mapCampaignRow(row: any): Campaign {
     title: row.name ?? '',
     movie_title: movie?.title ?? '',
     hero_image_url: movie?.poster_url ?? row.media_url ?? '',
+    movie_active: movie?.active !== false,
+    trailer_url: movie?.trailer_url || row.media_url || '',
   };
 }
 
 export async function getCampaigns(): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*, movies(title, poster_url)')
+    .select('*, movies(title, poster_url, trailer_url, active)')
     .eq('active', true)
     .order('created_at', {
       ascending: false,
@@ -197,7 +199,7 @@ export async function getCampaign(
 ): Promise<Campaign | null> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*, movies(title, poster_url)')
+    .select('*, movies(title, poster_url, trailer_url, active)')
     .eq('id', id)
     .maybeSingle();
 

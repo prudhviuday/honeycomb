@@ -42,6 +42,8 @@ type MovieCardData = {
   movie_title: string;
   title: string;
   hero_image_url?: string | null;
+  /** Active state of the underlying movie record, separate from campaign status. */
+  movieActive?: boolean;
   demo: boolean;
 };
 
@@ -179,6 +181,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
           campaign.hero_image_url ||
           localMovieImage(movieTitle) ||
           defaultMovieImage,
+        movieActive: campaign.movie_active !== false,
         demo: false,
       };
     }),
@@ -426,10 +429,18 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                       <MovieArtwork movie={movie} isCenter={isCenter} />
                       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#08080A] via-[#08080A]/55 to-transparent pointer-events-none" />
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/35 backdrop-blur-md pointer-events-none">
-                        <span className={'w-1.5 h-1.5 rounded-full ' + (movie.demo ? 'bg-gold' : 'bg-[#45D483]')} />
-                        <span className="text-[9px] uppercase tracking-[0.16em] text-white/75">
-                          {movie.demo ? 'Demo' : 'Live'}
+                      <div className={
+                        'absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-md pointer-events-none ' +
+                        (movie.demo
+                          ? 'bg-black/35'
+                          : movie.movieActive === false
+                            ? 'bg-rose-950/85 border border-rose-400/30'
+                            : 'bg-emerald-950/80 border border-emerald-400/25')
+                      }>
+                        <span className={'w-1.5 h-1.5 rounded-full ' +
+                          (movie.demo ? 'bg-gold' : movie.movieActive === false ? 'bg-[#FF7474]' : 'bg-[#45D483]')} />
+                        <span className="text-[9px] uppercase tracking-[0.12em] text-white/85">
+                          {movie.demo ? 'Demo' : movie.movieActive === false ? 'Movie inactive' : 'Movie active'}
                         </span>
                       </div>
                       <div className="absolute z-20 left-4 right-4 bottom-4 pointer-events-none">
