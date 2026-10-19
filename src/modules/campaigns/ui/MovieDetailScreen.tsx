@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   MapPin,
+  Play,
   QrCode,
   ScanLine,
   Share2,
@@ -48,6 +49,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const { selectCampaign } = useCampaign();
 
   const [data, setData] = useState<MoviePageData | null>(null);
+  const [selectedPosterUrl, setSelectedPosterUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [referral, setReferral] = useState<ReferralCode | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -63,6 +65,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     try {
       const result = await getMoviePageData(campaignId);
       setData(result);
+      setSelectedPosterUrl(
+        result.campaign?.movie_poster_urls?.[0] || result.campaign?.hero_image_url || null,
+      );
       // Render the movie page as soon as its core data arrives. Activity, membership,
       // referral and invite-QR requests below are optional enhancements and must not
       // keep the entire public landing page on a spinner.
@@ -196,6 +201,18 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   }
 
   const movieTitle = campaign.movie_title || campaign.title || 'Movie';
+  const moviePosters = Array.from(new Set(
+    (campaign.movie_poster_urls?.length
+      ? campaign.movie_poster_urls
+      : campaign.hero_image_url ? [campaign.hero_image_url] : [])
+      .filter((url): url is string => typeof url === 'string' && url.trim().length > 0),
+  ));
+  const heroPosterUrl = selectedPosterUrl && moviePosters.includes(selectedPosterUrl)
+    ? selectedPosterUrl
+    : moviePosters[0] || campaign.hero_image_url || '';
+  const movieTrailerUrl = campaign.movie_trailer_url?.trim() || '';
+  const trailerEmbedUrl = movieTrailerUrl ? toYouTubeEmbedUrl(movieTrailerUrl) : null;
+  const isNativeTrailer = /\\.(mp4|webm|ogg)(?:$|[?#])/i.test(movieTrailerUrl);
   const completedReferrals = referrals.filter((item) =>
     item.status === 'completed' || item.status === 'rewarded',
   ).length;
@@ -290,9 +307,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
       <div className="space-y-6">
         <section className="relative overflow-hidden min-h-[300px]">
           <div className="absolute inset-0 bg-bg-elevated" />
-          {campaign.hero_image_url ? (
+          {heroPosterUrl ? (
             <img
-              src={campaign.hero_image_url}
+              src={heroPosterUrl}
               alt={movieTitle}
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -301,11 +318,23 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/20 to-transparent" />
           <div className="absolute left-5 right-5 bottom-7">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-              <Sparkles className="w-3 h-3 text-gold" />
-              <span className="text-[9px] text-white/80 uppercase tracking-[0.16em]">
-                {campaign.active ? 'Live campaign' : 'Campaign'}
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className={'inline-flex items-center gap-2 px-2.5 py-1 rounded-full backdrop-blur-md border ' + (
+                campaign.movie_active === false
+                  ? 'bg-rose-500/15 border-rose-400/30 text-rose-200'
+                  : 'bg-emerald-500/15 border-emerald-400/30 text-emerald-200'
+              )}>
+                <span className={'w-1.5 h-1.5 rounded-full ' + (campaign.movie_active === false ? 'bg-rose-300' : 'bg-emerald-300')} />
+                <span className="text-[9px] uppercase tracking-[0.16em]">
+                  {campaign.movie_active === false ? 'Movie inactive' : 'Movie active'}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                <Sparkles className="w-3 h-3 text-gold" />
+                <span className="text-[9px] text-white/80 uppercase tracking-[0.16em]">
+                  {campaign.active ? 'Live campaign' : 'Campaign paused'}
+                </span>
+              </div>
             </div>
             <h1 className="font-display text-[34px] leading-[0.92] text-white mt-3 tracking-[-0.02em]">
               {movieTitle}
@@ -313,8 +342,44 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             {campaign.title && campaign.title !== movieTitle && (
               <p className="text-sm text-white/70 mt-2">{campaign.title}</p>
             )}
+            {campaign.movie_active === false && (
+              <p className="text-xs text-rose-100/85 mt-2">This movie is marked inactive in the admin panel.</p>
+            )}
           </div>
         </section>
+
+        {moviePosters.length > 1 && (
+          <section className="px-4 -mt-2">
+            <div className="flex items-end justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Movie artwork</p>
+                <h2 className="font-display text-[19px] leading-none text-white mt-1">POSTER GALLERY</h2>
+              </div>
+              <span className="text-[10px] text-text-subtle">{moviePosters.length} posters</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Movie poster gallery">
+              {moviePosters.map((posterUrl, index) => (
+                <button
+                  key={posterUrl}
+                  type="button"
+                  onClick={() => setSelectedPosterUrl(posterUrl)}
+                  aria-label={'Show movie poster ' + (index + 1)}
+                  aria-pressed={heroPosterUrl === posterUrl}
+                  className={'shrink-0 overflow-hidden rounded-xl border transition-colors ' + (
+                    heroPosterUrl === posterUrl ? 'border-accent ring-1 ring-accent/50' : 'border-white/10'
+                  )}
+                >
+                  <img
+                    src={posterUrl}
+                    alt={movieTitle + ' poster ' + (index + 1)}
+                    loading="lazy"
+                    className="w-[82px] h-[122px] object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="px-4 pt-1 space-y-5">
           <section className="grid grid-cols-2 gap-2.5">
@@ -347,6 +412,51 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                   </span>
                 )}
               </div>
+            </section>
+          )}
+
+          {movieTrailerUrl && (
+            <section className="rounded-[20px] bg-bg-secondary border border-white/[0.06] p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Play className="w-4 h-4 text-accent" />
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Official trailer</p>
+                  <h2 className="font-display text-[21px] leading-none text-white mt-1">WATCH THE TRAILER</h2>
+                </div>
+              </div>
+              {trailerEmbedUrl ? (
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
+                  <iframe
+                    src={trailerEmbedUrl}
+                    title={'Official trailer for ' + movieTitle}
+                    className="absolute inset-0 w-full h-full"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
+              ) : isNativeTrailer ? (
+                <video
+                  src={movieTrailerUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full rounded-xl bg-black"
+                >
+                  Your browser does not support this video.
+                </video>
+              ) : (
+                <a
+                  href={movieTrailerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-3.5 rounded-xl bg-accent text-white text-sm font-semibold flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4" />
+                  Open official trailer
+                </a>
+              )}
             </section>
           )}
 
@@ -624,6 +734,36 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
       </div>
     </div>
   );
+}
+
+function toYouTubeEmbedUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\\./, '');
+    let videoId = '';
+
+    if (host === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+    } else if (
+      host === 'youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'music.youtube.com' ||
+      host === 'youtube-nocookie.com'
+    ) {
+      videoId = url.searchParams.get('v') || '';
+      if (!videoId) {
+        const parts = url.pathname.split('/').filter(Boolean);
+        const kindIndex = parts.findIndex((part) => ['embed', 'shorts', 'live'].includes(part));
+        if (kindIndex >= 0) videoId = parts[kindIndex + 1] || '';
+      }
+    }
+
+    return /^[A-Za-z0-9_-]{11}$/.test(videoId)
+      ? 'https://www.youtube-nocookie.com/embed/' + videoId
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function InfoTile({
