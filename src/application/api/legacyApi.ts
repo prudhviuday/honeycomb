@@ -775,7 +775,12 @@ export async function getMissions(
 
   if (error) throw error;
 
-  const mapped = (data || []).map((row) => ({
+  const now = Date.now();
+  const inWindow = (data || []).filter((row) =>
+    (!row.starts_at || Date.parse(row.starts_at) <= now) &&
+    (!row.ends_at || Date.parse(row.ends_at) >= now)
+  );
+  const mapped = inWindow.map((row) => ({
     ...row,
 
     /*
