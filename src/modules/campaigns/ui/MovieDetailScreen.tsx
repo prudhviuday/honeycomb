@@ -44,7 +44,7 @@ function buildTrailerEmbedUrl(rawUrl: string): string | null {
   try {
     const url = new URL(rawUrl);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-    const hostname = url.hostname.toLowerCase().replace(/^www\\./, '');
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
     const segments = url.pathname.split('/').filter(Boolean);
     let videoId = '';
 
@@ -62,7 +62,7 @@ function buildTrailerEmbedUrl(rawUrl: string): string | null {
     } else if (hostname === 'vimeo.com' || hostname === 'player.vimeo.com') {
       const index = segments[0] === 'video' ? 1 : 0;
       videoId = segments[index] || '';
-      if (/^\\d{5,15}$/.test(videoId)) return 'https://player.vimeo.com/video/' + videoId;
+      if (/^\d{5,15}$/.test(videoId)) return 'https://player.vimeo.com/video/' + videoId;
     }
   } catch {
     return null;
@@ -73,7 +73,7 @@ function buildTrailerEmbedUrl(rawUrl: string): string | null {
 function isDirectVideoFile(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl);
-    return (url.protocol === 'https:' || url.protocol === 'http:') && /\\.(mp4|webm|ogg)$/i.test(url.pathname);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && /\.(mp4|webm|ogg)$/i.test(url.pathname);
   } catch {
     return false;
   }
