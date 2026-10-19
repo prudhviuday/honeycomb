@@ -52,3 +52,14 @@ a browser-submitted "completed" flag.
 Required Edge Function secret: `SUPABASE_SERVICE_ROLE_KEY` (server-side only).
 The platform supplies `SUPABASE_URL`. Never put the service-role key in the
 frontend, a `VITE_*` variable, or the HoneyBadgerAdmin browser bundle.
+
+
+## Configurable task verification
+
+- `_shared/verification/task-types.ts`: shared verifier/evidence contract.
+- `_shared/verification/task-registry.ts`: catalog read by HoneyBadgerAdmin.
+- `_shared/verification/verifiers/`: one file per evidence type.
+- `complete-task/index.ts`: loads saved task settings, checks task/campaign/member eligibility, validates evidence, and records scoped progress through the atomic `record_verified_task_activity` RPC.
+- `missions.verification_action`, `verification_config`, `ui_component`, and `ui_config`: repeatable admin configuration.
+
+Creating a task with an existing verifier is an admin-only operation. A genuinely new evidence type needs a verifier module, registry entry, a UI component only if a new interaction is needed, tests, and sometimes a migration. Apply migrations in order before enabling this flow.
