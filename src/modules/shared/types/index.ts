@@ -19,6 +19,8 @@ export interface Campaign {
   movie_active?: boolean;
   /** Official trailer URL stored on the movie record (falls back to campaign media). */
   trailer_url?: string | null;
+  /** Ordered poster URL list; hero_image_url remains the primary/first poster for older surfaces. */
+  movie_poster_urls?: string[];
   active: boolean;
   starts_at: string;
   ends_at: string;
