@@ -12,6 +12,7 @@ This folder is the shared onboarding manual for anyone working on Honeycomb. Sta
 | Understand what happens after an action | [User journeys and sequence diagrams](flows.md) |
 | Understand which records link a movie, campaign, location, scan or reward | [Database model](data-model.md) |
 | Find an API, RPC or Edge Function | [API and function catalog](api-and-functions.md) |
+| Find the purpose of an exported function and its side effects | [Function-by-function reference](function-reference.md) |
 | Install, run, test and release changes | [Development guide](development.md) |
 | Build a feature without bypassing trusted logic | [Feature development guide](feature-development.md) |
 | Check known unfinished paths and schema caveats | [Known limitations](known-limitations.md) |
