@@ -47,12 +47,14 @@ declare
   v_target integer;
   v_reward integer;
   v_transaction_id uuid;
+  v_reward_entry_id uuid;
+  v_entries integer := 0;
 begin
   if p_mission_id is null or p_user_id is null or p_event_type_id is null
      or nullif(trim(coalesce(p_event_key, '')), '') is null or p_entity_id is null then
     raise exception using errcode = '22023', message = 'Task, user, event category, idempotency key and evidence entity are required.';
   end if;
-  select m.id, m.campaign_id, m.name, m.target_value, m.reward_points,
+  select m.id, m.campaign_id, m.name, m.target_value, m.reward_points, m.reward_entries,
          m.progress_mode, m.progress_event_type_id, m.is_active, m.starts_at, m.ends_at
     into v_mission from public.missions m where m.id = p_mission_id for update;
   if not found then raise exception using errcode = '22023', message = 'Task does not exist.'; end if;
@@ -107,6 +109,18 @@ begin
   if coalesce(v_completed, false) then
     update public.mission_progress set progress = greatest(coalesce(progress, 0), v_progress)
       where mission_id = p_mission_id and user_id = p_user_id;
+    -- Backfill/repair an entry award if this mission was completed before this
+    -- verifier was used, without issuing a second entry grant on a replay.
+    v_entries := greatest(0, coalesce(v_mission.reward_entries, 0));
+    if v_entries > 0 then
+      select re.id into v_reward_entry_id from public.reward_entries re
+      where re.campaign_id = v_mission.campaign_id and re.user_id = p_user_id
+        and re.source_type = 'mission' and re.source_id = p_mission_id limit 1;
+      if v_reward_entry_id is null then
+        insert into public.reward_entries (campaign_id, user_id, source_type, source_id, entry_count)
+        values (v_mission.campaign_id, p_user_id, 'mission', p_mission_id, v_entries);
+      end if;
+    end if;
     return jsonb_build_object('success', true, 'duplicate', false, 'activityNumber', v_activity_number,
       'progress', v_progress, 'completed', true, 'tasksCompleted', '[]'::jsonb);
   end if;
@@ -125,9 +139,21 @@ begin
       update public.campaign_users set points_balance = coalesce(points_balance, 0) + v_reward, last_activity_at = now()
         where id = v_campaign_user_id;
     end if;
+
+    v_entries := greatest(0, coalesce(v_mission.reward_entries, 0));
+    if v_entries > 0 then
+      select re.id into v_reward_entry_id from public.reward_entries re
+      where re.campaign_id = v_mission.campaign_id and re.user_id = p_user_id
+        and re.source_type = 'mission' and re.source_id = p_mission_id limit 1;
+      if v_reward_entry_id is null then
+        insert into public.reward_entries (campaign_id, user_id, source_type, source_id, entry_count)
+        values (v_mission.campaign_id, p_user_id, 'mission', p_mission_id, v_entries);
+      end if;
+    end if;
     return jsonb_build_object('success', true, 'duplicate', false, 'activityNumber', v_activity_number,
       'progress', v_progress, 'completed', true,
-      'tasksCompleted', jsonb_build_array(jsonb_build_object('missionId', p_mission_id, 'missionName', v_mission.name, 'rewardPoints', v_reward)));
+      'tasksCompleted', jsonb_build_array(jsonb_build_object('missionId', p_mission_id, 'missionName', v_mission.name,
+        'rewardPoints', v_reward, 'rewardEntries', v_entries)));
   end if;
   return jsonb_build_object('success', true, 'duplicate', false, 'activityNumber', v_activity_number,
     'progress', v_progress, 'completed', false, 'tasksCompleted', '[]'::jsonb);
