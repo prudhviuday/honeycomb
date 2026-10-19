@@ -49,7 +49,7 @@ flowchart TD
   QR --> SCAN[scans QR attribution]
 ~~~
 
-- A movie is the content record (title, poster/trailer and other movie metadata).
+- A movie is the content record (title, legacy primary `poster_url`, ordered `poster_urls` text array, `trailer_url`, `active` and other movie metadata). The first `poster_urls` entry is mapped into `hero_image_url` for older app surfaces; the movie detail screen exposes the full poster gallery. `movie_active` remains separate from `campaigns.active` so the page can distinguish an inactive movie from an inactive campaign.
 - A campaign is a particular promotion/hunt for that movie. Its movie_id points to movies.id.
 - A campaign location is a map point owned by the campaign. Its campaign_id points to campaigns.id and its latitude/longitude define where the pin is displayed.
 - A physical venue is a reusable place record. Do not assign a venue to only one movie by concept; a venue can participate in multiple campaigns through locations and QR attribution.
