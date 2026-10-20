@@ -52,7 +52,6 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
     });
   };
 
-  const points = campaignUser?.points ?? 0;
   const displayName = getDisplayName(profile?.display_name, user?.email);
 
   return (
