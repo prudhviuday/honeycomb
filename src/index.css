@@ -750,3 +750,44 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
     animation: none !important;
   }
 }
+
+/* ===== Leaderboard: staggered ranking reveals and a soft champion glint ===== */
+@keyframes leaderboard-row-pop {
+  from { opacity: 0; transform: translateY(9px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes leaderboard-champion-glint {
+  0% { transform: translateX(-175%) skewX(-16deg); opacity: 0; }
+  18% { opacity: 0.7; }
+  52%, 100% { transform: translateX(270%) skewX(-16deg); opacity: 0; }
+}
+.leaderboard-row-reveal {
+  animation: leaderboard-row-pop 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.leaderboard-champion {
+  isolation: isolate;
+}
+.leaderboard-champion::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  left: -55%;
+  width: 45%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 151, 0.12), transparent);
+  animation: leaderboard-champion-glint 5.5s ease-in-out infinite;
+}
+.leaderboard-trophy-wrap {
+  animation: float-slow 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-row-reveal,
+  .leaderboard-champion::after,
+  .leaderboard-trophy-wrap {
+    animation: none !important;
+  }
+}
+
