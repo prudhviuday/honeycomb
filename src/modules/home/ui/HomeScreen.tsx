@@ -238,7 +238,8 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     );
   }
 
-  // Points always come from the shared campaign membership balance, not a second dashboard fetch.\n  const points = campaignUser?.points ?? 0;
+  // Points always come from the shared campaign membership balance, not a second dashboard fetch.
+  const points = campaignUser?.points ?? 0;
   const scanCount = dashboard.scans.length;
   const completedMissions = getCompletedMissionCount(dashboard);
   const totalMissions = dashboard.missions.length;
