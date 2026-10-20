@@ -341,9 +341,35 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
 
   return (
     <div className="pb-8 animate-fade-in overflow-x-hidden">
-      {/* TOP BAR — overall points remain visible while browsing campaigns */}
+      {/* TOP BAR */}
       <header className="sticky top-0 z-40 px-4 pt-3 pb-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.04]">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1 leading-none">
+              <span className="font-display text-[22px] text-white tracking-wide">HONEY</span>
+              <span className="font-display text-[22px] text-accent tracking-wide">BADGER</span>
+            </div>
+            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
+              <span className="font-medium text-text-primary">{locationLabel}</span>
+              <ChevronRight className="w-3 h-3 rotate-90" aria-hidden="true" />
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('profile')}
+            className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-full bg-bg-surface border border-amber-300/15 hover:border-amber-200/30 transition-colors flex-shrink-0"
+            aria-label={overallPointsLoading ? 'Loading overall points' : overallPoints.toLocaleString() + ' overall points across all movies'}
+          >
+            <PointsBadge
+              scope="overall"
+              points={overallPoints}
+              loading={overallPointsLoading}
+              size="sm"
+              valueClassName="text-xs text-text-primary"
+            />
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-100/60">PTS</span>
+          </button>
           <button
             type="button"
             onClick={() => onNavigate?.('profile')}
@@ -356,31 +382,6 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
               <span className="text-sm font-semibold text-white">{displayName.charAt(0).toUpperCase()}</span>
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => onNavigate?.('profile')}
-            className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-bg-surface border border-amber-300/15 hover:border-amber-200/30 transition-colors flex-shrink-0"
-            aria-label={overallPointsLoading ? 'Loading overall points' : overallPoints.toLocaleString() + ' overall points across all movies'}
-          >
-            <PointsBadge
-              scope="overall"
-              points={overallPoints}
-              loading={overallPointsLoading}
-              size="sm"
-              valueClassName="text-xs text-text-primary"
-            />
-            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-100/60">PTS</span>
-          </button>
-          <div className="flex-1 min-w-0 text-right">
-            <div className="flex items-baseline justify-end gap-1 leading-none">
-              <span className="font-display text-[18px] sm:text-[20px] text-white tracking-wide">HONEY</span>
-              <span className="font-display text-[18px] sm:text-[20px] text-accent tracking-wide">BADGER</span>
-            </div>
-            <p className="text-[10px] text-text-muted flex items-center justify-end gap-1 mt-1">
-              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
-              <span className="font-medium text-text-primary truncate">{locationLabel}</span>
-            </p>
-          </div>
         </div>
       </header>
 
