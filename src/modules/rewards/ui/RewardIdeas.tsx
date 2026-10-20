@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CalendarDays,
   ChevronRight,
@@ -133,9 +134,10 @@ export function RewardIdeas({ onOpenRewards }: Props) {
         ))}
       </div>
 
-      {selectedReward && (
+      {selectedReward && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 sm:p-6 bg-black/70 backdrop-blur-md animate-fade-in"
+          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh' }}
           onClick={() => setSelectedTitle(null)}
           role="presentation"
         >
@@ -143,7 +145,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="reward-detail-title"
-            className="relative w-full max-w-md max-h-[min(84dvh,680px)] overflow-y-auto rounded-[28px] border border-white/10 bg-gradient-to-br from-[#22212a] via-[#15151d] to-[#101014] shadow-[0_28px_100px_rgba(0,0,0,0.7)] animate-scale-in"
+            className="relative my-auto w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(84dvh,680px)] overflow-y-auto overscroll-contain rounded-[28px] border border-white/10 bg-gradient-to-br from-[#22212a] via-[#15151d] to-[#101014] shadow-[0_28px_100px_rgba(0,0,0,0.7)] animate-scale-in"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-gold/[0.12] to-transparent pointer-events-none" />
@@ -237,7 +239,8 @@ export function RewardIdeas({ onOpenRewards }: Props) {
               )}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );
