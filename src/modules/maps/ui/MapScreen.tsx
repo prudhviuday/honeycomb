@@ -382,9 +382,20 @@ export function MapScreen({ onNavigate }: Props) {
               {selectedDist !== null && <div className="flex items-center gap-2 mb-4 text-text-subtle"><Navigation className="w-3.5 h-3.5" /><span className="text-[11px]">{formatDistance(selectedDist)}</span></div>}
               <div className="mb-5">
                 {selected.isScanned ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20"><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium"><PointsIcon scope="campaign" size="xs" />Mission completed · +{selected.totalPoints} pts</span></div>
+                  <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="text-[11px] text-emerald-400 font-medium">Mission completed</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                      <PointsIcon scope="campaign" size="xs" /> +{selected.totalPoints} pts
+                    </span>
+                  </div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20"><PointsIcon scope="campaign" size="xs" /><span className="inline-flex items-center gap-1.5 text-[11px] text-gold font-medium">Mission available · +{selected.totalPoints} pts</span></div>
+                  <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20">
+                    <span className="text-[11px] text-gold font-medium">Mission available</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-gold font-semibold">
+                      <PointsIcon scope="campaign" size="xs" /> +{selected.totalPoints} pts
+                    </span>
+                  </div>
                 )}
               </div>
               {selected.sources.length > 0 && (
