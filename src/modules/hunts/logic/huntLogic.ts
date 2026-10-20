@@ -3,8 +3,8 @@ import type { Mission, MissionProgress } from '@/shared/types';
 export interface HuntSummary {
   completedMissions: number;
   totalMissions: number;
-  earnedXP: number;
-  totalXP: number;
+  earnedPoints: number;
+  totalPoints: number;
 }
 
 export function summarizeHunt(missions: Mission[], progress: MissionProgress[]): HuntSummary {
@@ -12,7 +12,7 @@ export function summarizeHunt(missions: Mission[], progress: MissionProgress[]):
   return {
     completedMissions: completedIds.size,
     totalMissions: missions.length,
-    earnedXP: missions.filter((mission) => completedIds.has(mission.id)).reduce((sum, mission) => sum + mission.points_reward, 0),
-    totalXP: missions.reduce((sum, mission) => sum + mission.points_reward, 0),
+    earnedPoints: missions.filter((mission) => completedIds.has(mission.id)).reduce((sum, mission) => sum + mission.points_reward, 0),
+    totalPoints: missions.reduce((sum, mission) => sum + mission.points_reward, 0),
   };
 }
