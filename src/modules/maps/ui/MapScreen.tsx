@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X, MapPin, Check, Navigation, Zap, Film, ChevronDown } from 'lucide-react';
+import { Search, X, MapPin, Check, Navigation, Film, ChevronDown, ScanLine, Target } from 'lucide-react';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getLocations, getInteractionSources, getUserScans } from '@/modules/maps/api/mapsApi';
@@ -339,7 +340,7 @@ export function MapScreen({ onNavigate }: Props) {
       {!panelOpen && nearbyCount > 0 && (
         <div className="absolute top-28 left-4 right-4 z-10 pointer-events-none">
           <div className="glass rounded-[10px] px-3 py-2 flex items-center gap-2 animate-fade-in">
-            <Zap className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+            <Target className="w-3.5 h-3.5 text-gold flex-shrink-0" />
             <p className="text-[11px] text-text-primary"><span className="text-gold font-medium">{nearbyCount}</span> {nearbyCount === 1 ? 'mission' : 'missions'} nearby</p>
           </div>
         </div>
@@ -381,9 +382,9 @@ export function MapScreen({ onNavigate }: Props) {
               {selectedDist !== null && <div className="flex items-center gap-2 mb-4 text-text-subtle"><Navigation className="w-3.5 h-3.5" /><span className="text-[11px]">{formatDistance(selectedDist)}</span></div>}
               <div className="mb-5">
                 {selected.isScanned ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20"><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-[11px] text-emerald-400 font-medium">Mission completed · +{selected.totalPoints} XP</span></div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20"><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium"><PointsIcon scope="campaign" size="xs" />Mission completed · +{selected.totalPoints} pts</span></div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20"><Zap className="w-3.5 h-3.5 text-gold" fill="currentColor" /><span className="text-[11px] text-gold font-medium">Mission available · +{selected.totalPoints} XP</span></div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20"><PointsIcon scope="campaign" size="xs" /><span className="inline-flex items-center gap-1.5 text-[11px] text-gold font-medium">Mission available · +{selected.totalPoints} pts</span></div>
                 )}
               </div>
               {selected.sources.length > 0 && (
@@ -391,11 +392,11 @@ export function MapScreen({ onNavigate }: Props) {
                   <p className="text-[10px] text-text-subtle uppercase tracking-[0.2em] mb-3">Scan Points</p>
                   {selected.sources.map((src) => {
                     const isScanned = selected.isScanned && src.location_id === selected.location.id;
-                    return <div key={src.id} className="flex items-center justify-between py-3 hairline-b last:border-b-0"><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center ${isScanned ? 'bg-emerald-500/15' : 'bg-gold/10'}`}>{isScanned ? <Check className="w-4 h-4 text-emerald-400" /> : <MapPin className="w-4 h-4 text-gold" />}</div><div><p className="text-sm text-text-primary">{src.name}</p><p className="text-[11px] text-text-subtle capitalize">{src.source_type}</p></div></div><span className="font-display text-base text-gold">+{src.points}</span></div>;
+                    return <div key={src.id} className="flex items-center justify-between py-3 hairline-b last:border-b-0"><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center ${isScanned ? 'bg-emerald-500/15' : 'bg-gold/10'}`}>{isScanned ? <Check className="w-4 h-4 text-emerald-400" /> : <MapPin className="w-4 h-4 text-gold" />}</div><div><p className="text-sm text-text-primary">{src.name}</p><p className="text-[11px] text-text-subtle capitalize">{src.source_type}</p></div></div><span className="inline-flex items-center gap-1 font-display text-base text-gold"><PointsIcon scope="campaign" size="xs" />+{src.points}</span></div>;
                   })}
                 </div>
               )}
-              <button onClick={() => { setPanelOpen(false); onNavigate?.('scanner'); }} className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">{selected.isScanned ? 'Already Scanned' : 'Scan Here'}{!selected.isScanned && <Zap className="w-4 h-4" fill="currentColor" />}</button>
+              <button onClick={() => { setPanelOpen(false); onNavigate?.('scanner'); }} className="w-full py-3.5 bg-accent text-white font-semibold text-sm rounded-[10px] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">{selected.isScanned ? 'Already Scanned' : 'Scan Here'}{!selected.isScanned && <ScanLine className="w-4 h-4" />}</button>
             </div>
           </div>
         </div>
