@@ -5,6 +5,7 @@ import { useCampaign } from '@/application/state/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/hunts/api/huntsApi';
 import { summarizeHunt } from '@/modules/hunts/logic/huntLogic';
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
+import { PointsBadge, PointsIcon } from '@/components/points/PointsIndicator';
 import type { Tab } from '@/app/AppShell';
 
 interface Props {
@@ -106,8 +107,8 @@ export function HuntsScreen({ onNavigate }: Props) {
   const huntSummary = summarizeHunt(dashboard.missions, dashboard.missionProgress);
   const completedMissions = huntSummary.completedMissions;
   const totalMissions = huntSummary.totalMissions;
-  const totalXP = huntSummary.totalXP;
-  const earnedXP = huntSummary.earnedXP;
+  const totalPoints = huntSummary.totalPoints;
+  const earnedPoints = huntSummary.earnedPoints;
 
   return (
     <div className="px-4 pt-12 pb-6 animate-fade-in">
@@ -117,12 +118,11 @@ export function HuntsScreen({ onNavigate }: Props) {
           <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your missions</p>
           <h1 className="font-display text-[34px] text-text-primary leading-none tracking-[-0.02em]">HUNTS</h1>
           <p className="text-[11px] text-text-muted mt-1.5">
-            {completedMissions}/{totalMissions} completed · {earnedXP}/{totalXP} XP earned · Campaign points
+            {completedMissions}/{totalMissions} completed · {earnedPoints}/{totalPoints} campaign pts earned
           </p>
         </div>
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-gold/15 to-accent/10 border border-white/8 rounded-full px-3 py-1.5 shadow-[0_8px_25px_rgba(139,92,246,0.10)]">
-          <Zap className="w-3.5 h-3.5 text-gold" fill="currentColor" />
-          <span className="font-display text-base text-gold">{points}</span>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-orange-400/10 to-orange-300/[0.04] border border-orange-300/15 rounded-full px-3 py-1.5">
+          <PointsBadge scope="campaign" points={points} valueClassName="font-display text-base text-orange-200" />
         </div>
       </div>
 
@@ -183,10 +183,10 @@ export function HuntsScreen({ onNavigate }: Props) {
 
                   {/* XP */}
                   <div className="text-right flex-shrink-0">
-                    <p className={`font-display text-base ${isCompleted ? 'text-text-muted' : 'text-gold'}`}>
-                      +{mission.points_reward}
+                    <p className={`inline-flex items-center justify-end gap-1 font-display text-base ${isCompleted ? 'text-text-muted' : 'text-orange-200'}`}>
+                      <PointsIcon scope="campaign" size="xs" /> +{mission.points_reward}
                     </p>
-                    <p className="text-[9px] text-text-subtle uppercase">XP</p>
+                    <p className="text-[9px] text-text-subtle uppercase">PTS</p>
                   </div>
                 </div>
 
