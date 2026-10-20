@@ -1,24 +1,30 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Campaign, CampaignUser } from '@/types';
-import { getCampaigns, ensureCampaignUser } from '@/lib/api';
+import { getCampaigns, ensureCampaignUser, getOverallPointsTotal } from '@/lib/api';
 import { useAuth } from './AuthContext';
 
 interface CampaignContextValue {
   campaigns: Campaign[];
   activeCampaign: Campaign | null;
   campaignUser: CampaignUser | null;
+  overallPoints: number;
+  overallPointsLoading: boolean;
   loading: boolean;
   selectCampaign: (campaign: Campaign) => Promise<void>;
   refreshCampaignUser: () => Promise<void>;
+  refreshOverallPoints: () => Promise<void>;
 }
 
 const CampaignContext = createContext<CampaignContextValue>({
   campaigns: [],
   activeCampaign: null,
   campaignUser: null,
+  overallPoints: 0,
+  overallPointsLoading: true,
   loading: true,
   selectCampaign: async () => {},
   refreshCampaignUser: async () => {},
+  refreshOverallPoints: async () => {},
 });
 
 export function CampaignProvider({ children }: { children: ReactNode }) {
@@ -26,10 +32,14 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
   const [campaignUser, setCampaignUser] = useState<CampaignUser | null>(null);
+  const [overallPoints, setOverallPoints] = useState(0);
+  const [overallPointsLoading, setOverallPointsLoading] = useState(true);
+  const [overallPointsUserId, setOverallPointsUserId] = useState<string | null>(null);
   const [campaignUserKey, setCampaignUserKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   // Older requests must never overwrite the balance for a newer campaign/user.
   const campaignUserRequest = useRef(0);
+  const overallPointsRequest = useRef(0);
   const requestedCampaignUserKey = useRef<string | null>(null);
   const campaignUserKeyRef = useRef<string | null>(null);
 
@@ -87,9 +97,48 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loadOverallPoints = useCallback(async (
+    targetUserId: string | null,
+    clearOnError = false,
+  ) => {
+    const requestId = ++overallPointsRequest.current;
+    if (!targetUserId) {
+      setOverallPoints(0);
+      setOverallPointsUserId(null);
+      setOverallPointsLoading(false);
+      return;
+    }
+
+    setOverallPointsLoading(true);
+    try {
+      // This sums each joined campaign's current points_balance, so redeemed points
+      // are already excluded and one balance per movie is counted exactly once.
+      const total = await getOverallPointsTotal(targetUserId);
+      if (requestId !== overallPointsRequest.current) return;
+      setOverallPoints(Math.max(0, Number(total) || 0));
+      setOverallPointsUserId(targetUserId);
+    } catch (error) {
+      if (requestId !== overallPointsRequest.current) return;
+      console.warn('[Points] Could not refresh overall points:', error);
+      if (clearOnError) {
+        setOverallPoints(0);
+        setOverallPointsUserId(targetUserId);
+      }
+      // On a routine refresh failure retain the last successful balance.
+    } finally {
+      if (requestId === overallPointsRequest.current) {
+        setOverallPointsLoading(false);
+      }
+    }
+  }, []);
+
   const campaignId = activeCampaign?.id ?? null;
   const userId = user?.id ?? null;
   const currentCampaignUserKey = campaignId && userId ? `${campaignId}:${userId}` : null;
+
+  useEffect(() => {
+    void loadOverallPoints(userId, true);
+  }, [userId, loadOverallPoints]);
 
   useEffect(() => {
     if (!campaignId || !userId) {
@@ -112,28 +161,40 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setActiveCampaign(campaign);
     if (user) {
       await loadCampaignUser(campaign.id, user.id, true);
+      // Selecting/opening a campaign is also a safe refresh point after a scan.
+      await loadOverallPoints(user.id);
     } else {
       requestedCampaignUserKey.current = null;
       campaignUserKeyRef.current = null;
       setCampaignUser(null);
       setCampaignUserKey(null);
     }
-  }, [user, loadCampaignUser]);
+  }, [user, loadCampaignUser, loadOverallPoints]);
 
   const refreshCampaignUser = useCallback(async () => {
-    await loadCampaignUser(activeCampaign?.id ?? null, user?.id ?? null, false);
-  }, [activeCampaign?.id, user?.id, loadCampaignUser]);
+    await Promise.all([
+      loadCampaignUser(activeCampaign?.id ?? null, user?.id ?? null, false),
+      loadOverallPoints(user?.id ?? null),
+    ]);
+  }, [activeCampaign?.id, user?.id, loadCampaignUser, loadOverallPoints]);
+
+  const refreshOverallPoints = useCallback(async () => {
+    await loadOverallPoints(user?.id ?? null);
+  }, [user?.id, loadOverallPoints]);
 
   const contextValue = useMemo(
     () => ({
       campaigns,
       activeCampaign,
       campaignUser: visibleCampaignUser,
+      overallPoints: overallPointsUserId === userId ? overallPoints : 0,
+      overallPointsLoading: Boolean(userId) && (overallPointsLoading || overallPointsUserId !== userId),
       loading,
       selectCampaign,
       refreshCampaignUser,
+      refreshOverallPoints,
     }),
-    [campaigns, activeCampaign, visibleCampaignUser, loading, selectCampaign, refreshCampaignUser],
+    [campaigns, activeCampaign, visibleCampaignUser, overallPoints, overallPointsLoading, overallPointsUserId, userId, loading, selectCampaign, refreshCampaignUser, refreshOverallPoints],
   );
 
   return (
