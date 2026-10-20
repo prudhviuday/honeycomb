@@ -145,14 +145,14 @@ export function RewardIdeas({ onOpenRewards }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="reward-detail-title"
-            className="relative my-auto w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(84dvh,680px)] overflow-y-auto overscroll-contain rounded-[28px] border border-white/10 bg-gradient-to-br from-[#22212a] via-[#15151d] to-[#101014] shadow-[0_28px_100px_rgba(0,0,0,0.7)] animate-scale-in"
+            className="relative my-auto w-full max-w-sm max-h-[70dvh] overflow-y-auto overscroll-contain rounded-[24px] border border-white/10 bg-gradient-to-br from-[#22212a] via-[#15151d] to-[#101014] shadow-[0_28px_100px_rgba(0,0,0,0.7)] animate-scale-in"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-gold/[0.12] to-transparent pointer-events-none" />
-            <div className="relative p-5 sm:p-6">
+            <div className="relative p-4 sm:p-5">
               <div className="flex items-start justify-between gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center shadow-[0_8px_28px_rgba(233,180,76,0.08)]">
-                  <selectedReward.icon className="w-7 h-7 text-gold" aria-hidden="true" />
+                <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center shadow-[0_8px_28px_rgba(233,180,76,0.08)]">
+                  <selectedReward.icon className="w-5 h-5 text-gold" aria-hidden="true" />
                 </div>
                 <button
                   type="button"
@@ -168,17 +168,17 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                 <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-gold/10 border border-gold/15 text-[10px] font-semibold uppercase tracking-[0.13em] text-gold">
                   <Sparkles className="w-3 h-3" /> Example reward goal
                 </span>
-                <h3 id="reward-detail-title" className="mt-3 font-display text-[32px] sm:text-[36px] leading-tight text-white">
+                <h3 id="reward-detail-title" className="mt-2 font-display text-[25px] sm:text-[28px] leading-tight text-white">
                   {selectedReward.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-white/65">{selectedReward.detail}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-white/65">{selectedReward.detail}</p>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+              <div className="mt-3 rounded-xl border border-white/[0.08] bg-black/20 p-3">
                 <div className="flex items-end justify-between gap-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Your points</p>
-                    <p className="mt-1 font-display text-[30px] leading-none text-white tabular-nums">{points.toLocaleString()}</p>
+                    <p className="mt-1 font-display text-[25px] leading-none text-white tabular-nums">{points.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Example target</p>
@@ -186,7 +186,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+                <div className="mt-3 flex items-center justify-between gap-3 text-[11px]">
                   <span className="text-white/65">{Math.round(progress)}% of target</span>
                   <span className={remaining === 0 ? 'text-emerald-300 font-semibold' : 'text-white/75'}>
                     {remaining === 0 ? 'Target reached!' : `${remaining.toLocaleString()} pts to go`}
@@ -211,7 +211,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-3 rounded-2xl bg-white/[0.035] border border-white/[0.06] p-3.5">
+              <div className="mt-3 flex gap-2.5 rounded-xl bg-white/[0.035] border border-white/[0.06] p-2.5">
                 <div className="mt-0.5 w-8 h-8 rounded-xl bg-white/[0.06] flex-shrink-0 flex items-center justify-center">
                   <Ticket className="w-4 h-4 text-white/70" aria-hidden="true" />
                 </div>
@@ -221,7 +221,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                 </div>
               </div>
 
-              <p className="mt-4 text-[10px] leading-relaxed text-white/40">
+              <p className="mt-3 text-[9px] leading-snug text-white/40">
                 This is an illustrative goal, not a live prize or redemption offer. Real rewards, availability and costs are set by each movie campaign.
               </p>
 
@@ -232,7 +232,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                     setSelectedTitle(null);
                     onOpenRewards();
                   }}
-                  className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 px-4 bg-gold text-[#17120a] font-bold text-sm hover:brightness-105 transition"
+                  className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 bg-gold text-[#17120a] font-bold text-sm hover:brightness-105 transition"
                 >
                   Explore campaign rewards <ChevronRight className="w-4 h-4" />
                 </button>
