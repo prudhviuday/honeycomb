@@ -73,13 +73,16 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
         </div>
         <div className="relative flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/75 flex items-center gap-2">
-              <PointsIcon scope="overall" size="xs" /> Your Honeycomb balance
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/75">
+              Your Honeycomb balance
             </p>
-            <p className="font-display text-[42px] leading-none tracking-tight text-amber-100 mt-3 tabular-nums">
-              {pointsLoading ? '···' : overallPoints.toLocaleString()}
-              <span className="text-sm font-semibold tracking-normal text-amber-200/70 ml-2">PTS</span>
-            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <PointsIcon scope="overall" size="md" />
+              <p className="font-display text-[42px] leading-none tracking-tight text-amber-100 tabular-nums">
+                {pointsLoading ? '···' : overallPoints.toLocaleString()}
+                <span className="text-sm font-semibold tracking-normal text-amber-200/70 ml-2">PTS</span>
+              </p>
+            </div>
             <p className="text-[11px] text-white/55 mt-2">Net total across movies · redeem within each movie campaign</p>
           </div>
           <div className="shrink-0 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-2 text-[10px] font-semibold text-amber-100">
