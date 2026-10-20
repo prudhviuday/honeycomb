@@ -3,7 +3,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
   ChevronRight, ChevronDown, Check, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
-  Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2, UserRound,
+  Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2,
 } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
