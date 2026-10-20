@@ -113,6 +113,8 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     if (user) {
       await loadCampaignUser(campaign.id, user.id, true);
     } else {
+      requestedCampaignUserKey.current = null;
+      campaignUserKeyRef.current = null;
       setCampaignUser(null);
       setCampaignUserKey(null);
     }
