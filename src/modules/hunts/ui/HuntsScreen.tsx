@@ -181,7 +181,7 @@ export function HuntsScreen({ onNavigate }: Props) {
                     <p className="text-[11px] text-text-muted line-clamp-2">{mission.description}</p>
                   </div>
 
-                  {/* XP */}
+                  {/* Campaign point reward */}
                   <div className="text-right flex-shrink-0">
                     <p className={`inline-flex items-center justify-end gap-1 font-display text-base ${isCompleted ? 'text-text-muted' : 'text-orange-200'}`}>
                       <PointsIcon scope="campaign" size="xs" /> +{mission.points_reward}
