@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
+  Coins,
   Copy,
   ExternalLink,
   MapPin,
@@ -107,11 +108,15 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const [inviteUrl, setInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [campaignPoints, setCampaignPoints] = useState(0);
+  const [campaignPointsLoading, setCampaignPointsLoading] = useState(false);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [pointHistory, setPointHistory] = useState<PointTransaction[]>([]);
 
   const loadMovie = async () => {
     setLoading(true);
+    setCampaignPoints(0);
+    setCampaignPointsLoading(Boolean(user));
 
     try {
       const result = await getMoviePageData(campaignId);
@@ -136,6 +141,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
         const campaignUser = existingCampaignUser
           ?? await ensureCampaignUser(result.campaign.id, user.id);
         setJoined(Boolean(campaignUser));
+        setCampaignPoints(campaignUser.points ?? 0);
+        setCampaignPointsLoading(false);
 
         // Count a QR-attributed campaign join as a conversion once for this visitor.
         if (!existingCampaignUser && qrCode) {
@@ -180,10 +187,13 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           }
         }
       } else if (result.campaign) {
+        setCampaignPoints(0);
+        setCampaignPointsLoading(false);
         void selectCampaign(result.campaign as Campaign);
       }
     } catch {
       setData(null);
+      setCampaignPointsLoading(false);
     } finally {
       setLoading(false);
     }
@@ -292,7 +302,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     }
 
     try {
-      await ensureCampaignUser(campaign.id, user.id);
+      const membership = await ensureCampaignUser(campaign.id, user.id);
+      setCampaignPoints(membership.points ?? 0);
+      setCampaignPointsLoading(false);
       setJoined(true);
     } catch {
       // Keep the movie page usable even if campaign joining is unavailable.
@@ -394,6 +406,22 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             </h1>
             {campaign.title && campaign.title !== movieTitle && (
               <p className="text-sm text-white/75 mt-3 max-w-sm">{campaign.title}</p>
+            )}
+            {user && (
+              <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-amber-200/20 bg-black/45 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.65)]">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center border border-amber-200/20 bg-amber-300/10">
+                  <Coins className="w-4 h-4 text-amber-200" />
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-amber-100/65 font-semibold">Your points in this movie</p>
+                  <p className="text-xl leading-tight font-bold tracking-tight text-amber-100 tabular-nums">
+                    {campaignPointsLoading ? '···' : campaignPoints.toLocaleString()}
+                    <span className="text-[10px] font-semibold text-amber-100/60 ml-1.5">PTS</span>
+                  </p>
+                </div>
+                <div className="ml-2 h-8 w-px bg-white/10" />
+                <p className="max-w-[76px] text-[9px] leading-snug text-white/55">Earn more by exploring this hunt</p>
+              </div>
             )}
           </div>
         </section>
