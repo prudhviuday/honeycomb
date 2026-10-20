@@ -30,6 +30,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   // Older requests must never overwrite the balance for a newer campaign/user.
   const campaignUserRequest = useRef(0);
+  const requestedCampaignUserKey = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,16 +56,19 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   ) => {
     const requestId = ++campaignUserRequest.current;
     if (!campaignId || !userId) {
+      requestedCampaignUserKey.current = null;
       setCampaignUser(null);
       setCampaignUserKey(null);
       return;
     }
+    const requestKey = `${campaignId}:${userId}`;
+    requestedCampaignUserKey.current = requestKey;
 
     try {
       const cu = await ensureCampaignUser(campaignId, userId);
       if (requestId !== campaignUserRequest.current) return;
       setCampaignUser(cu);
-      setCampaignUserKey(`${campaignId}:${userId}`);
+      setCampaignUserKey(requestKey);
     } catch {
       if (requestId !== campaignUserRequest.current) return;
       if (clearOnError) {
@@ -72,6 +76,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         setCampaignUserKey(null);
       }
       // A refresh failure should not replace a valid last-known balance with 0.
+    } finally {
+      if (requestId === campaignUserRequest.current && requestedCampaignUserKey.current === requestKey) {
+        requestedCampaignUserKey.current = null;
+      }
     }
   }, []);
 
@@ -80,8 +88,16 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const currentCampaignUserKey = campaignId && userId ? `${campaignId}:${userId}` : null;
 
   useEffect(() => {
+    if (!campaignId || !userId) {
+      void loadCampaignUser(campaignId, userId, true);
+      return;
+    }
+    const key = `${campaignId}:${userId}`;
+    // selectCampaign already started the matching request; don't race it with
+    // a second request from this effect.
+    if (campaignUserKey === key || requestedCampaignUserKey.current === key) return;
     void loadCampaignUser(campaignId, userId, true);
-  }, [campaignId, userId, loadCampaignUser]);
+  }, [campaignId, userId, campaignUserKey, loadCampaignUser]);
 
   // Only expose a balance that belongs to the currently selected campaign and
   // signed-in user. This prevents a previous campaign's points flashing on screen.
