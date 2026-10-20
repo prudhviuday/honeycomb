@@ -569,8 +569,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                           {mission.description}
                         </p>
                       </div>
-                      <span className="text-sm font-display text-gold flex-shrink-0">
-                        +{mission.points_reward}
+                      <span className="inline-flex items-center gap-1 text-sm font-display text-gold flex-shrink-0">
+                        <PointsIcon scope="campaign" size="xs" /> +{mission.points_reward}
                       </span>
                     </div>
                   </div>
