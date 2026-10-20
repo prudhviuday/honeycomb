@@ -228,6 +228,25 @@ export async function getCampaign(
    CAMPAIGN USERS
    ============================================================ */
 
+/**
+ * Net points across every movie campaign the user has joined.
+ * campaign_users.points_balance is the current balance after any reward spend,
+ * so summing it avoids counting gross earnings as still-spendable points.
+ */
+export async function getOverallPointsTotal(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('campaign_users')
+    .select('points_balance')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  return (data ?? []).reduce(
+    (total, row) => total + Number(row.points_balance ?? 0),
+    0,
+  );
+}
+
 export async function getCampaignUser(
   campaignId: string,
   userId: string
