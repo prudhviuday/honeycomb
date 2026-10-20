@@ -771,7 +771,6 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                 <div
                   key={entry.id}
                   className="leaderboard-preview-row relative flex items-center justify-between gap-3 px-4 py-3"
-                  style={{ animationDelay: \`\${index * 75}ms\` }}
                 >
                   <span className="min-w-0 truncate text-sm font-medium text-white/85">
                     {entry.user_id === user?.id ? 'You' : entry.display_name || 'Movie Explorer'}
@@ -785,7 +784,6 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
               {showMeSeparately && me && (
                 <div
                   className="leaderboard-preview-row leaderboard-preview-row-you relative flex items-center justify-between gap-3 px-4 py-3"
-                  style={{ animationDelay: \`\${top3.length * 75}ms\` }}
                 >
                   <span className="min-w-0 truncate text-sm font-medium text-violet-100/90">You</span>
                   <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm font-semibold tabular-nums text-violet-100">
@@ -1339,7 +1337,6 @@ function LeaderboardListRow({
   return (
     <div
       className={'leaderboard-row-reveal flex items-center gap-3 border-b border-white/[0.055] py-3 last:border-b-0 ' + (isMe ? 'rounded-xl bg-violet-300/[0.06] px-2' : '')}
-      style={{ animationDelay: `${Math.min(index, 12) * 32}ms` }}
     >
       <span className={'w-6 shrink-0 text-center font-display text-sm tabular-nums ' + (entry.rank === 1 ? 'text-amber-200' : entry.rank === 2 ? 'text-slate-200' : entry.rank === 3 ? 'text-orange-200' : 'text-white/35')}>
         {entry.rank}
