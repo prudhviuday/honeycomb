@@ -31,6 +31,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   // Older requests must never overwrite the balance for a newer campaign/user.
   const campaignUserRequest = useRef(0);
   const requestedCampaignUserKey = useRef<string | null>(null);
+  const campaignUserKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +58,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     const requestId = ++campaignUserRequest.current;
     if (!campaignId || !userId) {
       requestedCampaignUserKey.current = null;
+      campaignUserKeyRef.current = null;
       setCampaignUser(null);
       setCampaignUserKey(null);
       return;
@@ -67,11 +69,13 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     try {
       const cu = await ensureCampaignUser(campaignId, userId);
       if (requestId !== campaignUserRequest.current) return;
+      campaignUserKeyRef.current = requestKey;
       setCampaignUser(cu);
       setCampaignUserKey(requestKey);
     } catch {
       if (requestId !== campaignUserRequest.current) return;
       if (clearOnError) {
+        campaignUserKeyRef.current = null;
         setCampaignUser(null);
         setCampaignUserKey(null);
       }
@@ -95,9 +99,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     const key = `${campaignId}:${userId}`;
     // selectCampaign already started the matching request; don't race it with
     // a second request from this effect.
-    if (campaignUserKey === key || requestedCampaignUserKey.current === key) return;
+    if (campaignUserKeyRef.current === key || requestedCampaignUserKey.current === key) return;
     void loadCampaignUser(campaignId, userId, true);
-  }, [campaignId, userId, campaignUserKey, loadCampaignUser]);
+  }, [campaignId, userId, loadCampaignUser]);
 
   // Only expose a balance that belongs to the currently selected campaign and
   // signed-in user. This prevents a previous campaign's points flashing on screen.
