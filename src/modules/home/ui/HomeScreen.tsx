@@ -8,7 +8,7 @@ import {
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { getCampaignDashboard, type CampaignDashboard } from '@/modules/home/api/homeApi';
-import { getHomePoints, getCompletedMissionCount } from '@/modules/home/logic/homeLogic';
+import { getCompletedMissionCount } from '@/modules/home/logic/homeLogic';
 import { calculateDistance } from '@/modules/maps/logic/mapData';
 import type { Tab } from './AppShell';
 import type { Campaign } from '@/types';
@@ -238,7 +238,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     );
   }
 
-  const points = getHomePoints(dashboard);
+  // Points always come from the shared campaign membership balance, not a second dashboard fetch.\n  const points = campaignUser?.points ?? 0;
   const scanCount = dashboard.scans.length;
   const completedMissions = getCompletedMissionCount(dashboard);
   const totalMissions = dashboard.missions.length;
@@ -357,7 +357,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
             type="button"
             onClick={() => onNavigate?.('rewards')}
             className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-full bg-bg-surface border border-white/[0.06]"
-            aria-label={points + ' points, view rewards'}
+            aria-label={points + ' points for ' + (activeCampaign.title || activeCampaign.movie_title || 'this campaign') + ', view rewards'}
           >
             <span className="w-5 h-5 rounded-full bg-gold/15 flex items-center justify-center">
               <Zap className="w-3 h-3 text-gold" fill="currentColor" aria-hidden="true" />
