@@ -161,15 +161,13 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setActiveCampaign(campaign);
     if (user) {
       await loadCampaignUser(campaign.id, user.id, true);
-      // Selecting/opening a campaign is also a safe refresh point after a scan.
-      await loadOverallPoints(user.id);
     } else {
       requestedCampaignUserKey.current = null;
       campaignUserKeyRef.current = null;
       setCampaignUser(null);
       setCampaignUserKey(null);
     }
-  }, [user, loadCampaignUser, loadOverallPoints]);
+  }, [user, loadCampaignUser]);
 
   const refreshCampaignUser = useCallback(async () => {
     await Promise.all([
@@ -181,6 +179,15 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const refreshOverallPoints = useCallback(async () => {
     await loadOverallPoints(user?.id ?? null);
   }, [user?.id, loadOverallPoints]);
+
+  // Refresh both balances when returning from an external task or app switch;
+  // some verified task completions can settle while the browser is unfocused.
+  useEffect(() => {
+    if (!userId || !campaignId) return;
+    const refreshOnFocus = () => { void refreshCampaignUser(); };
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [userId, campaignId, refreshCampaignUser]);
 
   const contextValue = useMemo(
     () => ({
