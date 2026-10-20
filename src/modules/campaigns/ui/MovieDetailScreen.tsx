@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
+  Coins,
   Copy,
   ExternalLink,
   MapPin,
@@ -107,11 +108,15 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const [inviteUrl, setInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [campaignPoints, setCampaignPoints] = useState(0);
+  const [campaignPointsLoading, setCampaignPointsLoading] = useState(false);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [pointHistory, setPointHistory] = useState<PointTransaction[]>([]);
 
   const loadMovie = async () => {
     setLoading(true);
+    setCampaignPoints(0);
+    setCampaignPointsLoading(Boolean(user));
 
     try {
       const result = await getMoviePageData(campaignId);
@@ -136,6 +141,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
         const campaignUser = existingCampaignUser
           ?? await ensureCampaignUser(result.campaign.id, user.id);
         setJoined(Boolean(campaignUser));
+        setCampaignPoints(campaignUser.points ?? 0);
+        setCampaignPointsLoading(false);
 
         // Count a QR-attributed campaign join as a conversion once for this visitor.
         if (!existingCampaignUser && qrCode) {
@@ -180,10 +187,13 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           }
         }
       } else if (result.campaign) {
+        setCampaignPoints(0);
+        setCampaignPointsLoading(false);
         void selectCampaign(result.campaign as Campaign);
       }
     } catch {
       setData(null);
+      setCampaignPointsLoading(false);
     } finally {
       setLoading(false);
     }
@@ -292,7 +302,9 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
     }
 
     try {
-      await ensureCampaignUser(campaign.id, user.id);
+      const membership = await ensureCampaignUser(campaign.id, user.id);
+      setCampaignPoints(membership.points ?? 0);
+      setCampaignPointsLoading(false);
       setJoined(true);
     } catch {
       // Keep the movie page usable even if campaign joining is unavailable.
@@ -333,13 +345,13 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
   const shareable = Boolean(user && inviteUrl && referral);
 
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto bg-bg-primary text-text-primary animate-fade-in pb-8 sm:border-x sm:border-white/5 overflow-x-hidden">
-      <header className="sticky top-0 z-40 px-4 py-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.05]">
+    <div className="min-h-screen w-full max-w-lg mx-auto bg-[#09090B] text-zinc-100 animate-fade-in pb-10 sm:border-x sm:border-white/[0.06] overflow-x-hidden">
+      <header className="sticky top-0 z-40 px-4 py-3 bg-[#09090B]/75 backdrop-blur-2xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/8 flex items-center justify-center"
+            className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.09] flex items-center justify-center transition-colors"
             aria-label="Back to movies"
           >
             <ArrowLeft className="w-4 h-4 text-white" />
@@ -357,20 +369,22 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
         </div>
       </header>
 
-      <div className="space-y-6">
-        <section className="relative overflow-hidden min-h-[300px]">
-          <div className="absolute inset-0 bg-bg-elevated" />
+      <div className="space-y-8">
+        <section className="relative isolate overflow-hidden min-h-[440px] sm:min-h-[500px] rounded-b-[32px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#25140D] via-[#121013] to-[#08080A]" />
           {heroPosterUrl ? (
             <img
               src={heroPosterUrl}
               alt={movieTitle}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover scale-[1.015] transition-transform duration-700"
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-accent/20 via-purple-900/20 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/20 to-transparent" />
-          <div className="absolute left-5 right-5 bottom-7">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#09090B] via-[#09090B]/35 to-black/5" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#09090B] to-transparent" />
+          <div className="absolute top-5 right-5 w-32 h-32 rounded-full bg-orange-500/15 blur-3xl pointer-events-none" />
+          <div className="absolute left-5 right-5 bottom-8 sm:left-7 sm:right-7">
             <div className="flex flex-wrap items-center gap-2">
               <span className={'inline-flex items-center gap-2 px-2.5 py-1 rounded-full backdrop-blur-md border text-[9px] uppercase tracking-[0.12em] ' +
                 (movieIsActive
@@ -387,21 +401,37 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                 {campaign.active ? 'Campaign active' : 'Campaign inactive'}
               </span>
             </div>
-            <h1 className="font-display text-[34px] leading-[0.92] text-white mt-3 tracking-[-0.02em]">
+            <h1 className="font-display text-[clamp(2.6rem,10vw,4rem)] leading-[0.9] text-white mt-4 tracking-[-0.045em] drop-shadow-[0_3px_22px_rgba(0,0,0,0.6)]">
               {movieTitle}
             </h1>
             {campaign.title && campaign.title !== movieTitle && (
-              <p className="text-sm text-white/70 mt-2">{campaign.title}</p>
+              <p className="text-sm text-white/75 mt-3 max-w-sm">{campaign.title}</p>
+            )}
+            {user && (
+              <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-amber-200/20 bg-black/45 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.65)]">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center border border-amber-200/20 bg-amber-300/10">
+                  <Coins className="w-4 h-4 text-amber-200" />
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-amber-100/65 font-semibold">Your points in this movie</p>
+                  <p className="text-xl leading-tight font-bold tracking-tight text-amber-100 tabular-nums">
+                    {campaignPointsLoading ? '···' : campaignPoints.toLocaleString()}
+                    <span className="text-[10px] font-semibold text-amber-100/60 ml-1.5">PTS</span>
+                  </p>
+                </div>
+                <div className="ml-2 h-8 w-px bg-white/10" />
+                <p className="max-w-[76px] text-[9px] leading-snug text-white/55">Earn more by exploring this hunt</p>
+              </div>
             )}
           </div>
         </section>
 
         {moviePosters.length > 1 && (
-          <section className="px-4 -mt-2">
+          <section className="px-4 -mt-3">
             <div className="flex items-end justify-between mb-3">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Movie artwork</p>
-                <h2 className="font-display text-[19px] leading-none text-white mt-1">POSTER GALLERY</h2>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-orange-300 font-semibold">Movie artwork</p>
+                <h2 className="font-display text-[21px] leading-none text-white mt-1 tracking-tight">Poster gallery</h2>
               </div>
               <span className="text-[10px] text-text-subtle">{moviePosters.length} posters</span>
             </div>
@@ -421,7 +451,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                     src={posterUrl}
                     alt={movieTitle + ' poster ' + (index + 1)}
                     loading="lazy"
-                    className="w-[82px] h-[122px] object-cover"
+                    className="w-[88px] h-[132px] object-cover transition-transform duration-300 hover:scale-[1.03]"
                   />
                 </button>
               ))}
@@ -429,8 +459,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           </section>
         )}
 
-        <div className="px-4 pt-1 space-y-5">
-          <section className="grid grid-cols-2 gap-2.5">
+        <div className="px-4 pt-1 space-y-6">
+          <section className="grid grid-cols-2 gap-3">
             <InfoTile
               icon={CalendarDays}
               label="Campaign"
@@ -444,10 +474,10 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
           </section>
 
           {safeTrailerUrl && (
-            <section className="rounded-[20px] overflow-hidden bg-bg-secondary border border-white/[0.06]">
+            <section className="rounded-[26px] overflow-hidden bg-gradient-to-br from-white/[0.07] to-white/[0.025] border border-white/[0.09] shadow-[0_18px_50px_-30px_rgba(0,0,0,0.8)]">
               <div className="p-4 pb-3">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-accent font-semibold">Official trailer</p>
-                <h2 className="font-display text-[23px] leading-none text-white mt-1">WATCH THE TRAILER</h2>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-orange-300 font-semibold">Official trailer</p>
+                <h2 className="font-display text-[25px] leading-none text-white mt-1 tracking-tight">Watch the trailer</h2>
               </div>
               {trailerEmbedUrl ? (
                 <div className="aspect-video bg-black">
@@ -793,7 +823,7 @@ function InfoTile({
   value: string;
 }) {
   return (
-    <div className="rounded-[16px] bg-bg-secondary border border-white/[0.06] p-4">
+    <div className="rounded-[20px] bg-gradient-to-br from-white/[0.075] to-white/[0.025] border border-white/[0.08] p-4 shadow-[0_14px_36px_-28px_rgba(0,0,0,0.9)]">
       <div className="flex items-center gap-2">
         <Icon className="w-3.5 h-3.5 text-gold" />
         <span className="text-[9px] uppercase tracking-[0.16em] text-text-subtle">{label}</span>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Share2, Pencil, Gift } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Share2, Pencil, Gift, Sparkles, Coins } from 'lucide-react';
 import type { Tab } from '@/app/AppShell';
 import type { Campaign } from '@/types';
 import { useAuth } from '@/application/state/AuthContext';
@@ -7,6 +7,7 @@ import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
+import { getOverallPointsTotal } from '@/application/api/legacyApi';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
 
 interface Props {
@@ -16,8 +17,28 @@ interface Props {
 
 export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { activeCampaign, campaignUser } = useCampaign();
+  const { activeCampaign } = useCampaign();
   const [editing, setEditing] = useState(false);
+  const [overallPoints, setOverallPoints] = useState(0);
+  const [pointsLoading, setPointsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      setOverallPoints(0);
+      setPointsLoading(false);
+      return () => { cancelled = true; };
+    }
+    setPointsLoading(true);
+    getOverallPointsTotal(user.id)
+      .then((total) => { if (!cancelled) setOverallPoints(total); })
+      .catch((error) => {
+        console.warn('[Profile] Could not load overall points:', error);
+        if (!cancelled) setOverallPoints(0);
+      })
+      .finally(() => { if (!cancelled) setPointsLoading(false); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
   const handleSignOut = async () => { await signOut(); };
 
   const handleSaveProfile = async (data: { display_name: string; city: string }) => {
@@ -31,7 +52,6 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
     });
   };
 
-  const points = campaignUser?.points ?? 0;
   const displayName = getDisplayName(profile?.display_name, user?.email);
 
   return (
@@ -62,18 +82,33 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
         )}
       </div>
 
-      {/* Stats — editorial divider style */}
-      <div className="grid grid-cols-1 gap-0 mb-8 hairline-t hairline-b py-5">
-        <button
-          type="button"
-          onClick={() => onNavigate?.('rewards')}
-          aria-label="View rewards for your points"
-          className="w-full text-center rounded-xl py-2 hover:bg-white/[0.03] transition-colors"
-        >
-          <p className="font-display text-3xl text-gold leading-none">{points}</p>
-          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Points · Tap to view rewards</p>
-        </button>
-      </div>
+      {/* Cross-campaign wallet: current net balance, after reward spending. */}
+      <button
+        type="button"
+        onClick={() => onNavigate?.('rewards')}
+        aria-label="View rewards using your overall points balance"
+        className="group relative w-full overflow-hidden rounded-[24px] text-left mb-8 p-5 border border-amber-300/20 bg-gradient-to-br from-[#30200D] via-[#19140F] to-[#101014] shadow-[0_20px_50px_-30px_rgba(245,158,11,0.5)] transition-transform active:scale-[0.99]"
+      >
+        <div className="absolute -right-7 -top-9 w-36 h-36 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute right-4 top-4 text-amber-200/70">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <div className="relative flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/75 flex items-center gap-2">
+              <Coins className="w-3.5 h-3.5" /> Your Honeycomb balance
+            </p>
+            <p className="font-display text-[42px] leading-none tracking-tight text-amber-100 mt-3 tabular-nums">
+              {pointsLoading ? '···' : overallPoints.toLocaleString()}
+              <span className="text-sm font-semibold tracking-normal text-amber-200/70 ml-2">PTS</span>
+            </p>
+            <p className="text-[11px] text-white/55 mt-2">Across all movies · after reward spending</p>
+          </div>
+          <div className="shrink-0 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-2 text-[10px] font-semibold text-amber-100 group-hover:bg-amber-200/15 transition-colors">
+            Rewards <ChevronRight className="w-3 h-3 inline ml-1" />
+          </div>
+        </div>
+      </button>
 
       {/* Menu */}
       <div className="space-y-px mb-8">
