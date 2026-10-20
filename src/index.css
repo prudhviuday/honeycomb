@@ -863,6 +863,15 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
 
 
 /* ===== Cinematic fan-tier emblems ===== */
+.fan-tier-badge--tier-new-fan .fan-tier-badge__label { color: #B9D2F4; }
+.fan-tier-badge--tier-fan .fan-tier-badge__label { color: #95E9D8; }
+.fan-tier-badge--tier-super-fan .fan-tier-badge__label { color: #88E9FB; }
+.fan-tier-badge--tier-movie-buff .fan-tier-badge__label { color: #C5A5FC; }
+.fan-tier-badge--tier-cinephile .fan-tier-badge__label { color: #F3B1E7; }
+.fan-tier-badge--tier-hype-star .fan-tier-badge__label { color: #FFD28B; }
+.fan-tier-badge--tier-superstar .fan-tier-badge__label { color: #FFA1B5; }
+.fan-tier-badge--tier-legend .fan-tier-badge__label { color: #FFEAA0; }
+
 .fan-tier-badge {
   display: inline-flex;
   align-items: center;
@@ -896,13 +905,14 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
   content: '';
   position: absolute;
   inset: 2px;
-  z-index: -1;
+  z-index: 0;
   clip-path: polygon(50% 0%, 82% 9%, 100% 35%, 92% 72%, 65% 100%, 35% 100%, 8% 72%, 0% 35%, 18% 9%);
   border: 1px solid rgba(255,255,255,.25);
   background: linear-gradient(145deg, rgba(255,255,255,.1), transparent 55%, rgba(0,0,0,.18));
 }
 .fan-tier-badge__art {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   padding: 1px;
@@ -920,6 +930,7 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
 }
 .fan-tier-badge__glint {
   position: absolute;
+  z-index: 2;
   inset: 0;
   pointer-events: none;
   opacity: .38;
