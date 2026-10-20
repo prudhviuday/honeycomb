@@ -206,3 +206,13 @@ export interface LeaderboardEntry {
   points: number;
   rank: number;
 }
+
+/** Public display fields returned by the authenticated overall leaderboard RPC. */
+export interface OverallLeaderboardEntry {
+  id: string;
+  user_id: string;
+  display_name: string;
+  avatar_url: string;
+  points: number;
+  rank: number;
+}
