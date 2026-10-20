@@ -40,7 +40,7 @@ function FanInsignia({ tierIndex }: { tierIndex: number }) {
           <circle cx="20" cy="20" r="11.4" strokeOpacity=".42" />
           <circle cx="20" cy="20" r="7.5" strokeOpacity=".8" />
           <path d="M20 9.5 22.8 17.2 30.5 20 22.8 22.8 20 30.5 17.2 22.8 9.5 20 17.2 17.2z" fill="currentColor" stroke="none" />
-          <circle cx="20" cy="20" r="2" fill="#fff8e7" stroke="none" />
+          <circle cx="20" cy="20" r="2" fill="currentColor" stroke="none" />
         </g>
       );
     case 1:
@@ -58,7 +58,7 @@ function FanInsignia({ tierIndex }: { tierIndex: number }) {
         <g {...line}>
           <path d="m20 5 3.5 8.2 8.5-2.7-2.7 8.5 8.2 3.5-8.2 3.5 2.7 8.5-8.5-2.7-3.5 8.2-3.5-8.2L8 34.5l2.7-8.5L2.5 22.5l8.2-3.5L8 10.5l8.5 2.7z" transform="translate(0 -2) scale(1 .94)" fill="currentColor" fillOpacity=".22" strokeWidth="1.1" />
           <path d="m20 11 3.1 6.1 6.7 1-4.9 4.7 1.2 6.6-6.1-3.1-6.1 3.1 1.2-6.6-4.9-4.7 6.7-1z" fill="currentColor" fillOpacity=".9" stroke="none" />
-          <circle cx="20" cy="21" r="2" fill="#fff" stroke="none" />
+          <circle cx="20" cy="21" r="2" fill="currentColor" stroke="none" />
         </g>
       );
     case 3:
@@ -102,7 +102,7 @@ function FanInsignia({ tierIndex }: { tierIndex: number }) {
           <circle cx="20" cy="20" r="14" strokeOpacity=".36" />
           <circle cx="20" cy="20" r="11" strokeOpacity=".7" />
           <path d="m20 7 3.3 8.4 8.7 4.6-8.7 3.3-3.3 8.7-3.3-8.7L8 20l8.7-4.6z" fill="currentColor" stroke="none" />
-          <path d="m20 12 2.2 5.5 5.5 2.5-5.5 2.2-2.2 5.5-2.2-5.5-5.5-2.2 5.5-2.5z" fill="#fff4e0" stroke="none" />
+          <path d="m20 12 2.2 5.5 5.5 2.5-5.5 2.2-2.2 5.5-2.2-5.5-5.5-2.2 5.5-2.5z" fill="currentColor" stroke="none" />
         </g>
       );
     default:
@@ -113,7 +113,7 @@ function FanInsignia({ tierIndex }: { tierIndex: number }) {
           <path d="M20 6.5 29 13l-2 13.2L20 33l-7-6.8L11 13z" />
           <path d="m11 13 9 3.5 9-3.5M13 26.2l7-9.7 7 9.7M20 16.5V33" strokeOpacity=".9" />
           <path d="M8 11c-4 5-4 12 0 17M6 15l4 1M5.5 20l4 .2M6.5 25l3.5-1.3M32 11c4 5 4 12 0 17M34 15l-4 1M34.5 20l-4 .2M33.5 25 30 23.7" strokeWidth="1.2" strokeOpacity=".8" />
-          <path d="m20 9 1.2 3.2 3.2 1.2-3.2 1.2-1.2 3.2-1.2-3.2-3.2-1.2 3.2-1.2z" fill="#fff8d7" stroke="none" />
+          <path d="m20 9 1.2 3.2 3.2 1.2-3.2 1.2-1.2 3.2-1.2-3.2-3.2-1.2 3.2-1.2z" fill="currentColor" stroke="none" />
         </g>
       );
   }
