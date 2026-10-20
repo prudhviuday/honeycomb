@@ -110,7 +110,7 @@ export function HuntsScreen({ onNavigate }: Props) {
   const earnedXP = huntSummary.earnedXP;
 
   return (
-    <div className="px-4 pt-12 pb-6 animate-fade-in">
+    <div className="px-4 pt-7 pb-8 animate-fade-in">
       {/* Title */}
       <div className="flex items-end justify-between mb-6 px-1">
         <div>

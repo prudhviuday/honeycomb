@@ -332,7 +332,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
+    <div className="flex flex-col min-h-screen pb-20 scanner-surface">
       {/* Scanner viewport */}
       <div className="relative flex-1 overflow-hidden bg-black min-h-[60vh]">
         {/* Live camera preview */}

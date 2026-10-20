@@ -341,7 +341,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   return (
     <div className="pb-8 animate-fade-in overflow-x-hidden">
       {/* TOP BAR */}
-      <header className="sticky top-0 z-40 px-4 pt-4 pb-3 bg-bg-primary/78 backdrop-blur-2xl border-b border-white/[0.055]">
+      <header className="sticky top-0 z-40 px-4 pt-5 pb-4 bg-bg-primary/72 backdrop-blur-2xl border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 leading-none">
@@ -388,7 +388,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
         </div>
       </header>
 
-      <div className="px-4 pt-5 space-y-8">
+      <div className="px-4 pt-6 space-y-10">
       <section aria-label="Scan call to action" className="hero-scan-card relative overflow-hidden rounded-[22px] border border-gold/20 bg-gradient-to-br from-gold/[0.14] via-bg-secondary to-bg-secondary p-4 shadow-[0_18px_45px_-28px_rgba(233,180,76,0.55)]">
         <div className="honeycomb-dust pointer-events-none absolute inset-0 opacity-60" />
         <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-gold/10 blur-2xl" />

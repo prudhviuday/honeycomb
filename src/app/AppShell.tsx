@@ -245,7 +245,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col w-full max-w-lg mx-auto relative overflow-x-hidden sm:border-x sm:border-white/5">
+    <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col w-full max-w-lg mx-auto relative overflow-x-hidden sm:border-x sm:border-white/5 app-frame">
       <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar pb-28">
         {/*
           Keep regular tabs mounted after their first visit. Several screens fetch
