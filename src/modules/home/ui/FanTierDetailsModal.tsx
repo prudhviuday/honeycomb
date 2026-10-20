@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sparkles } from 'lucide-react';
 import { FanTierBadge, getFanTier } from '@/components/badges/FanTierBadge';
 import { FanJourneyPanel } from './FanJourneyPanel';
@@ -26,8 +27,12 @@ export function FanTierDetailsModal({ points, onClose }: Props) {
     };
   }, [onClose]);
 
-  return (
-    <div className="fan-tier-modal fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-5" onClick={onClose}>
+  return createPortal(
+    <div
+      className="fan-tier-modal fixed inset-0 z-[9999] flex items-end justify-center sm:items-center sm:p-5"
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, visibility: 'visible' }}
+      onClick={onClose}
+    >
       <button
         type="button"
         className="fan-tier-modal-backdrop absolute inset-0"
@@ -38,7 +43,7 @@ export function FanTierDetailsModal({ points, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="fan-tier-modal-title"
-        className="fan-tier-modal-sheet relative z-10 mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#0B0B14] shadow-[0_-22px_80px_rgba(0,0,0,0.65)] animate-slide-up sm:rounded-[28px]"
+        className="fan-tier-modal-sheet relative z-10 mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#0B0B14] shadow-[0_-22px_80px_rgba(0,0,0,0.65)] animate-slide-up sm:rounded-[28px]" style={{ height: "min(70dvh, 760px)", minHeight: "min(60dvh, 460px)", visibility: "visible", opacity: 1 }}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="fan-tier-modal-header relative shrink-0 border-b border-white/[0.07] px-5 pb-4 pt-3">
@@ -76,6 +81,7 @@ export function FanTierDetailsModal({ points, onClose }: Props) {
           <FanJourneyPanel points={points} />
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
