@@ -767,7 +767,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
             className="leaderboard-preview group w-full overflow-hidden rounded-2xl border border-white/[0.08] text-left"
           >
             <div className="leaderboard-preview-list divide-y divide-white/[0.055]">
-              {top3.map((entry, index) => (
+              {top3.map((entry) => (
                 <div
                   key={entry.id}
                   className="leaderboard-preview-row relative flex items-center justify-between gap-3 px-4 py-3"
