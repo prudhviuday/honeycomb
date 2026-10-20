@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
-  Coins,
   Copy,
   ExternalLink,
   MapPin,
@@ -38,6 +37,7 @@ import { buildMapFeatures } from '@/modules/maps/logic/mapData';
 import { MapLibreMap } from '@/modules/maps/ui/MapLibreMap';
 import type { ReferralCode, Referral, Campaign, ActivityEvent, PointTransaction } from '@/types';
 import { getActivityEvents, getPointTransactions } from '@/application/api/legacyApi';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 
 
 /** Only trusted video platforms are embedded; unknown URLs remain ordinary external links. */
@@ -409,8 +409,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             )}
             {user && (
               <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-amber-200/20 bg-black/45 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.65)]">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center border border-amber-200/20 bg-amber-300/10">
-                  <Coins className="w-4 h-4 text-amber-200" />
+                <div className="flex items-center justify-center">
+                  <PointsIcon scope="campaign" size="md" />
                 </div>
                 <div>
                   <p className="text-[9px] uppercase tracking-[0.18em] text-amber-100/65 font-semibold">Your points in this movie</p>
@@ -603,8 +603,8 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                 <div className="space-y-2">
                   {pointHistory.slice(0, 4).map((transaction) => (
                     <div key={transaction.id} className="flex items-start gap-3 rounded-[12px] bg-white/[0.03] border border-white/[0.04] px-3 py-3">
-                      <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                        <Zap className="w-3.5 h-3.5 text-gold" />
+                      <div className="flex items-center justify-center flex-shrink-0">
+                        <PointsIcon scope="campaign" size="md" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-white font-medium">{transaction.reason || 'Movie activity'}</p>
