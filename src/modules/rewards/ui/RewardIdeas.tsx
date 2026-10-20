@@ -7,11 +7,11 @@ import {
   Ticket,
   UsersRound,
   X,
-  Zap,
   ArrowUpRight,
   Sparkles,
 } from 'lucide-react';
 import { useCampaign } from '@/application/state/CampaignContext';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 
 const rewardIdeas = [
   {
@@ -178,11 +178,11 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                 <div className="flex items-end justify-between gap-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Your points</p>
-                    <p className="mt-1 font-display text-[25px] leading-none text-white tabular-nums">{points.toLocaleString()}</p>
+                    <p className="mt-1 font-display text-[25px] leading-none text-white tabular-nums inline-flex items-center gap-1.5"><PointsIcon scope="campaign" size="xs" />{points.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Example target</p>
-                    <p className="mt-1 font-display text-xl text-gold tabular-nums">{selectedReward.points.toLocaleString()} pts</p>
+                    <p className="mt-1 font-display text-xl text-gold tabular-nums inline-flex items-center gap-1.5"><PointsIcon scope="campaign" size="xs" />{selectedReward.points.toLocaleString()} pts</p>
                   </div>
                 </div>
 
@@ -206,7 +206,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
                   />
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-[11px] text-white/50">
-                  <Zap className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+                  <PointsIcon scope="campaign" size="xs" />
                   <span>Points shown are your balance for {movieName}; balances are tracked separately by campaign.</span>
                 </div>
               </div>
