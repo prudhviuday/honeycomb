@@ -19,6 +19,7 @@ import type {
   Referral,
   ActivityEvent,
   LeaderboardEntry,
+  OverallLeaderboardEntry,
   Profile,
 } from '@/types';
 
@@ -1135,6 +1136,32 @@ export async function getMyLeaderboardPosition(
   return asAppType<LeaderboardEntry | null>(
     data
   );
+}
+
+/**
+ * Global ranking uses each user's current net campaign balance, including point
+ * redemptions, via a narrowly scoped database RPC. Raw membership rows stay private.
+ */
+export async function getOverallLeaderboard(): Promise<OverallLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_overall_leaderboard');
+
+  if (error) throw error;
+
+  return ((data ?? []) as Array<{
+    id: string;
+    user_id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    points: number | string;
+    rank: number | string;
+  }>).map((row) => ({
+    id: row.id || row.user_id,
+    user_id: row.user_id,
+    display_name: row.display_name || 'Movie Explorer',
+    avatar_url: row.avatar_url || '',
+    points: Number(row.points) || 0,
+    rank: Number(row.rank) || 0,
+  }));
 }
 
 /* ============================================================
