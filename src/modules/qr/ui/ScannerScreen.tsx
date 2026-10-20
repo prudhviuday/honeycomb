@@ -513,7 +513,7 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
                   <PointsIcon scope="campaign" size="md" />
                 </div>
                 <p className="text-[10px] text-text-subtle uppercase tracking-[0.25em] mb-2">
-                  Points Earned
+                  Campaign Points Earned
                 </p>
                 <p className="font-display text-5xl text-gold mb-3">
                   +{result.pointsAwarded}
