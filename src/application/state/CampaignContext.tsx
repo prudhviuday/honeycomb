@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Campaign, CampaignUser } from '@/types';
 import { getCampaigns, ensureCampaignUser } from '@/lib/api';
 import { useAuth } from './AuthContext';
@@ -26,70 +26,92 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
   const [campaignUser, setCampaignUser] = useState<CampaignUser | null>(null);
+  const [campaignUserKey, setCampaignUserKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Older requests must never overwrite the balance for a newer campaign/user.
+  const campaignUserRequest = useRef(0);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const data = await getCampaigns();
+        if (cancelled) return;
         setCampaigns(data);
-        if (data.length > 0 && !activeCampaign) {
-          setActiveCampaign(data[0]);
-        }
+        setActiveCampaign((current) => current ?? data[0] ?? null);
       } catch {
-        // ignore
+        // Keep the app usable if campaign discovery temporarily fails.
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    if (activeCampaign && user) {
-      (async () => {
-        try {
-          const cu = await ensureCampaignUser(activeCampaign.id, user.id);
-          setCampaignUser(cu);
-        } catch {
-          setCampaignUser(null);
-        }
-      })();
-    } else {
+  const loadCampaignUser = useCallback(async (
+    campaignId: string | null,
+    userId: string | null,
+    clearOnError = true,
+  ) => {
+    const requestId = ++campaignUserRequest.current;
+    if (!campaignId || !userId) {
       setCampaignUser(null);
+      setCampaignUserKey(null);
+      return;
     }
-  }, [activeCampaign, user]);
 
-  // Keep context actions referentially stable. Consumers use these callbacks
-  // in effects; recreating them on every provider render can retrigger effects
-  // and create repeated Supabase requests.
+    try {
+      const cu = await ensureCampaignUser(campaignId, userId);
+      if (requestId !== campaignUserRequest.current) return;
+      setCampaignUser(cu);
+      setCampaignUserKey(`${campaignId}:${userId}`);
+    } catch {
+      if (requestId !== campaignUserRequest.current) return;
+      if (clearOnError) {
+        setCampaignUser(null);
+        setCampaignUserKey(null);
+      }
+      // A refresh failure should not replace a valid last-known balance with 0.
+    }
+  }, []);
+
+  const campaignId = activeCampaign?.id ?? null;
+  const userId = user?.id ?? null;
+  const currentCampaignUserKey = campaignId && userId ? `${campaignId}:${userId}` : null;
+
+  useEffect(() => {
+    void loadCampaignUser(campaignId, userId, true);
+  }, [campaignId, userId, loadCampaignUser]);
+
+  // Only expose a balance that belongs to the currently selected campaign and
+  // signed-in user. This prevents a previous campaign's points flashing on screen.
+  const visibleCampaignUser =
+    campaignUserKey === currentCampaignUserKey ? campaignUser : null;
+
   const selectCampaign = useCallback(async (campaign: Campaign) => {
     setActiveCampaign(campaign);
     if (user) {
-      try {
-        const cu = await ensureCampaignUser(campaign.id, user.id);
-        setCampaignUser(cu);
-      } catch {
-        setCampaignUser(null);
-      }
+      await loadCampaignUser(campaign.id, user.id, true);
     } else {
       setCampaignUser(null);
+      setCampaignUserKey(null);
     }
-  }, [user]);
+  }, [user, loadCampaignUser]);
 
   const refreshCampaignUser = useCallback(async () => {
-    if (activeCampaign && user) {
-      try {
-        const cu = await ensureCampaignUser(activeCampaign.id, user.id);
-        setCampaignUser(cu);
-      } catch {
-        // Keep the last known campaign-user state if a refresh fails.
-      }
-    }
-  }, [activeCampaign, user]);
+    await loadCampaignUser(activeCampaign?.id ?? null, user?.id ?? null, false);
+  }, [activeCampaign?.id, user?.id, loadCampaignUser]);
 
   const contextValue = useMemo(
-    () => ({ campaigns, activeCampaign, campaignUser, loading, selectCampaign, refreshCampaignUser }),
-    [campaigns, activeCampaign, campaignUser, loading, selectCampaign, refreshCampaignUser],
+    () => ({
+      campaigns,
+      activeCampaign,
+      campaignUser: visibleCampaignUser,
+      loading,
+      selectCampaign,
+      refreshCampaignUser,
+    }),
+    [campaigns, activeCampaign, visibleCampaignUser, loading, selectCampaign, refreshCampaignUser],
   );
 
   return (
