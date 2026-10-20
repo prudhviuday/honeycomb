@@ -1,17 +1,23 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
-  ChevronRight, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
-  Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2,
+  ChevronRight, ChevronDown, Check, Star, Target, X, Ticket, Clapperboard, Clock, Crown,
+  Film, CalendarDays, ShoppingBag, Sparkles, Medal, MapPinned, Gamepad2, UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
-import { getCampaignDashboard, type CampaignDashboard } from '@/modules/home/api/homeApi';
+import {
+  getCampaignDashboard,
+  getLeaderboard,
+  getMyLeaderboardPosition,
+  getOverallLeaderboard,
+  type CampaignDashboard,
+} from '@/modules/home/api/homeApi';
 import { getCompletedMissionCount } from '@/modules/home/logic/homeLogic';
 import { calculateDistance } from '@/modules/maps/logic/mapData';
 import type { Tab } from './AppShell';
-import type { Campaign } from '@/types';
+import type { Campaign, LeaderboardEntry } from '@/types';
 import { RewardIdeas } from '@/modules/rewards/ui/RewardIdeas';
 import { PointsBadge, PointsIcon } from '@/components/points/PointsIndicator';
 
@@ -37,6 +43,12 @@ type CollectionItem = {
   label: string;
   sub: string;
 };
+
+type LeaderboardMode = 'overall' | 'movie';
+type LeaderboardDisplayEntry = Pick<
+  LeaderboardEntry,
+  'id' | 'user_id' | 'display_name' | 'avatar_url' | 'points' | 'rank'
+>;
 
 type MovieCardData = {
   id: string;
@@ -105,9 +117,33 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const campaignId = activeCampaign?.id ?? null;
   const userId = user?.id ?? null;
   const currentDashboardKey = campaignId && userId ? `${campaignId}:${userId}` : null;
+  const selectedLeaderboardCampaign = leaderboardCampaign ?? activeCampaign;
+  const leaderboardCampaignId = selectedLeaderboardCampaign?.id ?? null;
+  const leaderboardRequestCampaignId = leaderboardMode === 'movie' ? leaderboardCampaignId : null;
+  const leaderboardCampaignOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return campaigns.filter((campaign) => {
+      if (seen.has(campaign.id)) return false;
+      seen.add(campaign.id);
+      return true;
+    });
+  }, [campaigns]);
+  const openLeaderboard = (mode: LeaderboardMode) => {
+    setLeaderboardMode(mode);
+    setLeaderboardCampaign(activeCampaign);
+    setLeaderboardPickerOpen(false);
+    setLeaderboardOpen(true);
+  };
   const [retryCount, setRetryCount] = useState(0);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboardMode, setLeaderboardMode] = useState<LeaderboardMode>('overall');
+  const [leaderboardCampaign, setLeaderboardCampaign] = useState<Campaign | null>(activeCampaign);
+  const [leaderboardPickerOpen, setLeaderboardPickerOpen] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardDisplayEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(false);
+  const [leaderboardReload, setLeaderboardReload] = useState(0);
   const [movieIndex, setMovieIndex] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'center',
@@ -116,6 +152,48 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     dragFree: false,
     duration: 28,
   });
+
+  useEffect(() => {
+    if (!leaderboardOpen) return;
+
+    let cancelled = false;
+    setLeaderboardLoading(true);
+    setLeaderboardError(false);
+
+    const load = async () => {
+      try {
+        let entries: LeaderboardDisplayEntry[] = [];
+        if (leaderboardMode === 'overall') {
+          entries = await getOverallLeaderboard();
+        } else if (leaderboardRequestCampaignId) {
+          const [topEntries, myPosition] = await Promise.all([
+            getLeaderboard(leaderboardRequestCampaignId),
+            userId
+              ? getMyLeaderboardPosition(leaderboardRequestCampaignId, userId)
+              : Promise.resolve(null),
+          ]);
+          entries = [...topEntries];
+          if (myPosition && !entries.some((entry) => entry.user_id === myPosition.user_id)) {
+            entries.push(myPosition);
+          }
+          entries.sort((a, b) => a.rank - b.rank);
+        }
+
+        if (!cancelled) setLeaderboardEntries(entries);
+      } catch (error) {
+        console.warn('[Home] Failed to load leaderboard:', error);
+        if (!cancelled) {
+          setLeaderboardEntries([]);
+          setLeaderboardError(true);
+        }
+      } finally {
+        if (!cancelled) setLeaderboardLoading(false);
+      }
+    };
+
+    void load();
+    return () => { cancelled = true; };
+  }, [leaderboardOpen, leaderboardMode, leaderboardRequestCampaignId, leaderboardReload, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,6 +389,16 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const top3 = dashboard.leaderboard.slice(0, 3);
   const me = dashboard.myLeaderboardPosition;
   const showMeSeparately = !!me && !top3.some((e) => e.user_id === me.user_id);
+  const boardTopThreeOrder: (LeaderboardDisplayEntry | null)[] = leaderboardEntries.length >= 3
+    ? [leaderboardEntries[1], leaderboardEntries[0], leaderboardEntries[2]]
+    : leaderboardEntries.length === 2
+      ? [leaderboardEntries[1], leaderboardEntries[0], null]
+      : [null, leaderboardEntries[0] ?? null, null];
+  const boardCurrentUser = leaderboardEntries.find((entry) => entry.user_id === user?.id) ?? null;
+  const boardScope = leaderboardMode === 'overall' ? 'overall' : 'campaign';
+  const boardRemainingEntries = leaderboardEntries.filter(
+    (entry) => entry.rank > 3 && entry.user_id !== user?.id,
+  );
 
   const earnedBadgeIds = new Set(dashboard.userBadges.map((b) => b.badge_id));
   const allBadges = dashboard.badges;
@@ -496,7 +584,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
           <QuickAction imageSrc="malls.jpg" label="Malls" compact onClick={() => scrollToSection('nearby-challenges')} />
           <QuickAction imageSrc="activities.jpg" label="Activities" compact onClick={() => scrollToSection('nearby-challenges')} />
           <QuickAction imageSrc="rewards.jpg" label="Rewards" compact onClick={() => onNavigate?.('rewards')} />
-          <QuickAction imageSrc="leaderboard.jpg" label="Ranks" compact onClick={() => setLeaderboardOpen(true)} />
+          <QuickAction imageSrc="leaderboard.jpg" label="Ranks" compact onClick={() => openLeaderboard('overall')} />
         </div>
       </section>
 
@@ -533,7 +621,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
         <div className="grid grid-cols-3 gap-2 mt-4">
           <StatChip icon={ScanLine} value={scanCount} label="Scans" onClick={() => onNavigate?.('scanner')} />
           <StatChip icon={Target} value={completedMissions + '/' + totalMissions} label="Missions" onClick={() => onNavigate?.('hunts')} />
-          <StatChip icon={Trophy} value={'#' + myRank} label="Rank" onClick={() => setLeaderboardOpen(true)} />
+          <StatChip icon={Trophy} value={'#' + myRank} label="Rank" onClick={() => openLeaderboard('movie')} />
         </div>
       </section>
 
@@ -670,9 +758,9 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
 
       {/* LEADERBOARD PREVIEW */}
       {dashboard.leaderboard.length > 0 && (
-        <Section title="Leaderboard" onMore={() => setLeaderboardOpen(true)}>
+        <Section title="Leaderboard" onMore={() => openLeaderboard('movie')}>
           <button
-            onClick={() => setLeaderboardOpen(true)}
+            onClick={() => openLeaderboard('movie')}
             className="w-full text-left bg-bg-secondary border border-white/[0.06] rounded-[18px] px-4 py-1.5"
           >
             {top3.map((entry) => (
@@ -753,29 +841,235 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
 
       {/* LEADERBOARD SHEET */}
       {leaderboardOpen && (
-        <div className="fixed inset-0 z-[60] max-w-lg mx-auto" onClick={() => setLeaderboardOpen(false)}>
-          <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm animate-fade-in" />
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-[#0E0E1A] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
+        <div
+          className="fixed inset-0 z-[60] max-w-lg mx-auto"
+          onClick={() => setLeaderboardOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in" />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Honeycomb leaderboard"
+            className="absolute inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[28px] border border-white/10 bg-[#0B0B14] shadow-[0_-18px_60px_rgba(0,0,0,0.55)] animate-slide-up flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="pt-3 pb-3 px-5">
-              <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-xl text-text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-gold" /> Leaderboard
-                </h3>
-                <button onClick={() => setLeaderboardOpen(false)} className="text-text-subtle hover:text-text-primary">
-                  <X className="w-5 h-5" />
-                </button>
+            <header className="relative shrink-0 px-5 pt-3 pb-4 border-b border-white/[0.07]">
+              <div className="pointer-events-none absolute -top-24 -right-10 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl animate-aurora" />
+              <div className="pointer-events-none absolute top-12 -left-12 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl" />
+              <div className="relative">
+                <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="leaderboard-trophy-wrap relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300/25 bg-gradient-to-br from-amber-300/20 via-amber-500/10 to-violet-500/15 shadow-[0_0_30px_rgba(245,190,75,0.12)]">
+                      <Trophy className="h-6 w-6 text-amber-200" />
+                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-amber-200 shadow-[0_0_12px_rgba(253,224,71,0.85)]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-amber-200/75">Honeycomb rankings</p>
+                      <h2 className="font-display text-[26px] leading-tight tracking-wide text-white">Leaderboard</h2>
+                      <p className="mt-0.5 text-[11px] text-white/45">Every scan brings you closer to the crown.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close leaderboard"
+                    onClick={() => setLeaderboardOpen(false)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-white/[0.07] bg-black/25 p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setLeaderboardMode('overall'); setLeaderboardPickerOpen(false); }}
+                    className={'flex h-10 items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ' + (leaderboardMode === 'overall'
+                      ? 'bg-gradient-to-r from-amber-300/20 to-amber-500/10 text-amber-100 shadow-inner shadow-amber-100/5 ring-1 ring-amber-300/20'
+                      : 'text-white/45 hover:text-white/80')}
+                  >
+                    <Zap className="h-3.5 w-3.5" /> Overall
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardMode('movie')}
+                    className={'flex h-10 items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ' + (leaderboardMode === 'movie'
+                      ? 'bg-gradient-to-r from-violet-400/20 to-violet-500/10 text-violet-100 shadow-inner shadow-violet-100/5 ring-1 ring-violet-300/20'
+                      : 'text-white/45 hover:text-white/80')}
+                  >
+                    <Film className="h-3.5 w-3.5" /> By movie
+                  </button>
+                </div>
+
+                {leaderboardMode === 'movie' && (
+                  <div className="relative mt-3">
+                    <button
+                      type="button"
+                      aria-expanded={leaderboardPickerOpen}
+                      onClick={() => setLeaderboardPickerOpen((open) => !open)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 text-left shadow-inner shadow-black/20 hover:border-amber-200/25 hover:bg-white/[0.07]"
+                    >
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                        {selectedLeaderboardCampaign?.hero_image_url ? (
+                          <img src={selectedLeaderboardCampaign.hero_image_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center"><Film className="h-4 w-4 text-white/35" /></div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40">Movie leaderboard</p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-white">
+                          {selectedLeaderboardCampaign?.movie_title || selectedLeaderboardCampaign?.title || 'Select a movie'}
+                        </p>
+                      </div>
+                      <ChevronDown className={'h-4 w-4 shrink-0 text-white/45 transition-transform ' + (leaderboardPickerOpen ? 'rotate-180' : '')} />
+                    </button>
+                    {leaderboardPickerOpen && (
+                      <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[80] max-h-56 overflow-y-auto rounded-2xl border border-white/10 bg-[#171522] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.72)] animate-scale-in">
+                        {leaderboardCampaignOptions.length === 0 ? (
+                          <p className="px-3 py-4 text-xs text-white/45">No movie campaigns available.</p>
+                        ) : leaderboardCampaignOptions.map((campaign) => {
+                          const isSelected = campaign.id === selectedLeaderboardCampaign?.id;
+                          return (
+                            <button
+                              key={campaign.id}
+                              type="button"
+                              onClick={() => { setLeaderboardCampaign(campaign); setLeaderboardPickerOpen(false); }}
+                              className={'flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left ' + (isSelected ? 'bg-amber-300/10 ring-1 ring-amber-200/15' : 'hover:bg-white/[0.05]')}
+                            >
+                              <div className={'h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-white/5 ' + (isSelected ? 'ring-1 ring-amber-200/35' : '')}>
+                                {campaign.hero_image_url ? (
+                                  <img src={campaign.hero_image_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center"><Film className="h-4 w-4 text-white/35" /></div>
+                                )}
+                              </div>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-semibold text-white/90">{campaign.movie_title || campaign.title}</span>
+                                <span className="mt-0.5 block truncate text-[10px] text-white/40">{campaign.title}</span>
+                              </span>
+                              {isSelected && <Check className="h-4 w-4 shrink-0 text-amber-200" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(env(safe-area-inset-bottom),24px)] pt-4 no-scrollbar">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">
+                    {leaderboardMode === 'overall' ? 'All movies · All campaigns' : (selectedLeaderboardCampaign?.movie_title || selectedLeaderboardCampaign?.title || 'Movie campaign')}
+                  </p>
+                  <p className="mt-0.5 text-xs text-white/55">
+                    {leaderboardMode === 'overall' ? 'Your net points combined across every movie.' : 'Compete with fans hunting this movie.'}
+                  </p>
+                </div>
+                <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wide text-white/45">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.75)]" />
+                  Top fans
+                </span>
+              </div>
+
+              {leaderboardLoading ? (
+                <div className="space-y-3 py-2" aria-label="Loading leaderboard">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[0, 1, 2].map((item) => <div key={item} className={'h-36 rounded-2xl shimmer ' + (item === 1 ? '' : 'mt-5')} />)}
+                  </div>
+                  {[0, 1, 2, 3].map((item) => <div key={item} className="h-[62px] rounded-2xl shimmer" />)}
+                </div>
+              ) : leaderboardError ? (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-8 text-center animate-scale-in">
+                  <Trophy className="mx-auto h-7 w-7 text-white/25" />
+                  <p className="mt-3 text-sm font-semibold text-white/80">The rankings didn’t load</p>
+                  <p className="mt-1 text-xs text-white/40">Try again to refresh the leaderboard.</p>
+                  <button type="button" onClick={() => setLeaderboardReload((value) => value + 1)} className="mt-4 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Try again</button>
+                </div>
+              ) : leaderboardEntries.length === 0 ? (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-9 text-center animate-scale-in">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/15 bg-amber-200/[0.06]">
+                    <Trophy className="h-6 w-6 text-amber-100/60" />
+                  </div>
+                  <p className="mt-3 font-display text-lg text-white">The race starts here</p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/45">
+                    {leaderboardMode === 'overall' ? 'Earn points in a movie hunt to appear on the global board.' : 'Be the first fan to earn points for this movie.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="animate-fade-in">
+                  <div className="grid grid-cols-3 items-end gap-2 pb-4">
+                    {boardTopThreeOrder.map((entry, index) => {
+                      if (!entry) return <div key={'empty-podium-' + index} />;
+                      const champion = entry.rank === 1;
+                      const isMe = entry.user_id === user?.id;
+                      const podiumStyle = champion
+                        ? 'leaderboard-champion relative z-10 border-amber-200/25 bg-gradient-to-b from-amber-200/[0.13] via-amber-400/[0.06] to-white/[0.025] shadow-[0_10px_35px_rgba(245,190,75,0.08)]'
+                        : entry.rank === 2
+                          ? 'mt-5 border-slate-200/15 bg-gradient-to-b from-slate-100/[0.07] to-white/[0.025]'
+                          : 'mt-7 border-orange-300/15 bg-gradient-to-b from-orange-300/[0.07] to-white/[0.02]';
+                      return (
+                        <div key={entry.user_id} className={'min-w-0 rounded-2xl border px-1.5 pb-3 pt-3 text-center ' + podiumStyle + ' animate-rise-in'} style={{ animationDelay: `${index * 90}ms` }}>
+                          <div className="relative mx-auto mb-2 w-fit">
+                            <div className={'relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 bg-[#151521] text-sm font-bold text-white ' + (champion ? 'border-amber-200/70 shadow-[0_0_18px_rgba(245,190,75,0.25)]' : entry.rank === 2 ? 'border-slate-200/45' : 'border-orange-300/40')}>
+                              {entry.avatar_url ? (
+                                <img src={entry.avatar_url} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span>{(entry.display_name || 'H').trim().charAt(0).toUpperCase() || 'H'}</span>
+                              )}
+                            </div>
+                            {champion ? (
+                              <Crown className="absolute -top-4 left-1/2 h-5 w-5 -translate-x-1/2 text-amber-200 drop-shadow-[0_0_8px_rgba(245,190,75,0.5)]" fill="currentColor" />
+                            ) : (
+                              <span className={'absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-black ' + (entry.rank === 2 ? 'border-slate-200/30 bg-slate-200/15 text-slate-100' : 'border-orange-300/25 bg-orange-300/10 text-orange-100')}>{entry.rank}</span>
+                            )}
+                          </div>
+                          <p className={'truncate text-[10px] font-bold ' + (isMe ? 'text-amber-100' : 'text-white/85')}>{isMe ? 'You' : entry.display_name || 'Movie Explorer'}</p>
+                          <p className="mt-0.5 text-[9px] text-white/35">#{entry.rank} {champion ? '· Champion' : '· Top fan'}</p>
+                          <span className={'mt-2 inline-flex max-w-full items-center justify-center gap-1 rounded-full px-1.5 py-1 font-display text-[11px] tabular-nums ' + (champion ? 'bg-amber-200/10 text-amber-100' : 'bg-white/[0.04] text-white/75')}>
+                            <PointsIcon scope={boardScope} size="xs" />{entry.points.toLocaleString()}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {boardCurrentUser && boardCurrentUser.rank > 3 && (
+                    <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-300/20 bg-gradient-to-r from-violet-400/[0.12] to-violet-400/[0.035] px-3 py-3 shadow-[0_8px_24px_rgba(124,92,255,0.08)] animate-scale-in">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-300/10 text-sm font-black text-violet-100">#{boardCurrentUser.rank}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-violet-100/65">Your current position</p>
+                        <p className="truncate text-xs font-semibold text-white">{boardCurrentUser.display_name || 'You'}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm text-violet-100 tabular-nums"><PointsIcon scope={boardScope} size="xs" />{boardCurrentUser.points.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  {boardRemainingEntries.length > 0 && (
+                    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.018] px-3">
+                      <div className="flex items-center justify-between border-b border-white/[0.06] py-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">The leaderboard</p>
+                        <span className="text-[10px] tabular-nums text-white/30">{boardRemainingEntries.length} {boardRemainingEntries.length === 1 ? 'player' : 'players'}</span>
+                      </div>
+                      {boardRemainingEntries.map((entry, index) => (
+                        <LeaderboardListRow
+                          key={entry.id}
+                          entry={entry}
+                          isMe={false}
+                          scope={boardScope}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="pt-4 text-center text-[9px] uppercase tracking-[0.18em] text-white/20">Play fair · Earn your place · Keep hunting</p>
+                </div>
+              )}
             </div>
-            <div className="overflow-y-auto no-scrollbar px-5 pb-8">
-              {dashboard.leaderboard.map((entry) => (
-                <LeaderRow key={entry.id} entry={entry} isMe={entry.user_id === user?.id} />
-              ))}
-            </div>
-          </div>
+          </section>
         </div>
       )}
     </div>
@@ -1001,6 +1295,43 @@ function CollectionTile({ item }: { item: CollectionItem }) {
       </div>
       <p className="text-[11px] font-medium text-text-primary truncate">{item.label}</p>
       <p className="text-[9px] text-text-subtle uppercase tracking-wide truncate">{item.sub}</p>
+    </div>
+  );
+}
+
+function LeaderboardListRow({
+  entry,
+  isMe,
+  scope,
+  index,
+}: {
+  entry: LeaderboardDisplayEntry;
+  isMe: boolean;
+  scope: 'overall' | 'campaign';
+  index: number;
+}) {
+  const playerName = isMe ? 'You' : (entry.display_name || 'Movie Explorer');
+  const levelName = LEVEL_NAMES[Math.min(Math.max(levelFor(entry.points), 1), LEVEL_NAMES.length) - 1];
+
+  return (
+    <div
+      className={'leaderboard-row-reveal flex items-center gap-3 border-b border-white/[0.055] py-3 last:border-b-0 ' + (isMe ? 'rounded-xl bg-violet-300/[0.06] px-2' : '')}
+      style={{ animationDelay: `${Math.min(index, 12) * 32}ms` }}
+    >
+      <span className={'w-6 shrink-0 text-center font-display text-sm tabular-nums ' + (entry.rank === 1 ? 'text-amber-200' : entry.rank === 2 ? 'text-slate-200' : entry.rank === 3 ? 'text-orange-200' : 'text-white/35')}>
+        {entry.rank}
+      </span>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/[0.045] text-xs font-bold text-white/70">
+        {entry.avatar_url ? <img src={entry.avatar_url} alt="" className="h-full w-full object-cover" /> : (entry.display_name || 'H').trim().charAt(0).toUpperCase() || 'H'}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={'truncate text-xs font-semibold ' + (isMe ? 'text-violet-100' : 'text-white/85')}>{playerName}</p>
+        <p className="mt-0.5 truncate text-[10px] text-white/35">{levelName}</p>
+      </div>
+      <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm tabular-nums text-white/80">
+        <PointsIcon scope={scope === 'overall' ? 'overall' : 'campaign'} size="xs" />
+        {entry.points.toLocaleString()}
+      </span>
     </div>
   );
 }
