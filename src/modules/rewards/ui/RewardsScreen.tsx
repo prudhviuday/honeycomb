@@ -7,6 +7,7 @@ import { calculateEntryTotal, canClaimReward } from '@/modules/rewards/logic/rew
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
 import type { Reward, RewardEntry, RewardClaim } from '@/modules/rewards/types';
 import { RewardIdeas } from './RewardIdeas';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 
 export function RewardsScreen() {
   const { user } = useAuth();
@@ -108,7 +109,10 @@ export function RewardsScreen() {
       {/* Points bar — editorial, not a card */}
       <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#1C1710] via-bg-surface to-[#0D0D10] border border-gold/15 shadow-[0_18px_45px_-24px_rgba(233,180,76,0.22)] py-5 px-5 mb-8 flex items-center justify-between">
         <div>
-          <p className="font-display text-4xl text-gold leading-none">{points}</p>
+          <div className="flex items-center gap-2">
+            <PointsIcon scope="campaign" size="md" />
+            <p className="font-display text-4xl text-gold leading-none tabular-nums">{points.toLocaleString()}</p>
+          </div>
           <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Campaign Points</p>
         </div>
         <div className="h-10 w-px bg-white/10" />
@@ -186,7 +190,7 @@ export function RewardsScreen() {
                         <p className="text-xs text-text-muted">{reward.description}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className={`font-display text-lg ${canAfford ? 'text-gold' : 'text-text-subtle'}`}>{reward.points_required.toLocaleString()}</p>
+                        <p className={`inline-flex items-center justify-end gap-1 font-display text-lg ${canAfford ? 'text-gold' : 'text-text-subtle'}`}><PointsIcon scope="campaign" size="xs" />{reward.points_required.toLocaleString()}</p>
                         <p className="text-[9px] text-text-subtle uppercase">pts</p>
                       </div>
                     </div>
@@ -211,7 +215,7 @@ export function RewardsScreen() {
                     ) : (
                       <div className="py-3 text-center">
                         <span className="text-xs text-text-subtle">
-                          Need {(reward.points_required - points).toLocaleString()} more points
+                          Need {(reward.points_required - points).toLocaleString()} more campaign points
                         </span>
                       </div>
                     )}
