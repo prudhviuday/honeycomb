@@ -21,6 +21,7 @@ import type { Campaign, LeaderboardEntry } from '@/types';
 import { RewardIdeas } from '@/modules/rewards/ui/RewardIdeas';
 import { PointsBadge, PointsIcon } from '@/components/points/PointsIndicator';
 import { FanTierBadge } from '@/components/badges/FanTierBadge';
+import { FanTierDetailsModal } from './FanTierDetailsModal';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
@@ -117,6 +118,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [fanJourneyOpen, setFanJourneyOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboardMode, setLeaderboardMode] = useState<LeaderboardMode>('overall');
   const [leaderboardCampaign, setLeaderboardCampaign] = useState<Campaign | null>(activeCampaign);
@@ -462,9 +464,15 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
             />
             <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-100/60">PTS</span>
           </button>
-          <span className="fan-profile-insignia flex items-center justify-center shrink-0" title="Your overall fan tier">
+          <button
+            type="button"
+            onClick={() => setFanJourneyOpen(true)}
+            className="fan-profile-insignia flex items-center justify-center shrink-0"
+            title="View your fan rank and badge collection"
+            aria-label="View your fan rank and badge collection"
+          >
             <FanTierBadge points={overallPoints} size="xs" />
-          </span>
+          </button>
           <button
             type="button"
             onClick={() => onNavigate?.('profile')}
@@ -871,6 +879,13 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
       </div>
 
       </div>
+
+      {fanJourneyOpen && (
+        <FanTierDetailsModal
+          points={overallPoints}
+          onClose={() => setFanJourneyOpen(false)}
+        />
+      )}
 
       {/* LEADERBOARD SHEET */}
       {leaderboardOpen && (
