@@ -1223,3 +1223,104 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
 .fan-profile-insignia .fan-tier-badge__seal {
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)) drop-shadow(0 0 4px var(--fan-glow));
 }
+
+
+/* ===== Expandable fan medal details sheet ===== */
+.fan-profile-insignia {
+  cursor: pointer;
+  appearance: none;
+  border: 1px solid rgba(245, 201, 107, .16);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+.fan-profile-insignia:hover {
+  border-color: rgba(245, 201, 107, .36);
+  background: linear-gradient(145deg, rgba(245,201,107,.12), rgba(255,255,255,.015));
+  box-shadow: 0 0 16px rgba(245,201,107,.08);
+}
+.fan-profile-insignia:active { transform: scale(.94); }
+.fan-profile-insignia:focus-visible {
+  outline: 2px solid rgba(245,201,107,.75);
+  outline-offset: 3px;
+}
+.fan-tier-modal {
+  padding-top: env(safe-area-inset-top);
+}
+.fan-tier-modal-backdrop {
+  border: 0;
+  padding: 0;
+  background: rgba(2, 2, 8, .78);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  animation: fan-tier-backdrop-in 180ms ease both;
+}
+.fan-tier-modal-sheet {
+  height: min(70vh, 760px);
+  height: min(70dvh, 760px);
+  min-height: min(60vh, 460px);
+  min-height: min(60dvh, 460px);
+  background:
+    radial-gradient(ellipse at 12% -12%, rgba(245,201,107,.065), transparent 44%),
+    radial-gradient(ellipse at 100% 100%, rgba(124,92,255,.08), transparent 45%),
+    linear-gradient(155deg, #11101a 0%, #0b0b14 58%, #0e0d17 100%);
+  animation: fan-tier-sheet-in 320ms cubic-bezier(.2,.8,.2,1) both;
+}
+.fan-tier-modal-header {
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+}
+.fan-tier-modal-orb {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(1px);
+}
+.fan-tier-modal-orb--gold {
+  width: 180px;
+  height: 180px;
+  top: -135px;
+  left: 20%;
+  border: 1px solid rgba(245,201,107,.12);
+  box-shadow: 0 0 0 18px rgba(245,201,107,.015), 0 0 55px rgba(245,201,107,.035);
+}
+.fan-tier-modal-orb--violet {
+  width: 125px;
+  height: 125px;
+  top: 5px;
+  right: -90px;
+  border: 1px solid rgba(163,139,255,.14);
+  box-shadow: 0 0 0 16px rgba(163,139,255,.018), 0 0 42px rgba(163,139,255,.035);
+}
+.fan-tier-modal-current-medal {
+  border: 1px solid rgba(245,201,107,.2);
+  background: radial-gradient(circle at 50% 34%, rgba(245,201,107,.14), transparent 72%), linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 22px rgba(245,201,107,.04);
+}
+.fan-tier-modal-scroll .fan-journey-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+@keyframes fan-tier-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fan-tier-sheet-in {
+  from { opacity: .7; transform: translateY(24px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (min-width: 640px) {
+  .fan-tier-modal-sheet {
+    border-radius: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fan-tier-modal-backdrop,
+  .fan-tier-modal-sheet {
+    animation: none !important;
+  }
+  .fan-profile-insignia {
+    transition: none !important;
+  }
+}
