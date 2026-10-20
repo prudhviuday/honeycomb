@@ -389,11 +389,13 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
       </header>
 
       <div className="px-4 pt-5 space-y-8">
-      <section aria-label="Scan call to action" className="relative overflow-hidden rounded-[22px] border border-gold/20 bg-gradient-to-br from-gold/[0.14] via-bg-secondary to-bg-secondary p-4 shadow-[0_18px_45px_-28px_rgba(233,180,76,0.55)]">
+      <section aria-label="Scan call to action" className="hero-scan-card relative overflow-hidden rounded-[22px] border border-gold/20 bg-gradient-to-br from-gold/[0.14] via-bg-secondary to-bg-secondary p-4 shadow-[0_18px_45px_-28px_rgba(233,180,76,0.55)]">
+        <div className="honeycomb-dust pointer-events-none absolute inset-0 opacity-60" />
         <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-gold/10 blur-2xl" />
         <div className="relative flex items-center gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gold text-black shadow-[0_8px_22px_rgba(233,180,76,0.22)]">
-            <ScanLine className="size-5" aria-hidden="true" />
+          <div className="scan-icon-shell relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gold text-black shadow-[0_8px_22px_rgba(233,180,76,0.22)]">
+            <span className="scan-icon-ring absolute inset-[-5px] rounded-[18px] border border-gold/35" />
+            <ScanLine className="relative size-5" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">Your next scene</p>

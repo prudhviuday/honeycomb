@@ -158,6 +158,16 @@
   50% { transform: translateY(-1px) rotate(2deg) scale(1.04); }
 }
 
+@keyframes ring-breathe {
+  0%, 100% { transform: scale(.92); opacity: .25; }
+  50% { transform: scale(1.12); opacity: .75; }
+}
+
+@keyframes dust-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: .35; }
+  50% { transform: translate3d(6px, -4px, 0); opacity: .7; }
+}
+
 .animate-scan-line { animation: scan-line 2.8s ease-in-out infinite; }
 .animate-slide-up { animation: slide-up 0.32s cubic-bezier(0.16,1,0.3,1); }
 .animate-scale-in { animation: scale-in 0.24s cubic-bezier(0.16,1,0.3,1); }
@@ -165,6 +175,21 @@
 .animate-marker-drop { animation: marker-drop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
 .animate-hero-breathe { animation: hero-breathe 5s ease-in-out infinite; }
 .animate-flame { animation: flame-flicker 1.4s ease-in-out infinite; }
+
+.scan-icon-ring { animation: ring-breathe 2.2s ease-in-out infinite; }
+.hero-scan-card { isolation: isolate; }
+.honeycomb-dust {
+  background-image:
+    linear-gradient(30deg, rgba(245,201,107,.16) 12%, transparent 12.5%, transparent 87%, rgba(245,201,107,.16) 87.5%, rgba(245,201,107,.16)),
+    linear-gradient(150deg, rgba(245,201,107,.16) 12%, transparent 12.5%, transparent 87%, rgba(245,201,107,.16) 87.5%, rgba(245,201,107,.16)),
+    linear-gradient(30deg, rgba(245,201,107,.16) 12%, transparent 12.5%, transparent 87%, rgba(245,201,107,.16) 87.5%, rgba(245,201,107,.16)),
+    linear-gradient(150deg, rgba(245,201,107,.16) 12%, transparent 12.5%, transparent 87%, rgba(245,201,107,.16) 87.5%, rgba(245,201,107,.16)),
+    linear-gradient(60deg, rgba(245,201,107,.10) 25%, transparent 25.5%, transparent 75%, rgba(245,201,107,.10) 75%);
+  background-position: 0 0, 0 0, 12px 21px, 12px 21px, 0 0;
+  background-size: 24px 42px;
+  mask-image: linear-gradient(120deg, black, transparent 72%);
+  animation: dust-drift 8s ease-in-out infinite;
+}
 
 .pulse-ring {
   animation: pulse-ring 2.5s cubic-bezier(0.215,0.61,0.355,1) infinite;
