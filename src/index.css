@@ -871,6 +871,15 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
 .fan-tier-badge--tier-hype-star .fan-tier-badge__label { color: #FFD28B; }
 .fan-tier-badge--tier-superstar .fan-tier-badge__label { color: #FFA1B5; }
 .fan-tier-badge--tier-legend .fan-tier-badge__label { color: #FFEAA0; }
+.fan-tier-badge--tier-new-fan { --fan-glow: rgba(115,164,224,.2); }
+.fan-tier-badge--tier-fan { --fan-glow: rgba(92,220,195,.2); }
+.fan-tier-badge--tier-super-fan { --fan-glow: rgba(57,206,245,.24); }
+.fan-tier-badge--tier-movie-buff { --fan-glow: rgba(167,139,250,.24); }
+.fan-tier-badge--tier-cinephile { --fan-glow: rgba(230,110,209,.23); }
+.fan-tier-badge--tier-hype-star { --fan-glow: rgba(255,180,74,.24); }
+.fan-tier-badge--tier-superstar { --fan-glow: rgba(255,103,142,.24); }
+.fan-tier-badge--tier-legend { --fan-glow: rgba(255,218,105,.3); }
+
 
 .fan-tier-badge {
   display: inline-flex;
