@@ -9,9 +9,9 @@ The bottom navigation is defined by tabs in src/app/AppShell.tsx. It shows **Hom
 | User-facing surface | Main component | What the UI does | Background work / dependencies |
 | --- | --- | --- | --- |
 | Sign in / sign up | src/modules/auth/ui/AuthScreen.tsx | Email/password forms, mode toggle, validation message and loading state | Calls src/modules/auth/api/authApi.ts, which delegates to Supabase Auth; records account/sign-in analytics where configured |
-| Home | src/modules/home/ui/HomeScreen.tsx | Movie carousel, points pill, explore shortcuts, progress/mission card, nearby challenges, collection, leaderboard, achievements and reward preview | Loads getCampaignDashboard for the selected campaign; uses active campaign/profile context; nearby distances use a one-shot browser geolocation request |
-| Hunts | src/modules/hunts/ui/HuntsScreen.tsx | Lists missions, progress and earned XP; routes incomplete scan-driven tasks to Scan | Loads campaign dashboard and summarizes progress with modules/hunts/logic/huntLogic.ts |
-| Scan | src/modules/qr/ui/ScannerScreen.tsx | Camera QR reader (ZXing), manual code entry, scan result/errors and reward-point feedback | Normalizes/unwraps the scanned code, calls processScan and refreshes campaign-user balance; camera stream is stopped during cleanup |
+| Home | src/modules/home/ui/HomeScreen.tsx | Movie carousel, overall lightning score beside the profile avatar, current-campaign flame score in Your Journey, explore shortcuts, progress/mission card, nearby challenges, collection, leaderboard, achievements and reward preview | Loads getCampaignDashboard for the selected campaign; uses active campaign/profile context; nearby distances use a one-shot browser geolocation request |
+| Hunts | src/modules/hunts/ui/HuntsScreen.tsx | Lists missions, progress and campaign point rewards; routes incomplete scan-driven tasks to Scan | Loads campaign dashboard and summarizes progress with modules/hunts/logic/huntLogic.ts |
+| Scan | src/modules/qr/ui/ScannerScreen.tsx | Camera QR reader (ZXing), manual code entry, scan result/errors and campaign-point feedback with a flame indicator | Normalizes/unwraps the scanned code, calls processScan and refreshes campaign-user balance; camera stream is stopped during cleanup |
 | Map | src/modules/maps/ui/MapScreen.tsx | Campaign location pins, search, location detail panel, general/campaign heatmaps, intensity controls and recenter control | Loads locations, interaction sources, user scans and heatmap RPC results for the selected campaign; builds features through modules/maps/logic/mapData.ts |
 | Profile | src/modules/profile/ui/ProfileScreen.tsx | Account identity, city, points, profile editor, rewards shortcut, achievements shortcut, referral route and sign out | Reads Auth/Campaign contexts; updates profile via profile API; points/rewards navigation is an AppShell callback |
 | Rewards | src/modules/rewards/ui/RewardsScreen.tsx | Current campaign reward catalog, point balance, draw entries, previous claims, claim actions, claim status and claim confirmation | Loads rewards/entries/claims from the reward API; claim is confirmed by the claim_reward PostgreSQL RPC; reward cards shown as examples on Home are not claimable |
@@ -24,7 +24,8 @@ Home has more than just the movie carousel. Use the component comments in HomeSc
 
 | UI element | Action |
 | --- | --- |
-| Points pill | Navigate to Rewards |
+| Overall lightning score beside the profile avatar | Navigate to Profile; displays the total of the user's net balances across all joined movie campaigns |
+| Campaign flame badge in Your Journey / campaign screens | Shows points for the selected movie campaign; campaign reward eligibility uses only this balance |
 | Profile avatar | Navigate to Profile |
 | Movie carousel card | First click selects the card; activating a real campaign opens its MovieDetail route. Static demo cards are visual examples, not database campaigns. |
 | Explore → Hunts | Navigate to Hunts |
@@ -38,7 +39,7 @@ Home has more than just the movie carousel. Use the component comments in HomeSc
 
 ## Profile actions
 
-Profile menu click handlers are wired through AppShell. “My Rewards” and the points total open Rewards. “Achievements” currently returns to Home; it does not open an independent badge inventory. “Refer Friends” opens the active campaign's MovieDetail/referral surface when a campaign is selected; otherwise it falls back to Hunts.
+Profile menu click handlers are wired through AppShell. The Profile balance is the overall lightning total across campaigns and is informational; it is not a spendable, cross-movie wallet. “My Rewards” opens Rewards for the currently selected movie campaign, whose balance and claim eligibility are campaign-specific. “Achievements” currently returns to Home; it does not open an independent badge inventory. “Refer Friends” opens the active campaign's MovieDetail/referral surface when a campaign is selected; otherwise it falls back to Hunts.
 
 ## Map behavior (important distinction)
 
