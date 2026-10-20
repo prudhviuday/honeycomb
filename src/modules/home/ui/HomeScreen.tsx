@@ -764,79 +764,36 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
             type="button"
             onClick={() => openLeaderboard('movie')}
             aria-label="Open movie leaderboard"
-            className="leaderboard-preview group relative w-full overflow-hidden rounded-[22px] border border-white/[0.09] text-left shadow-[0_16px_38px_rgba(0,0,0,0.24)]"
+            className="leaderboard-preview group w-full overflow-hidden rounded-2xl border border-white/[0.08] text-left"
           >
-            <span className="leaderboard-preview-orb leaderboard-preview-orb-gold" aria-hidden="true" />
-            <span className="leaderboard-preview-orb leaderboard-preview-orb-violet" aria-hidden="true" />
-            <span className="leaderboard-preview-grid" aria-hidden="true" />
-            <div className="leaderboard-preview-content relative z-10 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="leaderboard-preview-emblem relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-200/20 bg-gradient-to-br from-amber-200/20 via-amber-300/[0.08] to-violet-400/10">
-                    <Trophy className="h-5 w-5 text-amber-100" />
-                    <Sparkles className="absolute -right-1 -top-1 h-3.5 w-3.5 text-amber-200" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-amber-100/70">This movie · Top fans</p>
-                    <p className="mt-0.5 truncate font-display text-lg leading-tight text-white">
-                      {activeCampaign?.movie_title || activeCampaign?.title || 'Movie leaderboard'}
-                    </p>
-                  </div>
+            <div className="leaderboard-preview-list divide-y divide-white/[0.055]">
+              {top3.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className="leaderboard-preview-row relative flex items-center justify-between gap-3 px-4 py-3"
+                  style={{ animationDelay: \`\${index * 75}ms\` }}
+                >
+                  <span className="min-w-0 truncate text-sm font-medium text-white/85">
+                    {entry.user_id === user?.id ? 'You' : entry.display_name || 'Movie Explorer'}
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm font-semibold tabular-nums text-white/90">
+                    <PointsIcon scope="campaign" size="xs" />
+                    {entry.points.toLocaleString()}
+                  </span>
                 </div>
-                <span className="leaderboard-preview-viewall inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.055] py-1.5 pl-2.5 pr-2 text-[9px] font-bold uppercase tracking-wide text-white/70 transition-all group-hover:border-amber-200/25 group-hover:text-amber-100">
-                  View all <ChevronRight className="h-3 w-3" />
-                </span>
-              </div>
-
-              <div className="leaderboard-preview-podium mt-5 grid grid-cols-3 items-end gap-2">
-                {[
-                  { entry: top3.find((candidate) => candidate.rank === 2) ?? top3[1] ?? null, place: 2 },
-                  { entry: top3.find((candidate) => candidate.rank === 1) ?? top3[0] ?? null, place: 1 },
-                  { entry: top3.find((candidate) => candidate.rank === 3) ?? top3[2] ?? null, place: 3 },
-                ].map(({ entry, place }, index) => {
-                  if (!entry) return <div key={'empty-preview-place-' + place} />;
-                  const champion = place === 1;
-                  const isMe = entry.user_id === user?.id;
-                  const placeLabel = place === 1 ? 'CHAMPION' : place === 2 ? '2ND PLACE' : '3RD PLACE';
-                  return (
-                    <div
-                      key={entry.id}
-                      className={'leaderboard-preview-podium-card leaderboard-preview-place-' + place + ' relative flex min-w-0 flex-col items-center rounded-2xl border px-1.5 pb-3 pt-4 text-center ' + (champion ? 'min-h-[142px]' : place === 2 ? 'min-h-[120px]' : 'min-h-[108px]')}
-                      style={{ animationDelay: `${index * 85}ms` }}
-                    >
-                      {champion && <Crown className="leaderboard-preview-crown absolute -top-3 h-5 w-5 text-amber-200 drop-shadow-[0_0_8px_rgba(245,190,75,0.45)]" fill="currentColor" />}
-                      <div className={'leaderboard-preview-avatar relative mb-2 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-[#11111C] text-sm font-bold text-white ' + (champion ? 'border-amber-200/75' : place === 2 ? 'border-slate-200/45' : 'border-orange-300/45')}>
-                        {entry.avatar_url ? (
-                          <img src={entry.avatar_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span>{(entry.display_name || 'H').trim().charAt(0).toUpperCase() || 'H'}</span>
-                        )}
-                      </div>
-                      <p className={'w-full truncate text-[10px] font-bold ' + (isMe ? 'text-amber-100' : 'text-white/85')}>{isMe ? 'You' : entry.display_name || 'Movie Explorer'}</p>
-                      <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/35">{placeLabel}</p>
-                      <span className={'mt-2 inline-flex max-w-full items-center justify-center gap-1 rounded-full px-1.5 py-1 font-display text-[11px] tabular-nums ' + (champion ? 'bg-amber-200/10 text-amber-100' : 'bg-white/[0.045] text-white/75')}>
-                        <PointsIcon scope="campaign" size="xs" />{entry.points.toLocaleString()}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
+              ))}
               {showMeSeparately && me && (
-                <div className="leaderboard-preview-you mt-3 flex items-center gap-2.5 rounded-xl border border-violet-300/15 bg-violet-300/[0.055] px-3 py-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-violet-200/20 bg-violet-300/10 text-[10px] font-extrabold text-violet-100">#{me.rank}</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-violet-100/65">Your position</p>
-                    <p className="truncate text-xs font-semibold text-white/85">You · {LEVEL_NAMES[Math.min(Math.max(levelFor(me.points), 1), LEVEL_NAMES.length) - 1]}</p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 font-display text-sm tabular-nums text-violet-100"><PointsIcon scope="campaign" size="xs" />{me.points.toLocaleString()}</span>
+                <div
+                  className="leaderboard-preview-row leaderboard-preview-row-you relative flex items-center justify-between gap-3 px-4 py-3"
+                  style={{ animationDelay: \`\${top3.length * 75}ms\` }}
+                >
+                  <span className="min-w-0 truncate text-sm font-medium text-violet-100/90">You</span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm font-semibold tabular-nums text-violet-100">
+                    <PointsIcon scope="campaign" size="xs" />
+                    {me.points.toLocaleString()}
+                  </span>
                 </div>
               )}
-
-              <div className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-3">
-                <span className="text-[9px] font-medium uppercase tracking-[0.16em] text-white/30">Earn your place · Keep hunting</span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-100/70 transition-transform group-hover:translate-x-0.5">Rankings <ChevronRight className="h-3 w-3" /></span>
-              </div>
             </div>
           </button>
         </Section>
