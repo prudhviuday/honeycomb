@@ -13,6 +13,7 @@ import { calculateDistance } from '@/modules/maps/logic/mapData';
 import type { Tab } from './AppShell';
 import type { Campaign } from '@/types';
 import { RewardIdeas } from '@/modules/rewards/ui/RewardIdeas';
+import { PointsBadge, PointsIcon } from '@/components/points/PointsIndicator';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
@@ -94,7 +95,7 @@ const DEMO_MOVIES: MovieCardData[] = [
 
 export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { campaigns, activeCampaign, campaignUser, selectCampaign, loading: campaignsLoading } = useCampaign();
+  const { campaigns, activeCampaign, campaignUser, overallPoints, overallPointsLoading, selectCampaign, loading: campaignsLoading } = useCampaign();
   const [dashboard, setDashboard] = useState<CampaignDashboard | null>(null);
   const [dashboardKey, setDashboardKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -340,31 +341,9 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
 
   return (
     <div className="pb-8 animate-fade-in overflow-x-hidden">
-      {/* TOP BAR */}
+      {/* TOP BAR — overall points remain visible while browsing campaigns */}
       <header className="sticky top-0 z-40 px-4 pt-3 pb-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.04]">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-1 leading-none">
-              <span className="font-display text-[22px] text-white tracking-wide">HONEY</span>
-              <span className="font-display text-[22px] text-accent tracking-wide">BADGER</span>
-            </div>
-            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-1">
-              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
-              <span className="font-medium text-text-primary">{locationLabel}</span>
-              <ChevronRight className="w-3 h-3 rotate-90" aria-hidden="true" />
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigate?.('rewards')}
-            className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-full bg-bg-surface border border-white/[0.06]"
-            aria-label={points + ' points for ' + (activeCampaign.title || activeCampaign.movie_title || 'this campaign') + ', view rewards'}
-          >
-            <span className="w-5 h-5 rounded-full bg-gold/15 flex items-center justify-center">
-              <Zap className="w-3 h-3 text-gold" fill="currentColor" aria-hidden="true" />
-            </span>
-            <span className="text-xs font-semibold text-text-primary tabular-nums">{points.toLocaleString()}</span>
-          </button>
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => onNavigate?.('profile')}
@@ -377,6 +356,31 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
               <span className="text-sm font-semibold text-white">{displayName.charAt(0).toUpperCase()}</span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('profile')}
+            className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-bg-surface border border-amber-300/15 hover:border-amber-200/30 transition-colors flex-shrink-0"
+            aria-label={overallPointsLoading ? 'Loading overall points' : overallPoints.toLocaleString() + ' overall points across all movies'}
+          >
+            <PointsBadge
+              scope="overall"
+              points={overallPoints}
+              loading={overallPointsLoading}
+              size="sm"
+              valueClassName="text-xs text-text-primary"
+            />
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-100/60">PTS</span>
+          </button>
+          <div className="flex-1 min-w-0 text-right">
+            <div className="flex items-baseline justify-end gap-1 leading-none">
+              <span className="font-display text-[18px] sm:text-[20px] text-white tracking-wide">HONEY</span>
+              <span className="font-display text-[18px] sm:text-[20px] text-accent tracking-wide">BADGER</span>
+            </div>
+            <p className="text-[10px] text-text-muted flex items-center justify-end gap-1 mt-1">
+              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
+              <span className="font-medium text-text-primary truncate">{locationLabel}</span>
+            </p>
+          </div>
         </div>
       </header>
 
@@ -498,9 +502,14 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
       {/* YOUR JOURNEY */}
       <section aria-label="Your progress" className="rounded-[20px] bg-bg-secondary border border-white/[0.06] p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] text-text-muted">Welcome back,</p>
             <p className="text-base font-bold text-text-white truncate">{displayName}</p>
+            <div className="mt-2 flex items-center gap-1.5 min-w-0">
+              <span className="text-[9px] uppercase tracking-wide text-text-subtle shrink-0">This movie</span>
+              <span className="text-[10px] text-text-muted truncate">{activeCampaign.movie_title || activeCampaign.title}</span>
+              <PointsBadge scope="campaign" points={points} size="xs" className="ml-auto rounded-full border border-orange-300/15 bg-orange-400/[0.06] px-1.5 py-1" valueClassName="text-[10px] text-orange-200" />
+            </div>
           </div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/10 border border-gold/20">
             <Crown className="w-3.5 h-3.5 text-gold" aria-hidden="true" />
@@ -586,7 +595,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
               className="w-full py-3.5 bg-accent hover:bg-accent-bright text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_-10px_rgba(124, 92, 255,0.6)] active:scale-[0.98] transition-transform"
             >
               {missionDone ? 'Continue Hunt' : 'Start Hunt'}
-              <span className="text-white/60">· +{nextMission.points_reward} XP</span>
+              <span className="inline-flex items-center gap-1 text-white/70">· <PointsIcon scope="campaign" size="xs" /> +{nextMission.points_reward} pts</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -615,8 +624,8 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                     <MapPin className="w-3 h-3 flex-shrink-0" /> {loc.address}
                   </p>
                   <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full bg-accent/12 text-[10px] font-semibold text-accent">
-                      +{totalPts} pts
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-400/[0.08] text-[10px] font-semibold text-orange-200">
+                      <PointsIcon scope="campaign" size="xs" /> +{totalPts} pts
                     </span>
                     {km !== null && (
                       <span className="px-2 py-0.5 rounded-full bg-white/6 text-[10px] text-text-muted flex items-center gap-1">
@@ -725,7 +734,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                       {new Date(scan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
-                  <span className="font-display text-base text-accent">+{scan.points_awarded}</span>
+                  <span className="inline-flex items-center gap-1 font-display text-base text-accent"><PointsIcon scope="campaign" size="xs" />+{scan.points_awarded}</span>
                 </div>
               );
             })}
@@ -1010,7 +1019,7 @@ function LeaderRow({ entry, isMe }: { entry: CampaignDashboard['leaderboard'][nu
           {LEVEL_NAMES[Math.min(Math.max(levelFor(entry.points), 1), LEVEL_NAMES.length) - 1]}
         </span>
       </span>
-      <span className="font-display text-sm text-text-primary tabular-nums">{entry.points.toLocaleString()}</span>
+      <span className="inline-flex items-center gap-1 font-display text-sm text-text-primary tabular-nums"><PointsIcon scope="campaign" size="xs" />{entry.points.toLocaleString()}</span>
     </div>
   );
 }
