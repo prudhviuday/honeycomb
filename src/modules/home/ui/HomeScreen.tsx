@@ -616,8 +616,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
               <PointsBadge scope="campaign" points={points} size="xs" className="ml-auto rounded-full border border-orange-300/15 bg-orange-400/[0.06] px-1.5 py-1" valueClassName="text-[10px] text-orange-200" />
             </div>
           </div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-white/[0.035] border border-white/[0.08]">
-            <FanTierBadge points={points} size="xs" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/[0.035] border border-white/[0.08]">
             <span className="text-[11px] font-semibold text-gold">{levelName}</span>
             <span className="text-[10px] text-gold/60">LV {Math.min(level, LEVEL_NAMES.length)}</span>
           </div>
