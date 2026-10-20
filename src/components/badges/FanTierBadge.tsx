@@ -85,7 +85,7 @@ export function FanTierBadge({
 
   return (
     <span
-      className={['fan-tier-badge', 'fan-tier-badge--' + size, className].filter(Boolean).join(' ')}
+      className={['fan-tier-badge', 'fan-tier-badge--' + size, 'fan-tier-badge--tier-' + tier.key, className].filter(Boolean).join(' ')}
       title={tier.name + ' · ' + Math.max(0, Number(points) || 0).toLocaleString() + ' points'}
       aria-label={tier.name + ' fan tier'}
     >
