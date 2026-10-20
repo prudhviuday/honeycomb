@@ -20,6 +20,7 @@ import type { Tab } from './AppShell';
 import type { Campaign, LeaderboardEntry } from '@/types';
 import { RewardIdeas } from '@/modules/rewards/ui/RewardIdeas';
 import { PointsBadge, PointsIcon } from '@/components/points/PointsIndicator';
+import { FanTierBadge } from '@/components/badges/FanTierBadge';
 
 interface Props {
   onNavigate?: (tab: Tab) => void;
@@ -27,11 +28,13 @@ interface Props {
 }
 
 const LEVEL_NAMES = [
-  'Explorer',
-  'Movie Fan',
+  'New Fan',
+  'Fan',
   'Super Fan',
   'Movie Buff',
-  'Cinema Insider',
+  'Cinephile',
+  'Hype Star',
+  'Superstar',
   'Legend',
 ];
 
@@ -772,9 +775,12 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                   key={entry.id}
                   className="leaderboard-preview-row relative flex items-center justify-between gap-3 px-4 py-3"
                 >
-                  <span className="min-w-0 truncate text-sm font-medium text-white/85">
-                    {entry.user_id === user?.id ? 'You' : entry.display_name || 'Movie Explorer'}
-                  </span>
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <span className="min-w-0 truncate text-sm font-medium text-white/85">
+                      {entry.user_id === user?.id ? 'You' : entry.display_name || 'Movie Explorer'}
+                    </span>
+                    <FanTierBadge points={entry.points} size="xs" showLabel className="shrink-0" />
+                  </div>
                   <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm font-semibold tabular-nums text-white/90">
                     <PointsIcon scope="campaign" size="xs" />
                     {entry.points.toLocaleString()}
@@ -785,7 +791,10 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                 <div
                   className="leaderboard-preview-row leaderboard-preview-row-you relative flex items-center justify-between gap-3 px-4 py-3"
                 >
-                  <span className="min-w-0 truncate text-sm font-medium text-violet-100/90">You</span>
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <span className="min-w-0 truncate text-sm font-medium text-violet-100/90">You</span>
+                    <FanTierBadge points={me.points} size="xs" showLabel className="shrink-0" />
+                  </div>
                   <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm font-semibold tabular-nums text-violet-100">
                     <PointsIcon scope="campaign" size="xs" />
                     {me.points.toLocaleString()}
@@ -1332,8 +1341,6 @@ function LeaderboardListRow({
   index: number;
 }) {
   const playerName = isMe ? 'You' : (entry.display_name || 'Movie Explorer');
-  const levelName = LEVEL_NAMES[Math.min(Math.max(levelFor(entry.points), 1), LEVEL_NAMES.length) - 1];
-
   return (
     <div
       className={'leaderboard-row-reveal flex items-center gap-3 border-b border-white/[0.055] py-3 last:border-b-0 ' + (isMe ? 'rounded-xl bg-violet-300/[0.06] px-2' : '')}
@@ -1346,7 +1353,7 @@ function LeaderboardListRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className={'truncate text-xs font-semibold ' + (isMe ? 'text-violet-100' : 'text-white/85')}>{playerName}</p>
-        <p className="mt-0.5 truncate text-[10px] text-white/35">{levelName}</p>
+        <div className="mt-1"><FanTierBadge points={entry.points} size="sm" showLabel /></div>
       </div>
       <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-sm tabular-nums text-white/80">
         <PointsIcon scope={scope === 'overall' ? 'overall' : 'campaign'} size="xs" />
@@ -1367,9 +1374,7 @@ function LeaderRow({ entry, isMe }: { entry: CampaignDashboard['leaderboard'][nu
         <span className={'block text-sm truncate ' + (isMe ? 'text-text-primary font-semibold' : 'text-text-primary')}>
           {isMe ? 'You' : entry.display_name}
         </span>
-        <span className="block text-[10px] text-text-subtle">
-          {LEVEL_NAMES[Math.min(Math.max(levelFor(entry.points), 1), LEVEL_NAMES.length) - 1]}
-        </span>
+        <span className="block mt-1"><FanTierBadge points={entry.points} size="xs" showLabel /></span>
       </span>
       <span className="inline-flex items-center gap-1 font-display text-sm text-text-primary tabular-nums"><PointsIcon scope="campaign" size="xs" />{entry.points.toLocaleString()}</span>
     </div>
