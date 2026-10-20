@@ -341,15 +341,23 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   return (
     <div className="pb-8 animate-fade-in overflow-x-hidden">
       {/* TOP BAR */}
-      <header className="sticky top-0 z-40 px-4 pt-3 pb-3 bg-bg-primary/85 backdrop-blur-xl border-b border-white/[0.04]">
+      <header className="sticky top-0 z-40 px-4 pt-4 pb-3 bg-bg-primary/78 backdrop-blur-2xl border-b border-white/[0.055]">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-1 leading-none">
-              <span className="font-display text-[22px] text-white tracking-wide">HONEY</span>
-              <span className="font-display text-[22px] text-accent tracking-wide">BADGER</span>
+            <div className="flex items-center gap-2 leading-none">
+              <span className="inline-flex size-7 items-center justify-center rounded-[10px] bg-gradient-to-br from-gold-bright to-gold text-black shadow-[0_6px_18px_rgba(233,180,76,0.2)]">
+                <span className="font-display text-[15px]">H</span>
+              </span>
+              <div>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display text-[21px] text-white tracking-wide">HONEY</span>
+                  <span className="font-display text-[21px] gold-text tracking-wide">BADGER</span>
+                </div>
+                <p className="text-[10px] text-text-subtle uppercase tracking-[0.16em] mt-1">Play the picture</p>
+              </div>
             </div>
-            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-1">
-              <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
+            <p className="text-[11px] text-text-muted flex items-center gap-1 mt-2">
+              <MapPin className="w-3 h-3 text-gold" aria-hidden="true" />
               <span className="font-medium text-text-primary">{locationLabel}</span>
               <ChevronRight className="w-3 h-3 rotate-90" aria-hidden="true" />
             </p>
@@ -380,7 +388,21 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
         </div>
       </header>
 
-      <div className="px-4 pt-4 space-y-8">
+      <div className="px-4 pt-5 space-y-8">
+      <section aria-label="Scan call to action" className="relative overflow-hidden rounded-[22px] border border-gold/20 bg-gradient-to-br from-gold/[0.14] via-bg-secondary to-bg-secondary p-4 shadow-[0_18px_45px_-28px_rgba(233,180,76,0.55)]">
+        <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-gold/10 blur-2xl" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gold text-black shadow-[0_8px_22px_rgba(233,180,76,0.22)]">
+            <ScanLine className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">Your next scene</p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">Find a QR. Unlock the story.</p>
+          </div>
+          <button type="button" onClick={() => onNavigate?.('scanner')} className="rounded-full border border-gold/30 bg-black/20 px-3 py-2 text-[11px] font-semibold text-gold transition-colors hover:bg-gold/15">Scan</button>
+        </div>
+      </section>
+
       {/* MOVIE CAROUSEL */}
       {movies.length > 0 && (
         <section id="movie-campaigns" className="scroll-mt-4">
