@@ -791,3 +791,144 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
   }
 }
 
+
+
+/* ===== Artistic inline leaderboard preview ===== */
+.leaderboard-preview {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 48% -22%, rgba(245, 201, 107, 0.17), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(124, 92, 255, 0.16), transparent 52%),
+    linear-gradient(145deg, #15131F 0%, #10101A 50%, #0B0B13 100%);
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.leaderboard-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.045) 0 1px, transparent 1.5px),
+    linear-gradient(118deg, transparent 0 37%, rgba(255, 255, 255, 0.025) 37.2%, transparent 37.7% 100%);
+  background-size: 23px 23px, 100% 100%;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+.leaderboard-preview::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: -55%;
+  width: 32%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 238, 196, 0.065), transparent);
+  transform: skewX(-16deg);
+  transition: left 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.leaderboard-preview:hover {
+  border-color: rgba(245, 201, 107, 0.25);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28), 0 0 28px rgba(233, 180, 76, 0.055);
+}
+.leaderboard-preview:hover::after {
+  left: 125%;
+}
+.leaderboard-preview:active {
+  transform: scale(0.992);
+}
+.leaderboard-preview-orb {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  width: 170px;
+  height: 170px;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(1px);
+}
+.leaderboard-preview-orb-gold {
+  top: 18%;
+  left: 24%;
+  border: 1px solid rgba(245, 201, 107, 0.055);
+  box-shadow: inset 0 0 50px rgba(245, 201, 107, 0.025);
+}
+.leaderboard-preview-orb-violet {
+  right: -112px;
+  bottom: -108px;
+  width: 230px;
+  height: 230px;
+  border: 1px solid rgba(163, 139, 255, 0.12);
+  box-shadow: 0 0 0 22px rgba(163, 139, 255, 0.018), 0 0 0 48px rgba(163, 139, 255, 0.014);
+}
+.leaderboard-preview-emblem {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 8px 25px rgba(0, 0, 0, 0.18);
+  transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 240ms ease;
+}
+.leaderboard-preview:hover .leaderboard-preview-emblem {
+  transform: translateY(-2px) rotate(-3deg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 28px rgba(245, 201, 107, 0.09);
+}
+.leaderboard-preview-podium-card {
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 8px 20px rgba(0, 0, 0, 0.12);
+  animation: leaderboard-row-pop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: border-color 220ms ease, background-color 220ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.leaderboard-preview-podium-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+  pointer-events: none;
+}
+.leaderboard-preview-podium-card.leaderboard-preview-place-1 {
+  border-color: rgba(245, 201, 107, 0.29);
+  background: linear-gradient(165deg, rgba(245, 201, 107, 0.12), rgba(245, 201, 107, 0.025) 56%, rgba(255, 255, 255, 0.018));
+  box-shadow: inset 0 1px 0 rgba(255, 241, 197, 0.1), 0 12px 28px rgba(245, 190, 75, 0.055);
+}
+.leaderboard-preview-podium-card.leaderboard-preview-place-2 {
+  border-color: rgba(203, 213, 225, 0.13);
+}
+.leaderboard-preview-podium-card.leaderboard-preview-place-3 {
+  border-color: rgba(251, 146, 60, 0.13);
+}
+.leaderboard-preview:hover .leaderboard-preview-podium-card {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.leaderboard-preview:hover .leaderboard-preview-place-1 {
+  border-color: rgba(245, 201, 107, 0.38);
+  transform: translateY(-2px);
+}
+.leaderboard-preview-avatar {
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.25);
+}
+.leaderboard-preview-crown {
+  animation: float-slow 4.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+.leaderboard-preview-you {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.leaderboard-preview-viewall {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-preview,
+  .leaderboard-preview::after,
+  .leaderboard-preview-emblem,
+  .leaderboard-preview-podium-card,
+  .leaderboard-preview-crown {
+    animation: none !important;
+    transition: none !important;
+  }
+}
