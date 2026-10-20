@@ -125,7 +125,7 @@ export function RewardIdeas({ onOpenRewards }: Props) {
             </p>
             <div className="mt-3 pt-3 border-t border-white/[0.07] flex items-center justify-between gap-2">
               <span className="text-[9px] uppercase tracking-wide text-text-subtle">Target</span>
-              <span className="font-display text-base text-gold tabular-nums">~{target.toLocaleString()} pts</span>
+              <span className="inline-flex items-center gap-1 font-display text-base text-gold tabular-nums"><PointsIcon scope="campaign" size="xs" />~{target.toLocaleString()} pts</span>
             </div>
             <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-white/45 group-hover:text-gold transition-colors">
               View progress <ArrowUpRight className="w-3 h-3" />
