@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Share2, Pencil, Gift, Sparkles, Coins } from 'lucide-react';
+import { useState } from 'react';
+import { User as UserIcon, Mail, MapPin, LogOut, ChevronRight, Award, Share2, Pencil, Gift, Sparkles } from 'lucide-react';
 import type { Tab } from '@/app/AppShell';
 import type { Campaign } from '@/types';
 import { useAuth } from '@/application/state/AuthContext';
@@ -7,7 +7,7 @@ import { useCampaign } from '@/application/state/CampaignContext';
 import { signOut, upsertProfile } from '@/modules/profile/api/profileApi';
 import { getDisplayName, normalizeProfileInput } from '@/modules/profile/logic/profileLogic';
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
-import { getOverallPointsTotal } from '@/application/api/legacyApi';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 import { ProfileEditModal } from '@/modules/profile/ui/ProfileEditModal';
 
 interface Props {
@@ -17,28 +17,8 @@ interface Props {
 
 export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { activeCampaign } = useCampaign();
+  const { activeCampaign, overallPoints, overallPointsLoading: pointsLoading } = useCampaign();
   const [editing, setEditing] = useState(false);
-  const [overallPoints, setOverallPoints] = useState(0);
-  const [pointsLoading, setPointsLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!user) {
-      setOverallPoints(0);
-      setPointsLoading(false);
-      return () => { cancelled = true; };
-    }
-    setPointsLoading(true);
-    getOverallPointsTotal(user.id)
-      .then((total) => { if (!cancelled) setOverallPoints(total); })
-      .catch((error) => {
-        console.warn('[Profile] Could not load overall points:', error);
-        if (!cancelled) setOverallPoints(0);
-      })
-      .finally(() => { if (!cancelled) setPointsLoading(false); });
-    return () => { cancelled = true; };
-  }, [user?.id]);
   const handleSignOut = async () => { await signOut(); };
 
   const handleSaveProfile = async (data: { display_name: string; city: string }) => {
@@ -96,7 +76,7 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
         <div className="relative flex items-end justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/75 flex items-center gap-2">
-              <Coins className="w-3.5 h-3.5" /> Your Honeycomb balance
+              <PointsIcon scope="overall" size="xs" /> Your Honeycomb balance
             </p>
             <p className="font-display text-[42px] leading-none tracking-tight text-amber-100 mt-3 tabular-nums">
               {pointsLoading ? '···' : overallPoints.toLocaleString()}
