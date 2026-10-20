@@ -103,13 +103,13 @@ export function RewardsScreen() {
     <div className="px-5 pt-12 pb-8 animate-fade-in">
       {/* Title */}
       <p className="text-[10px] text-accent-bright uppercase tracking-[0.24em] font-semibold mb-1">Your haul</p>\n      <h1 className="font-display text-[36px] text-text-primary leading-none tracking-[-0.02em] mb-1">REWARDS</h1>
-      <p className="text-xs text-text-muted mb-8">See the prizes available for this campaign and the experiences your points could build toward.</p>
+      <p className="text-xs text-text-muted mb-8">Points and prizes are specific to the selected movie campaign.</p>
 
       {/* Points bar — editorial, not a card */}
       <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#1C1710] via-bg-surface to-[#0D0D10] border border-gold/15 shadow-[0_18px_45px_-24px_rgba(233,180,76,0.22)] py-5 px-5 mb-8 flex items-center justify-between">
         <div>
           <p className="font-display text-4xl text-gold leading-none">{points}</p>
-          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Available Points</p>
+          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Campaign Points</p>
         </div>
         <div className="h-10 w-px bg-white/10" />
         <div className="text-right">
