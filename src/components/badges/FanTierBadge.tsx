@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 export type FanTier = {
   key: string;
   name: string;
@@ -25,48 +23,100 @@ export function getFanTier(points: number): FanTier {
   return FAN_TIERS[0];
 }
 
-function FanGlyph({ tierIndex }: { tierIndex: number }) {
-  const glyphs: ReactNode[] = [
-    <g key="new-fan">
-      <circle cx="18" cy="18" r="7" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="18" cy="18" r="2.3" fill="currentColor" />
-      <path d="M18 5.5v3 M18 27.5v3 M5.5 18h3 M27.5 18h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </g>,
-    <g key="fan">
-      <path d="M8 13c3.5-4 6.5 4 10 0s6.5-4 10 0 M8 19c3.5-4 6.5 4 10 0s6.5-4 10 0 M8 25c3.5-4 6.5 4 10 0s6.5-4 10 0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </g>,
-    <g key="super-fan">
-      <path d="M18 7v5 M18 24v5 M7 18h5 M24 18h5 M10.5 10.5l3.4 3.4 M22.1 22.1l3.4 3.4 M25.5 10.5l-3.4 3.4 M13.9 22.1l-3.4 3.4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <circle cx="18" cy="18" r="3.3" fill="currentColor" />
-    </g>,
-    <g key="movie-buff">
-      <rect x="8" y="8" width="20" height="20" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M13 8v20 M23 8v20" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2 2" />
-      <path d="M15.5 14l6 4-6 4z" fill="currentColor" />
-    </g>,
-    <g key="cinephile">
-      <circle cx="18" cy="18" r="10" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M18 8l4 6-4 4-4-4z M28 18l-6 4-4-4 4-4z M18 28l-4-6 4-4 4 4z M8 18l6-4 4 4-4 4z" fill="currentColor" fillOpacity=".72" />
-    </g>,
-    <g key="hype-star">
-      <ellipse cx="18" cy="18" rx="11" ry="5" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(-34 18 18)" />
-      <ellipse cx="18" cy="18" rx="11" ry="5" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(34 18 18)" />
-      <circle cx="18" cy="18" r="3.1" fill="currentColor" />
-      <circle cx="8.5" cy="13" r="1.6" fill="currentColor" />
-    </g>,
-    <g key="superstar">
-      <path d="M18 6l3.3 8.2L30 18l-8.7 3.3L18 30l-3.3-8.7L6 18l8.7-3.8z" fill="currentColor" fillOpacity=".88" />
-      <circle cx="27.5" cy="8.5" r="1.8" fill="currentColor" />
-      <circle cx="8.5" cy="27.5" r="1.8" fill="currentColor" />
-    </g>,
-    <g key="legend">
-      <path d="M18 6l4.3 8.2L30 18l-7.7 3.8L18 30l-4.3-8.2L6 18l7.7-3.8z" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M18 10l2.4 5.5L26 18l-5.6 2.4L18 26l-2.4-5.6L10 18l5.6-2.5z" fill="currentColor" fillOpacity=".75" />
-      <circle cx="18" cy="18" r="2" fill="#fff" />
-    </g>,
-  ];
+function FanInsignia({ tierIndex }: { tierIndex: number }) {
+  const line = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.5,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
 
-  return <>{glyphs[tierIndex] ?? glyphs[0]}</>;
+  switch (tierIndex) {
+    case 0:
+      // A quiet, compass-like spark: the first sign of a fan.
+      return (
+        <g {...line}>
+          <circle cx="20" cy="20" r="11.4" strokeOpacity=".42" />
+          <circle cx="20" cy="20" r="7.5" strokeOpacity=".8" />
+          <path d="M20 9.5 22.8 17.2 30.5 20 22.8 22.8 20 30.5 17.2 22.8 9.5 20 17.2 17.2z" fill="currentColor" stroke="none" />
+          <circle cx="20" cy="20" r="2" fill="#fff8e7" stroke="none" />
+        </g>
+      );
+    case 1:
+      // A traditional enamel shield, distinct from a generic round medal.
+      return (
+        <g {...line}>
+          <path d="M20 7.5 30 11v8.2c0 6.1-4.2 10.2-10 13.2-5.8-3-10-7.1-10-13.2V11z" strokeOpacity=".65" />
+          <path d="M13.5 17.5c2.2-2.4 4.3 2.4 6.5 0s4.3-2.4 6.5 0M13.5 22c2.2-2.4 4.3 2.4 6.5 0s4.3-2.4 6.5 0" />
+          <path d="m16.5 26 2.4 2 4.8-5" strokeWidth="1.8" />
+        </g>
+      );
+    case 2:
+      // A many-pointed flare with a cut-glass center.
+      return (
+        <g {...line}>
+          <path d="m20 5 3.5 8.2 8.5-2.7-2.7 8.5 8.2 3.5-8.2 3.5 2.7 8.5-8.5-2.7-3.5 8.2-3.5-8.2L8 34.5l2.7-8.5L2.5 22.5l8.2-3.5L8 10.5l8.5 2.7z" transform="translate(0 -2) scale(1 .94)" fill="currentColor" fillOpacity=".22" strokeWidth="1.1" />
+          <path d="m20 11 3.1 6.1 6.7 1-4.9 4.7 1.2 6.6-6.1-3.1-6.1 3.1 1.2-6.6-4.9-4.7 6.7-1z" fill="currentColor" fillOpacity=".9" stroke="none" />
+          <circle cx="20" cy="21" r="2" fill="#fff" stroke="none" />
+        </g>
+      );
+    case 3:
+      // Film-strip frame with a luminous play window.
+      return (
+        <g {...line}>
+          <path d="M10 7.5h20v25H10z" strokeOpacity=".8" />
+          <path d="M10 13h20M10 27h20" strokeOpacity=".8" />
+          <path d="M13 9.5v1M18 9.5v1M23 9.5v1M27 9.5v1M13 29v1M18 29v1M23 29v1M27 29v1" strokeWidth="2.2" />
+          <path d="m17 16 9 4.5-9 4.5z" fill="currentColor" stroke="none" />
+        </g>
+      );
+    case 4:
+      // Camera-aperture iris, cut like a precision lens.
+      return (
+        <g {...line}>
+          <circle cx="20" cy="20" r="13" strokeOpacity=".4" />
+          <circle cx="20" cy="20" r="9.8" strokeOpacity=".8" />
+          <path d="m20 10 5 5-1.1 7.2-7.8 2.8-4.9-5 1.1-7.2z" fill="currentColor" fillOpacity=".2" />
+          <path d="m20 10 5 5-1.1 7.2-7.8 2.8-4.9-5 1.1-7.2z" transform="rotate(60 20 20)" />
+          <path d="m20 10 5 5-1.1 7.2-7.8 2.8-4.9-5 1.1-7.2z" transform="rotate(120 20 20)" />
+          <circle cx="20" cy="20" r="3.2" fill="currentColor" stroke="none" />
+          <circle cx="20" cy="20" r="1.1" fill="#fff" stroke="none" />
+        </g>
+      );
+    case 5:
+      // An orbital comet with an inlaid star.
+      return (
+        <g {...line}>
+          <ellipse cx="20" cy="20" rx="14" ry="6.3" transform="rotate(-35 20 20)" strokeOpacity=".55" />
+          <path d="M8 27c3.2-6.2 8.2-12.2 16.5-16.2-4 8.3-10 13.3-16.5 16.2z" fill="currentColor" fillOpacity=".26" />
+          <path d="m23 8 2.5 6.2 6.5 2.5-6.5 2.5-2.5 6.5-2.5-6.5-6.2-2.5 6.2-2.5z" fill="currentColor" stroke="none" />
+          <circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none" />
+          <circle cx="32" cy="29" r="1" fill="currentColor" stroke="none" />
+        </g>
+      );
+    case 6:
+      // An eight-faceted star with a fine double-ring setting.
+      return (
+        <g {...line}>
+          <circle cx="20" cy="20" r="14" strokeOpacity=".36" />
+          <circle cx="20" cy="20" r="11" strokeOpacity=".7" />
+          <path d="m20 7 3.3 8.4 8.7 4.6-8.7 3.3-3.3 8.7-3.3-8.7L8 20l8.7-4.6z" fill="currentColor" stroke="none" />
+          <path d="m20 12 2.2 5.5 5.5 2.5-5.5 2.2-2.2 5.5-2.2-5.5-5.5-2.2 5.5-2.5z" fill="#fff4e0" stroke="none" />
+        </g>
+      );
+    default:
+      // The highest tier is a tall cut gemstone framed by laurel arcs.
+      return (
+        <g {...line}>
+          <path d="M20 6.5 29 13l-2 13.2L20 33l-7-6.8L11 13z" fill="currentColor" fillOpacity=".16" />
+          <path d="M20 6.5 29 13l-2 13.2L20 33l-7-6.8L11 13z" />
+          <path d="m11 13 9 3.5 9-3.5M13 26.2l7-9.7 7 9.7M20 16.5V33" strokeOpacity=".9" />
+          <path d="M8 11c-4 5-4 12 0 17M6 15l4 1M5.5 20l4 .2M6.5 25l3.5-1.3M32 11c4 5 4 12 0 17M34 15l-4 1M34.5 20l-4 .2M33.5 25 30 23.7" strokeWidth="1.2" strokeOpacity=".8" />
+          <path d="m20 9 1.2 3.2 3.2 1.2-3.2 1.2-1.2 3.2-1.2-3.2-3.2-1.2 3.2-1.2z" fill="#fff8d7" stroke="none" />
+        </g>
+      );
+  }
 }
 
 export function FanTierBadge({
@@ -90,16 +140,13 @@ export function FanTierBadge({
       aria-label={tier.name + ' fan tier'}
     >
       <span className={'fan-tier-badge__seal fan-tier-badge__seal--' + tier.key}>
-        <svg viewBox="0 0 36 36" className="fan-tier-badge__art" aria-hidden="true">
-          <path className="fan-tier-badge__facet" d="M18 2.5 29 7.2 33.5 18 29 28.8 18 33.5 7 28.8 2.5 18 7 7.2z" />
-          <path d="M18 5.5 27 9.1 30.5 18 27 26.9 18 30.5 9 26.9 5.5 18 9 9.1z" fill="none" stroke="currentColor" strokeOpacity=".48" strokeWidth=".8" />
-          <g className="fan-tier-badge__glyph">
-            <FanGlyph tierIndex={tierIndex} />
-          </g>
+        <span className="fan-tier-badge__edge" aria-hidden="true" />
+        <svg viewBox="0 0 40 40" className="fan-tier-badge__art" aria-hidden="true">
+          <FanInsignia tierIndex={tierIndex} />
         </svg>
         <span className="fan-tier-badge__glint" aria-hidden="true" />
       </span>
-      {showLabel && <span className={'fan-tier-badge__label fan-tier-badge__label--' + tier.key}>{tier.name}</span>}
+      {showLabel && <span className="fan-tier-badge__label">{tier.name}</span>}
     </span>
   );
 }
