@@ -63,11 +63,9 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
       </div>
 
       {/* Cross-campaign wallet: current net balance, after reward spending. */}
-      <button
-        type="button"
-        onClick={() => onNavigate?.('rewards')}
-        aria-label="View rewards using your overall points balance"
-        className="group relative w-full overflow-hidden rounded-[24px] text-left mb-8 p-5 border border-amber-300/20 bg-gradient-to-br from-[#30200D] via-[#19140F] to-[#101014] shadow-[0_20px_50px_-30px_rgba(245,158,11,0.5)] transition-transform active:scale-[0.99]"
+      <section
+        aria-label="Overall points balance"
+        className="relative w-full overflow-hidden rounded-[24px] text-left mb-8 p-5 border border-amber-300/20 bg-gradient-to-br from-[#30200D] via-[#19140F] to-[#101014] shadow-[0_20px_50px_-30px_rgba(245,158,11,0.5)]"
       >
         <div className="absolute -right-7 -top-9 w-36 h-36 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
         <div className="absolute right-4 top-4 text-amber-200/70">
@@ -82,13 +80,13 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
               {pointsLoading ? '···' : overallPoints.toLocaleString()}
               <span className="text-sm font-semibold tracking-normal text-amber-200/70 ml-2">PTS</span>
             </p>
-            <p className="text-[11px] text-white/55 mt-2">Across all movies · after reward spending</p>
+            <p className="text-[11px] text-white/55 mt-2">Net total across movies · redeem within each movie campaign</p>
           </div>
-          <div className="shrink-0 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-2 text-[10px] font-semibold text-amber-100 group-hover:bg-amber-200/15 transition-colors">
-            Rewards <ChevronRight className="w-3 h-3 inline ml-1" />
+          <div className="shrink-0 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-2 text-[10px] font-semibold text-amber-100">
+            All movies
           </div>
         </div>
-      </button>
+      </section>
 
       {/* Menu */}
       <div className="space-y-px mb-8">
