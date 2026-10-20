@@ -462,8 +462,8 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
             />
             <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-100/60">PTS</span>
           </button>
-          <span className="fan-profile-insignia flex items-center justify-center shrink-0" title="Your fan tier">
-            <FanTierBadge points={points} size="xs" />
+          <span className="fan-profile-insignia flex items-center justify-center shrink-0" title="Your overall fan tier">
+            <FanTierBadge points={overallPoints} size="xs" />
           </span>
           <button
             type="button"
