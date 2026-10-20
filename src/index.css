@@ -931,6 +931,16 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
   transform: translateX(-135%);
   transition: transform 650ms cubic-bezier(.2,.8,.2,1);
 }
+
+.fan-tier-badge--tier-new-fan .fan-tier-badge__label { color: #c3dafa; }
+.fan-tier-badge--tier-fan .fan-tier-badge__label { color: #a7f4dc; }
+.fan-tier-badge--tier-super-fan .fan-tier-badge__label { color: #a3f0ff; }
+.fan-tier-badge--tier-movie-buff .fan-tier-badge__label { color: #d8c0ff; }
+.fan-tier-badge--tier-cinephile .fan-tier-badge__label { color: #f8b9ea; }
+.fan-tier-badge--tier-hype-star .fan-tier-badge__label { color: #ffdf9e; }
+.fan-tier-badge--tier-superstar .fan-tier-badge__label { color: #ffb1c5; }
+.fan-tier-badge--tier-legend .fan-tier-badge__label { color: #ffe7a0; }
+
 .fan-tier-badge__label {
   display: inline-block;
   max-width: 88px;
@@ -998,11 +1008,9 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
 }
 @keyframes fan-tier-glow {
   0%, 100% {
-    transform: translateY(0) rotateX(0deg) rotateY(0deg);
     filter: drop-shadow(0 2px 1px rgba(0,0,0,.7)) drop-shadow(0 2px 5px var(--fan-glow));
   }
   50% {
-    transform: translateY(-1px) rotateX(3deg) rotateY(-2deg);
     filter: drop-shadow(0 3px 1px rgba(0,0,0,.72)) drop-shadow(0 3px 9px var(--fan-glow));
   }
 }
