@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserQRCodeReader } from '@zxing/browser';
-import { ScanLine, Keyboard, X, Zap, AlertCircle, Camera, RefreshCw } from 'lucide-react';
+import { ScanLine, Keyboard, X, AlertCircle, Camera, RefreshCw } from 'lucide-react';
+import { PointsIcon } from '@/components/points/PointsIndicator';
 import { useAuth } from '@/application/state/AuthContext';
 import { useCampaign } from '@/application/state/CampaignContext';
 import { processScan, type ScanResult } from '@/modules/qr/api/qrApi';
@@ -508,8 +509,8 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
           >
             {result.success ? (
               <>
-                <div className="w-16 h-16 rounded-full bg-gold/10 hairline flex items-center justify-center mx-auto mb-6">
-                  <Zap className="w-7 h-7 text-gold" fill="currentColor" />
+                <div className="w-16 h-16 rounded-full bg-orange-400/[0.08] border border-orange-300/10 flex items-center justify-center mx-auto mb-6">
+                  <PointsIcon scope="campaign" size="md" />
                 </div>
                 <p className="text-[10px] text-text-subtle uppercase tracking-[0.25em] mb-2">
                   Points Earned
