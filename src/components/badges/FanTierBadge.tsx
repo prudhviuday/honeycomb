@@ -81,7 +81,7 @@ function FanInsignia({ tierIndex }: { tierIndex: number }) {
           <path d="m20 10 5 5-1.1 7.2-7.8 2.8-4.9-5 1.1-7.2z" transform="rotate(60 20 20)" />
           <path d="m20 10 5 5-1.1 7.2-7.8 2.8-4.9-5 1.1-7.2z" transform="rotate(120 20 20)" />
           <circle cx="20" cy="20" r="3.2" fill="currentColor" stroke="none" />
-          <circle cx="20" cy="20" r="1.1" fill="#fff" stroke="none" />
+          <circle cx="20" cy="20" r="1.1" fill="currentColor" stroke="none" />
         </g>
       );
     case 5:
