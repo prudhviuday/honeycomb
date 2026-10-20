@@ -1148,3 +1148,78 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
     transition: none !important;
   }
 }
+
+
+/* ===== Medal-grade metal trims (bronze · silver · gold) ===== */
+.fan-tier-badge__seal {
+  --fan-rim: #abb4bf;
+  --fan-rim-hi: #e8edf3;
+  --fan-rim-shadow: #343c47;
+}
+.fan-tier-badge__edge {
+  background:
+    linear-gradient(135deg,
+      var(--fan-rim-hi) 0%,
+      var(--fan-rim) 24%,
+      var(--fan-rim-shadow) 47%,
+      var(--fan-rim-hi) 63%,
+      var(--fan-rim-shadow) 82%,
+      var(--fan-rim) 100%);
+  opacity: 1;
+  padding: 1px;
+}
+.fan-tier-badge__edge::after {
+  inset: 2px;
+  background:
+    linear-gradient(145deg,
+      var(--fan-rim-hi) 0%,
+      transparent 35%,
+      var(--fan-rim-shadow) 76%,
+      var(--fan-rim) 100%);
+}
+.fan-tier-badge__art {
+  color: var(--fan-rim);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.86));
+}
+.fan-tier-badge__glint {
+  background: linear-gradient(112deg, transparent 17%, var(--fan-rim-hi) 29%, var(--fan-rim) 36%, transparent 47%);
+}
+
+/* Increasingly prestigious metal finishes; enamel remains tier-specific. */
+.fan-tier-badge__seal--new-fan {
+  --fan-rim: #8996a5; --fan-rim-hi: #e2e8ef; --fan-rim-shadow: #303945;
+}
+.fan-tier-badge__seal--fan {
+  --fan-rim: #b87333; --fan-rim-hi: #f3c58b; --fan-rim-shadow: #482713;
+}
+.fan-tier-badge__seal--super-fan {
+  --fan-rim: #cd7f32; --fan-rim-hi: #ffdda5; --fan-rim-shadow: #563016;
+}
+.fan-tier-badge__seal--movie-buff {
+  --fan-rim: #aeb7c1; --fan-rim-hi: #f5f7fa; --fan-rim-shadow: #424a55;
+}
+.fan-tier-badge__seal--cinephile {
+  --fan-rim: #c5d0dc; --fan-rim-hi: #fff3df; --fan-rim-shadow: #465363;
+}
+.fan-tier-badge__seal--hype-star {
+  --fan-rim: #c99a38; --fan-rim-hi: #ffe8a0; --fan-rim-shadow: #5a3b0e;
+}
+.fan-tier-badge__seal--superstar {
+  --fan-rim: #e5b94b; --fan-rim-hi: #fff0b0; --fan-rim-shadow: #6d4d14;
+}
+.fan-tier-badge__seal--legend {
+  --fan-rim: #f0ce69; --fan-rim-hi: #fff9dc; --fan-rim-shadow: #775515;
+}
+
+/* Tiny avatar-side presentation: like a ranked-player medal pin. */
+.fan-profile-insignia {
+  width: 26px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(245,201,107,.055), rgba(255,255,255,.008));
+  border: 1px solid rgba(245,201,107,.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.fan-profile-insignia .fan-tier-badge__seal {
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)) drop-shadow(0 0 4px var(--fan-glow));
+}
