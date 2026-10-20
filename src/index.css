@@ -1019,3 +1019,132 @@ input:focus-visible, textarea:focus-visible { caret-color: #A38BFF; }
   .fan-tier-badge__glint { transition: none !important; }
 }
 
+
+
+/* ===== Fan journey: visible goals and collection progression ===== */
+.fan-journey-panel {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 12% -12%, rgba(245,201,107,.12), transparent 44%),
+    radial-gradient(ellipse at 100% 100%, rgba(124,92,255,.12), transparent 45%),
+    linear-gradient(145deg, #15131f 0%, #0e0e18 62%, #11101a 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 16px 34px rgba(0,0,0,.12);
+}
+.fan-journey-orb {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+}
+.fan-journey-orb--gold {
+  width: 180px;
+  height: 180px;
+  top: -125px;
+  left: 20%;
+  border: 1px solid rgba(245,201,107,.13);
+  box-shadow: 0 0 0 16px rgba(245,201,107,.018), 0 0 45px rgba(245,201,107,.04);
+}
+.fan-journey-orb--violet {
+  width: 150px;
+  height: 150px;
+  right: -100px;
+  bottom: -105px;
+  border: 1px solid rgba(163,139,255,.15);
+  box-shadow: 0 0 0 18px rgba(163,139,255,.022), 0 0 45px rgba(163,139,255,.04);
+}
+.fan-journey-count {
+  border: 1px solid rgba(245,201,107,.18);
+  color: #f5d58b;
+  background: linear-gradient(135deg, rgba(245,201,107,.1), rgba(245,201,107,.025));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.fan-journey-feature {
+  background:
+    radial-gradient(ellipse at 5% 0%, rgba(245,201,107,.09), transparent 65%),
+    linear-gradient(135deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 8px 22px rgba(0,0,0,.12);
+}
+.fan-journey-feature-emblem {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(245,201,107,.13), transparent 67%),
+    linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.005));
+  border: 1px solid rgba(245,201,107,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 24px rgba(245,201,107,.035);
+}
+.fan-journey-current-tag {
+  color: #f9df9b;
+  border: 1px solid rgba(245,201,107,.2);
+  background: rgba(245,201,107,.09);
+}
+.fan-journey-progress {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.36);
+}
+.fan-journey-progress-fill {
+  background: linear-gradient(90deg, #a8752b 0%, #f5c96b 54%, #fff0b8 100%);
+  box-shadow: 0 0 12px rgba(245,201,107,.34);
+}
+.fan-journey-tier {
+  min-height: 86px;
+  color: rgba(255,255,255,.3);
+  border-color: rgba(255,255,255,.055);
+  background: linear-gradient(150deg, rgba(255,255,255,.025), rgba(255,255,255,.008));
+  transition: border-color 220ms ease, background 220ms ease, transform 220ms ease, box-shadow 220ms ease, opacity 220ms ease;
+}
+.fan-journey-tier--locked .fan-tier-badge {
+  opacity: .48;
+  filter: grayscale(.94) saturate(.2);
+}
+.fan-journey-tier--locked .fan-journey-tier-label {
+  color: rgba(255,255,255,.3);
+}
+.fan-journey-tier--unlocked {
+  color: rgba(255,255,255,.5);
+  border-color: rgba(255,255,255,.085);
+  background: linear-gradient(155deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+}
+.fan-journey-tier--unlocked .fan-tier-badge {
+  filter: saturate(1.08);
+}
+.fan-journey-tier--current {
+  color: #ffebba;
+  border-color: rgba(245,201,107,.42);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(245,201,107,.15), transparent 72%),
+    linear-gradient(155deg, rgba(245,201,107,.075), rgba(255,255,255,.018));
+  box-shadow: inset 0 1px 0 rgba(255,239,189,.08), 0 0 18px rgba(245,201,107,.07);
+}
+.fan-journey-tier--current .fan-tier-badge {
+  filter: saturate(1.15) drop-shadow(0 0 6px rgba(245,201,107,.1));
+}
+.fan-journey-tier--next {
+  color: rgba(255,255,255,.82);
+  border-color: rgba(245,201,107,.35);
+  background: linear-gradient(155deg, rgba(245,201,107,.06), rgba(255,255,255,.015));
+  animation: fan-tier-next-pulse 3.2s ease-in-out infinite;
+}
+.fan-journey-tier--next .fan-tier-badge {
+  opacity: .84;
+  filter: saturate(.8);
+}
+.fan-journey-next-label {
+  color: #191108;
+  background: linear-gradient(135deg, #fff0b8, #e9b44c);
+  box-shadow: 0 2px 10px rgba(245,201,107,.17);
+}
+@keyframes fan-tier-next-pulse {
+  0%,100% { box-shadow: 0 0 0 rgba(245,201,107,0); }
+  50% { box-shadow: 0 0 15px rgba(245,201,107,.09); }
+}
+@media (hover:hover) {
+  .fan-journey-tier:hover {
+    transform: translateY(-2px);
+    border-color: rgba(245,201,107,.3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fan-journey-tier,
+  .fan-journey-tier--next {
+    animation: none !important;
+    transition: none !important;
+  }
+}
