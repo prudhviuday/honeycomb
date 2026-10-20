@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Eye, EyeOff, Clapperboard, Loader2, ArrowRight } from 'lucide-react';
 import { signIn, signUp } from '@/modules/auth/api/authApi';
 import { normalizeDisplayName, normalizeEmail } from '@/modules/auth/logic/authLogic';
 import { registerActivity } from '@/modules/analytics/api/analyticsApi';
@@ -53,13 +53,18 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-6 py-8">
+    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-6 py-8 relative overflow-hidden">
+      <div className="absolute -top-24 -left-20 w-72 h-72 rounded-full bg-accent/30 blur-3xl animate-aurora pointer-events-none" />
+      <div className="absolute -bottom-24 -right-16 w-72 h-72 rounded-full bg-gold/15 blur-3xl animate-aurora pointer-events-none" style={{ animationDelay: '-7s' }} />
       <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
       }} />
 
-      <div className="w-full max-w-sm relative z-10">
-        <div className="flex flex-col items-center mb-12">
+      <div className="w-full max-w-sm relative z-10 rounded-3xl border border-white/10 bg-bg-secondary/70 backdrop-blur-xl p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(124,92,255,0.12)] animate-rise-in">
+        <div className="flex flex-col items-center mb-9">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-bright to-accent flex items-center justify-center mb-4 shadow-[0_8px_28px_rgba(124,92,255,0.5)] animate-float">
+            <Clapperboard className="w-7 h-7 text-white" strokeWidth={2} />
+          </div>
           <div className="flex items-baseline gap-1 mb-2">
             <span className="font-display text-3xl text-text-primary tracking-wide">HONEY</span>
             <span className="font-display text-3xl gold-text tracking-wide">BADGER</span>
@@ -138,9 +143,13 @@ export function AuthScreen() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-accent text-white font-semibold text-sm tracking-wide rounded-[10px] hover:bg-accent-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-6"
+            className="w-full py-3.5 bg-accent text-white font-semibold text-sm tracking-wide rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-6"
           >
-            {loading ? 'Creating...' : mode === 'signup' ? 'Create Account' : 'Log In'}
+            {loading ? (
+              <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{mode === 'signup' ? 'Creating...' : 'Signing in...'}</span>
+            ) : (
+              <span className="inline-flex items-center gap-2">{mode === 'signup' ? 'Create Account' : 'Log In'}<ArrowRight className="w-4 h-4" /></span>
+            )}
           </button>
         </form>
 

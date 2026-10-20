@@ -429,7 +429,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                     >
                       <MovieArtwork movie={movie} isCenter={isCenter} />
                       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent pointer-events-none" />
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#08080A] via-[#08080A]/55 to-transparent pointer-events-none" />
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#07070F] via-[#07070F]/55 to-transparent pointer-events-none" />
                       <div className={
                         'absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-md pointer-events-none ' +
                         (movie.demo
@@ -550,7 +550,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                 isCenter
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#101013] via-[#101013]/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E1A] via-[#0E0E1A]/25 to-transparent" />
             <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-md">
               <Flame className="w-3.5 h-3.5 text-accent" />
               <span className="text-[10px] text-white/90 uppercase tracking-[0.18em] font-medium">Active Hunt</span>
@@ -583,7 +583,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
 
             <button
               onClick={() => onNavigate?.('scanner')}
-              className="w-full py-3.5 bg-accent hover:bg-accent-bright text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_-10px_rgba(229,9,20,0.6)] active:scale-[0.98] transition-transform"
+              className="w-full py-3.5 bg-accent hover:bg-accent-bright text-white rounded-[14px] font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_-10px_rgba(124, 92, 255,0.6)] active:scale-[0.98] transition-transform"
             >
               {missionDone ? 'Continue Hunt' : 'Start Hunt'}
               <span className="text-white/60">· +{nextMission.points_reward} XP</span>
@@ -690,7 +690,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
                     className={
                       'w-14 h-14 rounded-full flex items-center justify-center mb-1.5 ' +
                       (earned
-                        ? 'bg-gradient-to-br from-accent/25 to-accent/5 shadow-[0_0_18px_rgba(229,9,20,0.22)]'
+                        ? 'bg-gradient-to-br from-accent/25 to-accent/5 shadow-[0_0_18px_rgba(124, 92, 255,0.22)]'
                         : 'bg-white/5')
                     }
                   >
@@ -746,7 +746,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
         <div className="fixed inset-0 z-[60] max-w-lg mx-auto" onClick={() => setLeaderboardOpen(false)}>
           <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm animate-fade-in" />
           <div
-            className="absolute bottom-0 left-0 right-0 bg-[#101013] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
+            className="absolute bottom-0 left-0 right-0 bg-[#0E0E1A] rounded-t-[24px] animate-slide-up max-h-[80%] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pt-3 pb-3 px-5">
@@ -955,7 +955,7 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
           : undefined;
 
   return (
-    <div className="absolute inset-0 bg-[#101013] z-0">
+    <div className="absolute inset-0 bg-[#0E0E1A] z-0">
       {imageSrc ? (
         <img
           key={imageSrc}
@@ -970,7 +970,7 @@ function MovieArtwork({ movie, isCenter }: { movie: MovieCardData; isCenter: boo
           <PosterArtwork movie={{ ...movie, movie_title: displayTitle }} isCenter={isCenter} />
         </div>
       )}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#08080A]/95 via-[#08080A]/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#07070F]/95 via-[#07070F]/5 to-transparent pointer-events-none" />
     </div>
   );
 }

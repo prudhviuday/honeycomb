@@ -5,10 +5,10 @@ export default {
     extend: {
       colors: {
         bg: {
-          primary: '#08080A',
-          secondary: '#101013',
-          surface: '#17171C',
-          elevated: '#202027',
+          primary: '#07070F',
+          secondary: '#0E0E1A',
+          surface: '#161628',
+          elevated: '#201F38',
         },
         gold: {
           DEFAULT: '#E9B44C',
@@ -16,8 +16,8 @@ export default {
           dim: '#9C7428',
         },
         accent: {
-          DEFAULT: '#E50914',
-          bright: '#FF2A36',
+          DEFAULT: '#7C5CFF',
+          bright: '#A38BFF',
         },
         text: {
           primary: '#F5F5F7',
@@ -27,12 +27,12 @@ export default {
         },
         line: 'rgba(255,255,255,0.08)',
         entertainment: {
-          DEFAULT: '#E50914',
-          bright: '#FF2A36',
+          DEFAULT: '#7C5CFF',
+          bright: '#A38BFF',
         },
       },
       fontFamily: {
-        display: ['Anton', 'sans-serif'],
+        display: ['Oswald', 'sans-serif'],
         body: ['Inter', 'system-ui', 'sans-serif'],
       },
     },

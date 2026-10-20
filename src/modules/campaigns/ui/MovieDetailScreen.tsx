@@ -371,7 +371,7 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
 
       <div className="space-y-8">
         <section className="relative isolate overflow-hidden min-h-[440px] sm:min-h-[500px] rounded-b-[32px]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#25140D] via-[#121013] to-[#08080A]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#25140D] via-[#121013] to-[#07070F]" />
           {heroPosterUrl ? (
             <img
               src={heroPosterUrl}
