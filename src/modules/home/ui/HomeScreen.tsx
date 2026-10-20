@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   Zap, MapPin, Trophy, Flame, ScanLine, Award, Gift,
@@ -158,6 +158,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     setLeaderboardPickerOpen(false);
     setLeaderboardOpen(true);
   }
+  const closeFanJourney = useCallback(() => setFanJourneyOpen(false), []);
 
   useEffect(() => {
     if (!leaderboardOpen) return;
@@ -883,7 +884,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
       {fanJourneyOpen && (
         <FanTierDetailsModal
           points={overallPoints}
-          onClose={() => setFanJourneyOpen(false)}
+          onClose={closeFanJourney}
         />
       )}
 
