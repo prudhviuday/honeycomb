@@ -71,7 +71,7 @@ export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
           className="w-full text-center rounded-xl py-2 hover:bg-white/[0.03] transition-colors"
         >
           <p className="font-display text-3xl text-gold leading-none">{points}</p>
-          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Points · Tap to view rewards</p>
+          <p className="text-[10px] text-text-subtle uppercase tracking-[0.15em] mt-2">Campaign points · Tap to view rewards</p>
         </button>
       </div>
 
