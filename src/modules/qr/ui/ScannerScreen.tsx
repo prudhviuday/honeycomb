@@ -28,7 +28,7 @@ function stopVideoStream(video: HTMLVideoElement | null) {
 
 export function ScannerScreen({ onScanComplete, initialCode }: Props) {
   const { user } = useAuth();
-  const { activeCampaign, refreshCampaignUser, selectCampaign } = useCampaign();
+  const { activeCampaign, refreshCampaignUser, refreshOverallPoints, selectCampaign } = useCampaign();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
@@ -279,8 +279,10 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
         // This user has already discovered this movie. Keep processing distinct
         // vendor/mall/hunt QR rewards, but take them straight to their movie page.
         const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
-        if (campaign) await selectCampaign(campaign);
-        else await refreshCampaignUser();
+        if (campaign) {
+          await selectCampaign(campaign);
+          await refreshOverallPoints();
+        } else await refreshCampaignUser();
         onScanComplete(targetCampaignId);
         return;
       }
@@ -289,8 +291,10 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
       setResult(res);
       if (res.success) {
         const campaign = targetCampaign ?? await getCampaign(targetCampaignId);
-        if (campaign) await selectCampaign(campaign);
-        else await refreshCampaignUser();
+        if (campaign) {
+          await selectCampaign(campaign);
+          await refreshOverallPoints();
+        } else await refreshCampaignUser();
       }
     } catch (err) {
       void registerActivity({
