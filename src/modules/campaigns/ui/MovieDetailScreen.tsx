@@ -98,7 +98,7 @@ interface Props {
 
 export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: Props) {
   const { user } = useAuth();
-  const { selectCampaign } = useCampaign();
+  const { selectCampaign, activeCampaign, campaignUser: activeCampaignUser } = useCampaign();
 
   const [data, setData] = useState<MoviePageData | null>(null);
   const [selectedPosterUrl, setSelectedPosterUrl] = useState<string | null>(null);
@@ -198,6 +198,14 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
       setLoading(false);
     }
   };
+
+  // Keep this screen's campaign-specific number synchronized with the shared
+  // membership balance after scans and reward claims.
+  useEffect(() => {
+    if (activeCampaign?.id !== campaignId || !activeCampaignUser) return;
+    setCampaignPoints(Math.max(0, Number(activeCampaignUser.points ?? 0) || 0));
+    setCampaignPointsLoading(false);
+  }, [activeCampaign?.id, activeCampaignUser?.points, campaignId]);
 
   useEffect(() => {
     void loadMovie();
