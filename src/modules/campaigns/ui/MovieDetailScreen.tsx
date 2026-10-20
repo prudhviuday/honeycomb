@@ -417,14 +417,12 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
             )}
             {user && (
               <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-amber-200/20 bg-black/45 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.65)]">
-                <div className="flex items-center justify-center">
-                  <PointsIcon scope="campaign" size="md" />
-                </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[9px] uppercase tracking-[0.18em] text-amber-100/65 font-semibold">Your points in this movie</p>
-                  <p className="text-xl leading-tight font-bold tracking-tight text-amber-100 tabular-nums">
+                  <p className="mt-1 inline-flex items-center gap-1.5 text-xl leading-tight font-bold tracking-tight text-amber-100 tabular-nums">
+                    <PointsIcon scope="campaign" size="md" />
                     {campaignPointsLoading ? '···' : campaignPoints.toLocaleString()}
-                    <span className="text-[10px] font-semibold text-amber-100/60 ml-1.5">PTS</span>
+                    <span className="text-[10px] font-semibold text-amber-100/60">PTS</span>
                   </p>
                 </div>
                 <div className="ml-2 h-8 w-px bg-white/10" />
@@ -611,14 +609,12 @@ export function MovieDetailScreen({ campaignId, referralCode, qrCode, onBack }: 
                 <div className="space-y-2">
                   {pointHistory.slice(0, 4).map((transaction) => (
                     <div key={transaction.id} className="flex items-start gap-3 rounded-[12px] bg-white/[0.03] border border-white/[0.04] px-3 py-3">
-                      <div className="flex items-center justify-center flex-shrink-0">
-                        <PointsIcon scope="campaign" size="md" />
-                      </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-white font-medium">{transaction.reason || 'Movie activity'}</p>
                         <p className="text-[10px] text-text-subtle mt-1">{formatDate(transaction.created_at)}</p>
                       </div>
-                      <span className="text-sm font-display text-gold flex-shrink-0">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-display text-gold flex-shrink-0">
+                        <PointsIcon scope="campaign" size="xs" />
                         {transaction.points >= 0 ? '+' : ''}{transaction.points}
                       </span>
                     </div>
