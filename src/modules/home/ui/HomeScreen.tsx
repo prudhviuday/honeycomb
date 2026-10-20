@@ -112,6 +112,25 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
   const [dashboardKey, setDashboardKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboardMode, setLeaderboardMode] = useState<LeaderboardMode>('overall');
+  const [leaderboardCampaign, setLeaderboardCampaign] = useState<Campaign | null>(activeCampaign);
+  const [leaderboardPickerOpen, setLeaderboardPickerOpen] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardDisplayEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(false);
+  const [leaderboardReload, setLeaderboardReload] = useState(0);
+  const [movieIndex, setMovieIndex] = useState(0);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'center',
+    loop: false,
+    containScroll: false,
+    dragFree: false,
+    duration: 28,
+  });
+
   // Depend on stable IDs rather than Supabase object identities. Auth token
   // refreshes can replace the User object without changing which user is signed in.
   const campaignId = activeCampaign?.id ?? null;
@@ -133,25 +152,7 @@ export function HomeScreen({ onNavigate, onOpenMovie }: Props) {
     setLeaderboardCampaign(activeCampaign);
     setLeaderboardPickerOpen(false);
     setLeaderboardOpen(true);
-  };
-  const [retryCount, setRetryCount] = useState(0);
-  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [leaderboardMode, setLeaderboardMode] = useState<LeaderboardMode>('overall');
-  const [leaderboardCampaign, setLeaderboardCampaign] = useState<Campaign | null>(activeCampaign);
-  const [leaderboardPickerOpen, setLeaderboardPickerOpen] = useState(false);
-  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardDisplayEntry[]>([]);
-  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-  const [leaderboardError, setLeaderboardError] = useState(false);
-  const [leaderboardReload, setLeaderboardReload] = useState(0);
-  const [movieIndex, setMovieIndex] = useState(0);
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'center',
-    loop: false,
-    containScroll: false,
-    dragFree: false,
-    duration: 28,
-  });
+  }
 
   useEffect(() => {
     if (!leaderboardOpen) return;
