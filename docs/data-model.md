@@ -63,7 +63,7 @@ The current consumer Map screen queries locations for one active campaign. The r
 | Entity | Responsibility | Developer notes |
 | --- | --- | --- |
 | profiles | Display/profile fields related to an Auth user | Supabase Auth is the identity source; do not use editable profile metadata for authorization |
-| campaign_users | Membership and current points balance for a user/campaign | Points are campaign-scoped in the current model; Context ensures membership for selected campaign |
+| campaign_users | Membership and current net points balance for a user/campaign | The row is the source of truth for that campaign's spendable balance; Context ensures membership for the selected campaign |
 | scans | Accepted/rejected scan history, source and location attribution | Scan writes should be performed by the transactional scan path |
 | point_transactions | Ledger rows describing earned/spent points | Keep a ledger; do not change points only in a React state variable |
 | missions | Campaign-specific task definitions and thresholds | Scan-count missions still use established process_scan logic; event-driven tasks use configured event types/modes |
@@ -73,6 +73,16 @@ The current consumer Map screen queries locations for one active campaign. The r
 | reward_entries | Lucky-draw entries earned by a user | Entries are campaign-scoped |
 | reward_claims | Claim record, status and code; points-consumption data may be returned by the RPC | The legacy RewardClaim type includes points_used, but do not assume it is a physical column in every deployed schema; inspect the live columns/RPC payload |
 | referral_codes / referrals | Invite codes and relationships between inviter and referred user | A QR landing is attribution; qualifying a referral task is a separate rule |
+
+### Points balance rules
+
+Honeycomb has two **views of the same campaign balances**, not two independent point wallets:
+
+- **Campaign points** are the current `campaign_users.points_balance` for one campaign (mapped to `campaignUser.points`). Use these for campaign hunts, campaign leaderboards and that campaign's rewards. A reward claim must validate and spend from this campaign balance only.
+- **Overall points** are the sum of `points_balance` across the authenticated user's `campaign_users` rows. For example, 100 + 150 + 120 = 370 overall points. This is a cross-campaign summary, not a transferable wallet, and it must not let a user redeem a reward from one movie using points earned in another.
+- The balances are **net of reward spending** because the current balance is summed, not gross point awards or the lifetime sum of positive transactions. Do not add transaction history to the overall total; that would double-count.
+- Accepted scans and reward claims are committed through the existing database operations. After such an operation, refresh the campaign membership and overall aggregate from the database; do not adjust either balance only in React state.
+- Visual convention: a flame inside a small circle marks a single campaign's points; a lightning bolt inside a small circle marks the overall cross-campaign total. Reusable UI is in `src/components/points/PointsIndicator.tsx`. Keep the label/scope explicit anywhere the value could be ambiguous.
 
 ## 4. Activity/event records
 
