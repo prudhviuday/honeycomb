@@ -17,7 +17,7 @@ interface Props {
 
 export function ProfileScreen({ onNavigate, onOpenMovie }: Props) {
   const { user, profile } = useAuth();
-  const { activeCampaign, campaignUser } = useCampaign();
+  const { activeCampaign } = useCampaign();
   const [editing, setEditing] = useState(false);
   const [overallPoints, setOverallPoints] = useState(0);
   const [pointsLoading, setPointsLoading] = useState(true);
