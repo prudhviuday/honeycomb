@@ -513,13 +513,11 @@ export function ScannerScreen({ onScanComplete, initialCode }: Props) {
           >
             {result.success ? (
               <>
-                <div className="w-16 h-16 rounded-full bg-orange-400/[0.08] border border-orange-300/10 flex items-center justify-center mx-auto mb-6">
-                  <PointsIcon scope="campaign" size="md" />
-                </div>
-                <p className="text-[10px] text-text-subtle uppercase tracking-[0.25em] mb-2">
+                <p className="text-[10px] text-text-subtle uppercase tracking-[0.25em] mb-3">
                   Campaign Points Earned
                 </p>
-                <p className="font-display text-5xl text-gold mb-3">
+                <p className="inline-flex items-center justify-center gap-2 font-display text-5xl text-gold mb-3">
+                  <PointsIcon scope="campaign" size="md" />
                   +{result.pointsAwarded}
                 </p>
                 <p className="text-sm text-text-primary mb-1">{result.message}</p>
